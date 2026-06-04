@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Serilog;
+using JournalRecall.Api.Auth;
 using JournalRecall.Api.Databases;
 
 namespace JournalRecall.Api.Extensions;
@@ -43,5 +44,8 @@ public static class ServiceRegistration
 
         // Apply migrations at startup so the SQLite file + schema exist on first run.
         services.AddHostedService<MigrationHostedService<JournalRecallDbContext>>();
+
+        // Identity + first-party JWT (cookie or bearer) authentication (ADR-0002).
+        services.AddJournalRecallAuth(builder.Configuration);
     }
 }

@@ -1,4 +1,5 @@
 using Serilog;
+using JournalRecall.Api.Auth;
 using JournalRecall.Api.Extensions;
 
 // Stage 1: a bootstrap logger that captures anything logged before the host (and the real Serilog
@@ -20,9 +21,15 @@ try
 
     app.UseSerilogRequestLogging();
 
+    app.UseAuthentication();
+    app.UseAuthorization();
+
     // Health probe under /api so it shares the SPA's single origin (ADR-0001). Traced + logged so
     // issue 0017's AI spans extend the same pipeline.
     app.MapHealthChecks("/api/health");
+
+    // Auth: register/login (HttpOnly cookie) + /api/me (ADR-0002).
+    app.MapAuth();
 
     // Serve the built Vite SPA from wwwroot/app at /app/*, with a fallback to its index.html so
     // client-side routes (e.g. /app/chat) deep-link. "/" redirects into the app.

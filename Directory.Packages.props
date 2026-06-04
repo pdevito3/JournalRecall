@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Identity & auth (ADR-0002) -->
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+
     <!-- EF Core on SQLite (file-based; ADR-0001) -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" />

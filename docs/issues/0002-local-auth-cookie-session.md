@@ -1,6 +1,6 @@
 # 0002 — Local auth: register/login → cookie session
 
-**Phase:** 1 · **Type:** AFK · **Status:** todo · **Realizes:** ADR-0002
+**Phase:** 1 · **Type:** AFK · **Status:** done · **Realizes:** ADR-0002
 
 ## What to build
 
@@ -17,13 +17,13 @@ React routes under `/app`.
 
 ## Acceptance criteria
 
-- [ ] Registering then logging in sets an HttpOnly auth cookie (not readable from `document.cookie`).
-- [ ] `GET /api/me` returns the user with the cookie present and 401 without it.
-- [ ] The same `GET /api/me` also succeeds when the JWT is supplied as an `Authorization: Bearer`
+- [x] Registering then logging in sets an HttpOnly auth cookie (not readable from `document.cookie`).
+- [x] `GET /api/me` returns the user with the cookie present and 401 without it.
+- [x] The same `GET /api/me` also succeeds when the JWT is supplied as an `Authorization: Bearer`
       header (no cookie) — proving the dual-delivery validation.
-- [ ] Logout clears the cookie and subsequent `/api/me` is 401.
-- [ ] No Identity Razor pages are reachable; auth happens through the React routes.
-- [ ] Integration tests cover register, login, authorized `/api/me`, and unauthorized 401.
+- [x] Logout clears the cookie and subsequent `/api/me` is 401.
+- [x] No Identity Razor pages are reachable; auth happens through the React routes.
+- [x] Integration tests cover register, login, authorized `/api/me`, and unauthorized 401.
 
 ## Blocked by
 

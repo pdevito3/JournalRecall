@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
-import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router'
+import { createRootRouteWithContext, Link, Outlet, useNavigate } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
+import { useLogout, useMe } from '@/features/auth/useAuth'
+import { Button } from '@/shared/ui/button'
 
 export interface RouterContext {
   queryClient: QueryClient
@@ -20,12 +22,41 @@ function RootLayout() {
             Journal
           </NavLink>
           <NavLink to="/chat">Chat</NavLink>
+          <div className="ml-auto flex items-center gap-2">
+            <AuthControls />
+          </div>
         </nav>
       </header>
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
         <Outlet />
       </main>
     </div>
+  )
+}
+
+function AuthControls() {
+  const { data: user, isLoading } = useMe()
+  const logout = useLogout()
+  const navigate = useNavigate()
+
+  if (isLoading) return null
+
+  if (!user) {
+    return (
+      <>
+        <NavLink to="/login">Sign in</NavLink>
+        <NavLink to="/register">Register</NavLink>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <span className="text-sm text-muted">{user.email}</span>
+      <Button onPress={() => logout.mutate(undefined, { onSuccess: () => navigate({ to: '/login' }) })}>
+        Sign out
+      </Button>
+    </>
   )
 }
 
