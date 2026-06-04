@@ -12,9 +12,14 @@ namespace JournalRecall.Api.Domain.Sessions;
 /// </summary>
 public sealed class Session : BaseEntity
 {
+    private readonly List<RawRevision> _rawRevisions = [];
+
     public Guid UserId { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public string RawDraft { get; private set; } = string.Empty;
+
+    /// <summary>The append-only Raw Revision stream, oldest first (ADR-0003).</summary>
+    public IReadOnlyList<RawRevision> RawRevisions => _rawRevisions;
 
     private Session() { } // EF
 
@@ -25,6 +30,20 @@ public sealed class Session : BaseEntity
         return session;
     }
 
-    /// <summary>Replace the live Draft with the user's text, verbatim (autosave save point).</summary>
-    public void SaveDraft(string rawText) => RawDraft = rawText ?? string.Empty;
+    /// <summary>
+    /// Save point for Raw: the live Draft mutates to the user's text (verbatim), and when the content
+    /// actually changed a new immutable Revision is appended. A debounced/explicit save that doesn't
+    /// change the text mints nothing, so rapid keystrokes never each create a Revision.
+    /// </summary>
+    public void SaveDraft(string rawText)
+    {
+        rawText ??= string.Empty;
+        var changed = !string.Equals(rawText, LatestRawContent, StringComparison.Ordinal);
+
+        RawDraft = rawText;
+        if (changed)
+            _rawRevisions.Add(new RawRevision(_rawRevisions.Count + 1, rawText));
+    }
+
+    private string LatestRawContent => _rawRevisions.Count == 0 ? string.Empty : _rawRevisions[^1].Content;
 }

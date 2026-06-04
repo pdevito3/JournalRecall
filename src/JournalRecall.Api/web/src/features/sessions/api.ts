@@ -17,6 +17,29 @@ export async function getSession(id: string): Promise<Session> {
   return res.json()
 }
 
+export interface RevisionSummary {
+  revisionNumber: number
+  createdAt: string
+}
+
+export interface Revision {
+  revisionNumber: number
+  createdAt: string
+  content: string
+}
+
+export async function getRevisions(id: string): Promise<RevisionSummary[]> {
+  const res = await fetch(`/api/sessions/${id}/revisions`, { credentials: 'include' })
+  if (!res.ok) throw new Error('Could not load history')
+  return res.json()
+}
+
+export async function getRevision(id: string, revisionNumber: number): Promise<Revision> {
+  const res = await fetch(`/api/sessions/${id}/revisions/${revisionNumber}`, { credentials: 'include' })
+  if (!res.ok) throw new Error('Could not load revision')
+  return res.json()
+}
+
 export async function saveDraft(id: string, rawText: string): Promise<void> {
   const res = await fetch(`/api/sessions/${id}/draft`, {
     method: 'PUT',

@@ -1,6 +1,6 @@
 # 0005 — Raw Revision history
 
-**Phase:** 2 · **Type:** AFK · **Status:** todo · **Realizes:** ADR-0003
+**Phase:** 2 · **Type:** AFK · **Status:** done · **Realizes:** ADR-0003
 
 ## What to build
 
@@ -15,11 +15,11 @@ Session.
 
 ## Acceptance criteria
 
-- [ ] Saving an edit creates a new Raw Revision; the prior Revision remains unchanged and viewable.
-- [ ] Rapid keystrokes do not each create a Revision — only the debounced/explicit save does.
-- [ ] The Session view shows a Revision history and can render a selected past Raw Revision.
-- [ ] Historical Revisions do not appear as separate entries in the timeline/list from #0006.
-- [ ] Tests assert append-only behavior (count grows, old content immutable) at save points.
+- [x] Saving an edit creates a new Raw Revision; the prior Revision remains unchanged and viewable.
+- [x] Rapid keystrokes do not each create a Revision — only the debounced/explicit save does.
+- [x] The Session view shows a Revision history and can render a selected past Raw Revision.
+- [x] Historical Revisions do not appear as separate entries in the timeline/list from #0006.
+- [x] Tests assert append-only behavior (count grows, old content immutable) at save points.
 
 ## Blocked by
 

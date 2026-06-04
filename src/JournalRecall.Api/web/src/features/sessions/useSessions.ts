@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as sessionsApi from './api'
 
 export function useCreateSession() {
@@ -13,5 +13,25 @@ export function useSession(id: string) {
 }
 
 export function useSaveDraft(id: string) {
-  return useMutation({ mutationFn: (rawText: string) => sessionsApi.saveDraft(id, rawText) })
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (rawText: string) => sessionsApi.saveDraft(id, rawText),
+    // A save point may have appended a Revision — refresh the history.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['session', id, 'revisions'] }),
+  })
+}
+
+export function useRevisions(id: string) {
+  return useQuery({
+    queryKey: ['session', id, 'revisions'],
+    queryFn: () => sessionsApi.getRevisions(id),
+  })
+}
+
+export function useRevision(id: string, revisionNumber: number | null) {
+  return useQuery({
+    queryKey: ['session', id, 'revisions', revisionNumber],
+    queryFn: () => sessionsApi.getRevision(id, revisionNumber!),
+    enabled: revisionNumber != null,
+  })
 }

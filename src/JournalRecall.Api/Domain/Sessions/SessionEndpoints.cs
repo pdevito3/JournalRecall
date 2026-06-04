@@ -27,6 +27,19 @@ public static class SessionEndpoints
             return saved ? Results.NoContent() : Results.NotFound();
         });
 
+        // Per-Session Raw Revision history (drill-down; not part of any list/search index).
+        group.MapGet("/{id:guid}/revisions", async (Guid id, ISender sender) =>
+        {
+            var revisions = await sender.Send(new GetRawRevisions.Query(id));
+            return revisions is null ? Results.NotFound() : Results.Ok(revisions);
+        });
+
+        group.MapGet("/{id:guid}/revisions/{revisionNumber:int}", async (Guid id, int revisionNumber, ISender sender) =>
+        {
+            var revision = await sender.Send(new GetRawRevision.Query(id, revisionNumber));
+            return revision is null ? Results.NotFound() : Results.Ok(revision);
+        });
+
         return app;
     }
 }
