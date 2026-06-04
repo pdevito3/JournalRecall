@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="HeimGuard" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,6 +29,10 @@
   <ItemGroup>
     <ProjectReference Include="..\JournalRecall.AI\JournalRecall.AI.csproj" />
     <ProjectReference Include="..\JournalRecall.AI.EntityFrameworkCore\JournalRecall.AI.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="JournalRecall.Api.Tests" />
   </ItemGroup>
 
   <!-- The Vite SPA builds into wwwroot/app (ADR-0001); served at /app with SPA fallback. -->

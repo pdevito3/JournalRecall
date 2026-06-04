@@ -1,6 +1,6 @@
 # 0003 — Roles & admin gate
 
-**Phase:** 1 · **Type:** AFK · **Status:** todo · **Realizes:** ADR-0002
+**Phase:** 1 · **Type:** AFK · **Status:** done · **Realizes:** ADR-0002
 
 ## What to build
 
@@ -15,11 +15,11 @@ admin surface.
 
 ## Acceptance criteria
 
-- [ ] A Member calling the admin-only endpoint receives 403; an Admin receives 200.
-- [ ] An unauthenticated caller receives 401.
-- [ ] New registrations are assigned the Member role by default.
-- [ ] `ICurrentUserService` returns the correct user id and role inside a request.
-- [ ] Tests cover member-forbidden, admin-allowed, and anonymous-unauthorized.
+- [x] A Member calling the admin-only endpoint receives 403; an Admin receives 200.
+- [x] An unauthenticated caller receives 401.
+- [x] New registrations are assigned the Member role by default.
+- [x] `ICurrentUserService` returns the correct user id and role inside a request.
+- [x] Tests cover member-forbidden, admin-allowed, and anonymous-unauthorized.
 
 ## Blocked by
 

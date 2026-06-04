@@ -31,6 +31,9 @@ try
     // Auth: register/login (HttpOnly cookie) + /api/me (ADR-0002).
     app.MapAuth();
 
+    // Admin surface, gated by the admin permission (HeimGuard).
+    app.MapAdmin();
+
     // Serve the built Vite SPA from wwwroot/app at /app/*, with a fallback to its index.html so
     // client-side routes (e.g. /app/chat) deep-link. "/" redirects into the app.
     app.UseStaticFiles();

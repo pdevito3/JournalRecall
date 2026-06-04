@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.JsonWebTokens;
 using JournalRecall.Api.Domain.Identity;
+using JournalRecall.Api.Services;
 
 namespace JournalRecall.Api.Auth;
 
@@ -22,6 +23,7 @@ public static class AuthEndpoints
                 return Results.ValidationProblem(result.Errors.GroupBy(e => e.Code)
                     .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray()));
 
+            await users.AddToRoleAsync(user, Roles.Member); // Member is the default role
             return Results.Ok(new UserResponse(user.Id, user.Email!));
         });
 

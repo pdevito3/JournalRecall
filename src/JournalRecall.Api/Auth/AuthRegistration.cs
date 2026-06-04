@@ -1,10 +1,12 @@
 using System.Text;
+using HeimGuard;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using JournalRecall.Api.Databases;
 using JournalRecall.Api.Domain.Identity;
+using JournalRecall.Api.Services;
 
 namespace JournalRecall.Api.Auth;
 
@@ -73,6 +75,18 @@ public static class AuthRegistration
             });
 
         services.AddAuthorization();
+
+        // Permission-based gate for the non-journal admin surface (HeimGuard). Roles map to
+        // permissions in UserPolicyHandler; MapAuthorizationPolicies() makes each permission usable
+        // as an authorization policy name (e.g. .RequireAuthorization(Permissions.CanAccessAdmin)).
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddHeimGuard<UserPolicyHandler>()
+            .AutomaticallyCheckPermissions()
+            .MapAuthorizationPolicies();
+
+        // Seed Admin/Member roles at startup (after migrations).
+        services.AddHostedService<RoleSeederHostedService>();
 
         return services;
     }
