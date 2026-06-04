@@ -1,6 +1,6 @@
 # 0004 — Create & view a Session (Raw autosave) + per-user privacy
 
-**Phase:** 2 · **Type:** AFK · **Status:** todo · **Realizes:** ADR-0003
+**Phase:** 2 · **Type:** AFK · **Status:** done · **Realizes:** ADR-0003
 
 ## What to build
 
@@ -17,13 +17,13 @@ layer so no user can ever read another user's Session.
 
 ## Acceptance criteria
 
-- [ ] From the home surface a user can start a new Session in one obvious action and begin typing.
-- [ ] Raw text autosaves (debounced) and survives a page reload of the same Session.
-- [ ] A second Session can be created on the same day (multiple-per-day).
-- [ ] User B requesting User A's Session id receives 404/forbidden — never the content (global-filter
+- [x] From the home surface a user can start a new Session in one obvious action and begin typing.
+- [x] Raw text autosaves (debounced) and survives a page reload of the same Session.
+- [x] A second Session can be created on the same day (multiple-per-day).
+- [x] User B requesting User A's Session id receives 404/forbidden — never the content (global-filter
       test proving the Privacy invariant).
-- [ ] Raw text is stored exactly as typed (no server-side mutation).
-- [ ] Registration-focused integration tests cover create, autosave, get, and cross-user isolation.
+- [x] Raw text is stored exactly as typed (no server-side mutation).
+- [x] Registration-focused integration tests cover create, autosave, get, and cross-user isolation.
 
 ## Blocked by
 

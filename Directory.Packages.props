@@ -25,6 +25,10 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
 
+    <!-- Application stack -->
+    <PackageVersion Include="MediatR" Version="12.4.1" />
+    <PackageVersion Include="Mapster" Version="7.4.0" />
+
     <!-- Host wiring (resilience + service discovery) -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.6.0" />

@@ -1,5 +1,6 @@
 using Serilog;
 using JournalRecall.Api.Auth;
+using JournalRecall.Api.Domain.Sessions;
 using JournalRecall.Api.Extensions;
 
 // Stage 1: a bootstrap logger that captures anything logged before the host (and the real Serilog
@@ -33,6 +34,9 @@ try
 
     // Admin surface, gated by the admin permission (HeimGuard).
     app.MapAdmin();
+
+    // Session core: create, autosave Draft, read (per-user via the global query filter).
+    app.MapSessions();
 
     // Serve the built Vite SPA from wwwroot/app at /app/*, with a fallback to its index.html so
     // client-side routes (e.g. /app/chat) deep-link. "/" redirects into the app.

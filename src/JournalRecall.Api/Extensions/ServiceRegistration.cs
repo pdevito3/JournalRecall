@@ -1,3 +1,4 @@
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Serilog;
@@ -47,5 +48,10 @@ public static class ServiceRegistration
 
         // Identity + first-party JWT (cookie or bearer) authentication (ADR-0002).
         services.AddJournalRecallAuth(builder.Configuration);
+
+        // Application stack: MediatR vertical slices + Mapster mappings (scan this assembly).
+        var assembly = typeof(ServiceRegistration).Assembly;
+        TypeAdapterConfig.GlobalSettings.Scan(assembly);
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
     }
 }
