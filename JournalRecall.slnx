@@ -1,0 +1,17 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/JournalRecall.AI/JournalRecall.AI.csproj" />
+    <Project Path="src/JournalRecall.AI.EntityFrameworkCore/JournalRecall.AI.EntityFrameworkCore.csproj" />
+    <Project Path="src/JournalRecall.Api/JournalRecall.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/JournalRecall.AI.Tests/JournalRecall.AI.Tests.csproj" />
+    <Project Path="tests/JournalRecall.Api.Tests/JournalRecall.Api.Tests.csproj" />
+  </Folder>
+  <Project Path="JournalRecall.AppHost/JournalRecall.AppHost.csproj" />
+</Solution>

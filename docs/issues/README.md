@@ -6,7 +6,7 @@ are **AFK** (no human review gate). Work them in dependency order.
 
 | # | Title | Phase | Blocked by | Status |
 |--:|-------|:-----:|------------|--------|
-| [0001](0001-walking-skeleton.md) | Walking skeleton (+ chat placeholder + baseline telemetry) | 0 | — | todo |
+| [0001](0001-walking-skeleton.md) | Walking skeleton (+ chat placeholder + baseline telemetry) | 0 | — | done |
 | [0002](0002-local-auth-cookie-session.md) | Local auth: register/login → cookie session | 1 | 0001 | todo |
 | [0003](0003-roles-and-admin-gate.md) | Roles & admin gate | 1 | 0002 | todo |
 | [0004](0004-create-view-session-privacy.md) | Create & view a Session (Raw autosave) + per-user privacy | 2 | 0002 | todo |

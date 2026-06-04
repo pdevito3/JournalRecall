@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/* Dark-first, emerald-accented design tokens. These become Tailwind utilities
+   (bg-surface, text-content, border-border, bg-accent, ...). A light theme is
+   layered in via a .light class on <html> (wired with a theme toggle later). */
+@theme {
+  --color-surface: #0b0f0e;
+  --color-surface-2: #121817;
+  --color-surface-3: #1a2220;
+  --color-border: #25302d;
+  --color-content: #e8efec;
+  --color-muted: #9bb0a8;
+
+  --color-accent: #10b981;        /* emerald-500 */
+  --color-accent-strong: #059669; /* emerald-600 */
+  --color-accent-soft: #064e3b;   /* emerald-900 */
+  --color-accent-fg: #04110c;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  html.light {
+    color-scheme: light;
+    --color-surface: #f6f8f7;
+    --color-surface-2: #ffffff;
+    --color-surface-3: #eef2f0;
+    --color-border: #d6e0db;
+    --color-content: #0b1512;
+    --color-muted: #5b6b65;
+    --color-accent-fg: #ffffff;
+  }
+
+  body {
+    @apply bg-surface text-content antialiased;
+  }
+}

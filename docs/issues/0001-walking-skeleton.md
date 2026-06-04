@@ -1,6 +1,6 @@
 # 0001 — Walking skeleton
 
-**Phase:** 0 · **Type:** AFK · **Status:** todo · **Realizes:** ADR-0001
+**Phase:** 0 · **Type:** AFK · **Status:** done · **Realizes:** ADR-0001
 
 ## What to build
 
@@ -22,13 +22,13 @@ observability so later slices inherit them.
 
 ## Acceptance criteria
 
-- [ ] `dotnet build` succeeds for the solution; `dotnet test` runs with one pure test and one
+- [x] `dotnet build` succeeds for the solution; `dotnet test` runs with one pure test and one
       DI-wiring test green.
-- [ ] Running the app serves the built SPA at `/app` and `GET /api/health` returns 200 **from the
+- [x] Running the app serves the built SPA at `/app` and `GET /api/health` returns 200 **from the
       same origin** (verified via the Vite dev proxy in dev).
-- [ ] The SQLite `.db` file is created and the initial migration is applied on first run.
-- [ ] Navigating to the Chat route shows the "coming soon" placeholder.
-- [ ] A request to `/api/health` produces a structured Serilog log line and an OpenTelemetry trace.
+- [x] The SQLite `.db` file is created and the initial migration is applied on first run.
+- [x] Navigating to the Chat route shows the "coming soon" placeholder.
+- [x] A request to `/api/health` produces a structured Serilog log line and an OpenTelemetry trace.
 
 ## Blocked by
 

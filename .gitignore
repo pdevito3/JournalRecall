@@ -1,0 +1,54 @@
+## .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+artifacts/
+publish/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Rider / Visual Studio / VS Code
+.idea/
+.vs/
+*.DotSettings.user
+.vscode/
+
+## Test / coverage
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.trx
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+project.lock.json
+
+## EF Core / local data
+*.db
+*.db-shm
+*.db-wal
+
+## Node / web
+node_modules/
+web/dist/
+wwwroot/app/
+
+## Environment / secrets
+.env
+*.local.json
+appsettings.*.local.json
+
+## OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>JournalRecall.AI.EntityFrameworkCore</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JournalRecall.AI\JournalRecall.AI.csproj" />
+  </ItemGroup>
+
+  <!--
+    Phase 0 placeholder. The durable-conversation EF satellite (IConversationDbContext, conversation
+    entities, ApplyConversationModel) is ported alongside the agent framework in issue 0007.
+  -->
+
+</Project>

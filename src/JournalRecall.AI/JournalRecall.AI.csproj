@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>JournalRecall.AI</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    Phase 0 holds only the observability seed (Telemetry) so the host's OpenTelemetry wiring has a
+    stable source/meter name to attach to. The full agent framework is ported in issue 0007.
+  -->
+
+</Project>

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>JournalRecall.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Sinks.OpenTelemetry" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Host wiring (OpenTelemetry, health, resilience, service discovery). -->
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JournalRecall.AI\JournalRecall.AI.csproj" />
+    <ProjectReference Include="..\JournalRecall.AI.EntityFrameworkCore\JournalRecall.AI.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+  <!-- The Vite SPA builds into wwwroot/app (ADR-0001); served at /app with SPA fallback. -->
+  <ItemGroup>
+    <Content Remove="web\**" />
+    <None Include="web\**" Exclude="web\node_modules\**;web\dist\**" />
+  </ItemGroup>
+
+</Project>
