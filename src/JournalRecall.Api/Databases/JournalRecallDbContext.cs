@@ -21,6 +21,13 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
 
     public DbSet<Session> Sessions => Set<Session>();
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+        // SQLite can't order/compare DateTimeOffset — store every one as sortable UTC ticks.
+        configurationBuilder.Properties<DateTimeOffset>().HaveConversion<DateTimeOffsetToTicksConverter>();
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -5,6 +5,13 @@ export function useCreateSession() {
   return useMutation({ mutationFn: sessionsApi.createSession })
 }
 
+export function useSessionList(filter?: string) {
+  return useQuery({
+    queryKey: ['sessions', filter ?? null],
+    queryFn: () => sessionsApi.getSessionList(filter),
+  })
+}
+
 export function useSession(id: string) {
   return useQuery({
     queryKey: ['session', id],

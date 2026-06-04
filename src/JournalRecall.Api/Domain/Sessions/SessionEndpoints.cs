@@ -9,6 +9,10 @@ public static class SessionEndpoints
     {
         var group = app.MapGroup("/api/sessions").RequireAuthorization();
 
+        // Reverse-chronological timeline (current state only), optionally QueryKit-filtered.
+        group.MapGet("", async (string? filter, ISender sender) =>
+            Results.Ok(await sender.Send(new GetSessionList.Query(filter))));
+
         group.MapPost("", async (ISender sender) =>
         {
             var dto = await sender.Send(new CreateSession.Command());

@@ -3,6 +3,7 @@ using System;
 using JournalRecall.Api.Databases;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JournalRecall.Api.Migrations
 {
     [DbContext(typeof(JournalRecallDbContext))]
-    partial class JournalRecallDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260604232731_AddUserTimeZone")]
+    partial class AddUserTimeZone
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -40,8 +43,8 @@ namespace JournalRecall.Api.Migrations
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("INTEGER");
 
-                    b.Property<long?>("LockoutEnd")
-                        .HasColumnType("INTEGER");
+                    b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -91,8 +94,8 @@ namespace JournalRecall.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<long>("CreatedAt")
-                        .HasColumnType("INTEGER");
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("RawDraft")
                         .IsRequired()
@@ -246,8 +249,8 @@ namespace JournalRecall.Api.Migrations
                                 .IsRequired()
                                 .HasColumnType("TEXT");
 
-                            b1.Property<long>("CreatedAt")
-                                .HasColumnType("INTEGER");
+                            b1.Property<DateTimeOffset>("CreatedAt")
+                                .HasColumnType("TEXT");
 
                             b1.Property<int>("RevisionNumber")
                                 .HasColumnType("INTEGER");

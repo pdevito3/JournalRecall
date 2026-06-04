@@ -11,6 +11,20 @@ export async function createSession(): Promise<Session> {
   return res.json()
 }
 
+export interface SessionListItem {
+  id: string
+  createdAt: string
+  journalingDay: string // YYYY-MM-DD in the user's timezone
+  preview: string
+}
+
+export async function getSessionList(filter?: string): Promise<SessionListItem[]> {
+  const url = filter ? `/api/sessions?filter=${encodeURIComponent(filter)}` : '/api/sessions'
+  const res = await fetch(url, { credentials: 'include' })
+  if (!res.ok) throw new Error('Could not load your timeline')
+  return res.json()
+}
+
 export async function getSession(id: string): Promise<Session> {
   const res = await fetch(`/api/sessions/${id}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Session not found')

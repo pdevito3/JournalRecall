@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useMe } from '@/features/auth/useAuth'
 import { useCreateSession } from '@/features/sessions/useSessions'
+import { Timeline } from '@/features/sessions/components/timeline'
 import { Button } from '@/shared/ui/button'
 
 export const Route = createFileRoute('/')({
@@ -47,6 +48,8 @@ function Home() {
       {createSession.isError ? (
         <p className="text-sm text-red-400">{createSession.error.message}</p>
       ) : null}
+
+      {user ? <Timeline /> : null}
     </section>
   )
 }

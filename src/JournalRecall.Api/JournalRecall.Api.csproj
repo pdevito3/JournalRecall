@@ -15,6 +15,7 @@
     <PackageReference Include="HeimGuard" />
     <PackageReference Include="MediatR" />
     <PackageReference Include="Mapster" />
+    <PackageReference Include="QueryKit" />
   </ItemGroup>
 
   <ItemGroup>
