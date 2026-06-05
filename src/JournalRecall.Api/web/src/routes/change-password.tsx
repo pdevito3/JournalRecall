@@ -14,11 +14,14 @@ function ChangePasswordPage() {
   const changePassword = useChangePassword()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   const forced = user?.mustChangePassword ?? false
+  const mismatch = confirmPassword.length > 0 && confirmPassword !== newPassword
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    if (newPassword !== confirmPassword) return
     changePassword.mutate(
       { currentPassword, newPassword },
       { onSuccess: () => navigate({ to: '/' }) },
@@ -51,8 +54,20 @@ function ChangePasswordPage() {
           <Label className="text-sm text-muted">New password</Label>
           <Input className="h-10 rounded-lg border border-border bg-surface-2 px-3 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent" />
         </TextField>
+        <TextField
+          className="flex flex-col gap-1"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          type="password"
+          isRequired
+          isInvalid={mismatch}
+        >
+          <Label className="text-sm text-muted">Confirm new password</Label>
+          <Input className="h-10 rounded-lg border border-border bg-surface-2 px-3 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+          {mismatch ? <p className="text-sm text-red-400">Passwords don’t match.</p> : null}
+        </TextField>
         {changePassword.error ? <p className="text-sm text-red-400">{changePassword.error.message}</p> : null}
-        <Button type="submit" variant="primary" isDisabled={changePassword.isPending} className="w-full">
+        <Button type="submit" variant="primary" isDisabled={changePassword.isPending || mismatch} className="w-full">
           {changePassword.isPending ? 'Saving…' : 'Set password'}
         </Button>
       </form>

@@ -9,14 +9,20 @@ interface AuthFormProps {
   error?: string | null
   onSubmit: (credentials: { email: string; password: string }) => void
   footer: ReactNode
+  // When true, render a second password field and require it to match before submitting.
+  confirmPassword?: boolean
 }
 
-export function AuthForm({ title, submitLabel, pending, error, onSubmit, footer }: AuthFormProps) {
+export function AuthForm({ title, submitLabel, pending, error, onSubmit, footer, confirmPassword = false }: AuthFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+
+  const mismatch = confirmPassword && confirm.length > 0 && confirm !== password
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    if (confirmPassword && password !== confirm) return
     onSubmit({ email, password })
   }
 
@@ -32,8 +38,22 @@ export function AuthForm({ title, submitLabel, pending, error, onSubmit, footer 
           <Label className="text-sm text-muted">Password</Label>
           <Input className="h-10 rounded-lg border border-border bg-surface-2 px-3 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent" />
         </TextField>
+        {confirmPassword ? (
+          <TextField
+            className="flex flex-col gap-1"
+            value={confirm}
+            onChange={setConfirm}
+            type="password"
+            isRequired
+            isInvalid={mismatch}
+          >
+            <Label className="text-sm text-muted">Confirm password</Label>
+            <Input className="h-10 rounded-lg border border-border bg-surface-2 px-3 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+            {mismatch ? <p className="text-sm text-red-400">Passwords don’t match.</p> : null}
+          </TextField>
+        ) : null}
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
-        <Button type="submit" variant="primary" isDisabled={pending} className="w-full">
+        <Button type="submit" variant="primary" isDisabled={pending || mismatch} className="w-full">
           {pending ? 'Working…' : submitLabel}
         </Button>
       </form>

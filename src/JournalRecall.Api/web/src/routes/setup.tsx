@@ -15,6 +15,7 @@ function SetupPage() {
     <AuthForm
       title="Set up JournalRecall"
       submitLabel="Create admin account"
+      confirmPassword
       pending={setup.isPending || login.isPending}
       error={setup.error?.message ?? login.error?.message}
       // Create the root Admin, then sign in immediately so the cookie is set and the app opens.

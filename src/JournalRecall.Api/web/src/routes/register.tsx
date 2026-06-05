@@ -15,6 +15,7 @@ function RegisterPage() {
     <AuthForm
       title="Create your account"
       submitLabel="Create account"
+      confirmPassword
       pending={register.isPending || login.isPending}
       error={register.error?.message ?? login.error?.message}
       onSubmit={(credentials) =>
