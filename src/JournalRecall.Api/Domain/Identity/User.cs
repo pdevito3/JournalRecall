@@ -15,4 +15,11 @@ public sealed class User : IdentityUser<Guid>
     /// derived by projecting a Session's UTC timestamp into this zone (CONTEXT.md).
     /// </summary>
     public string? TimeZoneId { get; set; }
+
+    /// <summary>
+    /// Per-user geo opt-in (CONTEXT.md Location). Off by default: when false, no location is captured or
+    /// stored for the user's Sessions. When true, a single lat/long may be stamped at Session creation
+    /// (the user may still decline per Session). Strictly per-user — never affects another User.
+    /// </summary>
+    public bool LocationCaptureEnabled { get; set; }
 }

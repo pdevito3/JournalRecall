@@ -1,5 +1,6 @@
 export interface UserSettings {
   timeZoneId: string | null
+  locationCaptureEnabled: boolean
 }
 
 export async function getSettings(): Promise<UserSettings> {

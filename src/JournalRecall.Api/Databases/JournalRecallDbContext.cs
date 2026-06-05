@@ -47,6 +47,8 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             session.Ignore(s => s.LatestRawRevisionNumber);
             // Mood is a value object reconstructed from the scalar MoodKey/MoodCustomValue columns.
             session.Ignore(s => s.Mood);
+            // Location is a value object reconstructed from the scalar Latitude/Longitude columns.
+            session.Ignore(s => s.Location);
             session.HasIndex(s => s.UserId);
             // Privacy invariant: referencing the instance field makes EF re-evaluate the owner per
             // query, so no User can ever read another User's Sessions (ADR-0002, CONTEXT.md).

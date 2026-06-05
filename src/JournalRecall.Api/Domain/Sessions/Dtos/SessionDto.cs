@@ -16,7 +16,8 @@ public sealed record SessionDto(
     IReadOnlyList<string> Topics,
     IReadOnlyList<string> People,
     MoodDto? Mood,
-    IReadOnlyList<SuggestionDto> Suggestions)
+    IReadOnlyList<SuggestionDto> Suggestions,
+    LocationDto? Location)
 {
     /// <summary>Projects a loaded Session, surfacing its effective status, metadata, and AI Suggestions.</summary>
     public static SessionDto From(Session session) => new(
@@ -25,5 +26,9 @@ public sealed record SessionDto(
         session.Topics.Select(t => t.Name).ToList(),
         session.People.Select(p => p.Name).ToList(),
         session.Mood is { } mood ? new MoodDto(mood.Key, mood.CustomValue) : null,
-        session.Suggestions.Select(s => new SuggestionDto(s.Kind, s.Value, s.MoodCustomValue)).ToList());
+        session.Suggestions.Select(s => new SuggestionDto(s.Kind, s.Value, s.MoodCustomValue)).ToList(),
+        session.Location is { } location ? new LocationDto(location.Latitude, location.Longitude) : null);
 }
+
+/// <summary>A Session's captured geo-point (CONTEXT.md Location): coordinates only.</summary>
+public sealed record LocationDto(double Latitude, double Longitude);

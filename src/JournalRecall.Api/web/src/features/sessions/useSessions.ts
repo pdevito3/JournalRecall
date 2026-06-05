@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as sessionsApi from './api'
 
 export function useCreateSession() {
-  return useMutation({ mutationFn: sessionsApi.createSession })
+  return useMutation({
+    mutationFn: (location?: sessionsApi.GeoPoint) => sessionsApi.createSession(location),
+  })
 }
 
 export function useSessionList(filter?: string) {

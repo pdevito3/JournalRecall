@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useMe } from '@/features/auth/useAuth'
 import { useCreateSession } from '@/features/sessions/useSessions'
+import { captureLocation } from '@/features/sessions/api'
+import { useSettings } from '@/features/settings/useSettings'
 import { Timeline } from '@/features/sessions/components/timeline'
 import { Button } from '@/shared/ui/button'
 
@@ -10,8 +12,18 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   const { data: user } = useMe()
+  const { data: settings } = useSettings()
   const navigate = useNavigate()
   const createSession = useCreateSession()
+
+  async function start() {
+    // With geo opt-in on, ask the browser for a point (the user may still decline) before creating.
+    const location = settings?.locationCaptureEnabled ? await captureLocation() : undefined
+    createSession.mutate(location, {
+      onSuccess: (session) =>
+        navigate({ to: '/sessions/$sessionId', params: { sessionId: session.id } }),
+    })
+  }
 
   return (
     <section className="space-y-6">
@@ -24,16 +36,7 @@ function Home() {
       </div>
 
       {user ? (
-        <Button
-          variant="primary"
-          isDisabled={createSession.isPending}
-          onPress={() =>
-            createSession.mutate(undefined, {
-              onSuccess: (session) =>
-                navigate({ to: '/sessions/$sessionId', params: { sessionId: session.id } }),
-            })
-          }
-        >
+        <Button variant="primary" isDisabled={createSession.isPending} onPress={start}>
           {createSession.isPending ? 'Starting…' : 'Start a session'}
         </Button>
       ) : (

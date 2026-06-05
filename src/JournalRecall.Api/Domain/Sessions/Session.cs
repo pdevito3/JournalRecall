@@ -23,6 +23,13 @@ public sealed class Session : BaseEntity
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public string RawDraft { get; private set; } = string.Empty;
 
+    /// <summary>The optional captured latitude/longitude (CONTEXT.md Location); null unless geo opt-in stamped one.</summary>
+    public double? Latitude { get; private set; }
+    public double? Longitude { get; private set; }
+
+    /// <summary>The captured geo-point as a value object, or null when none was stored.</summary>
+    public Location? Location => Sessions.Location.TryCreate(Latitude, Longitude, out var location) ? location : null;
+
     /// <summary>The AI-derived, polished copy produced by the latest Cleanup (CONTEXT.md). Empty until a run succeeds.</summary>
     public string CleanedDraft { get; private set; } = string.Empty;
 
@@ -86,9 +93,14 @@ public sealed class Session : BaseEntity
 
     private Session() { } // EF
 
-    public static Session Create(Guid userId)
+    public static Session Create(Guid userId, Location? location = null)
     {
-        var session = new Session { UserId = userId };
+        var session = new Session
+        {
+            UserId = userId,
+            Latitude = location?.Latitude,
+            Longitude = location?.Longitude,
+        };
         session.QueueDomainEvent(new SessionCreated(session.Id));
         return session;
     }

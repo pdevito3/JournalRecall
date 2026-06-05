@@ -1,6 +1,6 @@
 # 0015 — Location opt-in
 
-**Phase:** 7 · **Type:** AFK · **Status:** todo
+**Phase:** 7 · **Type:** AFK · **Status:** done
 
 ## What to build
 

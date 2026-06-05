@@ -38,6 +38,7 @@ export function Timeline() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-4">
         <TimeZonePicker />
+        <LocationToggle />
         <label className="flex items-center gap-2 text-sm text-muted">
           Jump to day
           <input
@@ -150,7 +151,7 @@ function TimeZonePicker() {
   useEffect(() => {
     if (settings && settings.timeZoneId === null) {
       const browser = Intl.DateTimeFormat().resolvedOptions().timeZone
-      if (browser) updateSettings.mutate({ timeZoneId: browser })
+      if (browser) updateSettings.mutate({ ...settings, timeZoneId: browser })
     }
   }, [settings, updateSettings])
 
@@ -164,7 +165,7 @@ function TimeZonePicker() {
       Timezone
       <select
         value={current}
-        onChange={(e) => updateSettings.mutate({ timeZoneId: e.target.value })}
+        onChange={(e) => updateSettings.mutate({ ...settings, timeZoneId: e.target.value })}
         className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         {zones.map((zone) => (
@@ -173,6 +174,26 @@ function TimeZonePicker() {
           </option>
         ))}
       </select>
+    </label>
+  )
+}
+
+/** Per-user geo opt-in: when on, starting a session asks the browser for a single point (issue 0015). */
+function LocationToggle() {
+  const { data: settings } = useSettings()
+  const updateSettings = useUpdateSettings()
+
+  if (!settings) return null
+
+  return (
+    <label className="flex items-center gap-2 text-sm text-muted">
+      <input
+        type="checkbox"
+        checked={settings.locationCaptureEnabled}
+        onChange={(e) => updateSettings.mutate({ ...settings, locationCaptureEnabled: e.target.checked })}
+        className="rounded border-border accent-accent"
+      />
+      Capture location on new sessions
     </label>
   )
 }

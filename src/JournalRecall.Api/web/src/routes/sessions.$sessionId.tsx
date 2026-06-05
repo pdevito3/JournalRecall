@@ -56,7 +56,14 @@ function SessionEditor() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-content">Session</h1>
+        <div className="space-y-0.5">
+          <h1 className="text-lg font-semibold text-content">Session</h1>
+          {session.location ? (
+            <p className="text-xs text-muted">
+              📍 {session.location.latitude.toFixed(5)}, {session.location.longitude.toFixed(5)}
+            </p>
+          ) : null}
+        </div>
         <SaveStatus pending={saveDraft.isPending} success={saveDraft.isSuccess} error={saveDraft.isError} />
       </div>
 

@@ -37,6 +37,8 @@ public static class GetSession
                     s.MoodCustomValue,
                     Suggestions = s.Suggestions
                         .Select(g => new SuggestionDto(g.Kind, g.Value, g.MoodCustomValue)).ToList(),
+                    s.Latitude,
+                    s.Longitude,
                 })
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -47,7 +49,10 @@ public static class GetSession
                 row.Id, row.CreatedAt, row.RawDraft, row.CleanedDraft, row.Synopsis, row.Status,
                 row.CleanedHasHandEdits, row.Topics, row.People,
                 row.MoodKey is null ? null : new MoodDto(row.MoodKey, row.MoodCustomValue),
-                row.Suggestions);
+                row.Suggestions,
+                Location.TryCreate(row.Latitude, row.Longitude, out var location)
+                    ? new LocationDto(location.Latitude, location.Longitude)
+                    : null);
         }
     }
 }

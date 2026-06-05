@@ -20,7 +20,7 @@ are **AFK** (no human review gate). Work them in dependency order.
 | [0012](0012-ai-metadata-suggestions.md) | AI metadata Suggestions (accept/reject) | 5 | 0008, 0011 | done |
 | [0013](0013-day-week-summaries.md) | Day & Week Summaries (on-demand) | 6 | 0007, 0004 | done |
 | [0014](0014-period-rollups-staleness.md) | Month/Quarter/Year roll-ups + staleness propagation | 6 | 0013 | done |
-| [0015](0015-location-opt-in.md) | Location opt-in | 7 | 0004 | todo |
+| [0015](0015-location-opt-in.md) | Location opt-in | 7 | 0004 | done |
 | [0016](0016-admin-surface.md) | Admin surface: user management + AI provider config | 7 | 0003, 0007 | todo |
 | [0017](0017-ai-lifecycle-observability.md) | AI-lifecycle observability + redaction | 7 | 0008 | todo |
 | [0018](0018-single-container-deployment.md) | Single-container deployment | 8 | 0001 | todo |

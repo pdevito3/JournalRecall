@@ -33,6 +33,12 @@ export interface Suggestion {
   moodCustomValue: string | null
 }
 
+/** A captured geo-point (CONTEXT.md Location): coordinates only. */
+export interface GeoPoint {
+  latitude: number
+  longitude: number
+}
+
 export interface Session {
   id: string
   createdAt: string
@@ -45,6 +51,7 @@ export interface Session {
   people: string[]
   mood: Mood | null
   suggestions: Suggestion[]
+  location: GeoPoint | null
 }
 
 export async function respondToSuggestion(
@@ -72,11 +79,30 @@ export async function saveMetadata(id: string, metadata: Metadata): Promise<void
   if (!res.ok) throw new Error('Could not save metadata')
 }
 
-export async function createSession(): Promise<Session> {
-  const res = await fetch('/api/sessions', { method: 'POST', credentials: 'include' })
+export async function createSession(location?: GeoPoint): Promise<Session> {
+  // A captured point is sent only when the user opted in and allowed it; otherwise a plain POST.
+  const res = await fetch('/api/sessions', {
+    method: 'POST',
+    credentials: 'include',
+    ...(location
+      ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(location) }
+      : {}),
+  })
   if (res.status === 401) throw new Error('Please sign in to start a session')
   if (!res.ok) throw new Error('Could not start a session')
   return res.json()
+}
+
+/** Asks the browser for one geo-point; resolves undefined if unsupported, denied, or it times out. */
+export function captureLocation(): Promise<GeoPoint | undefined> {
+  return new Promise((resolve) => {
+    if (!('geolocation' in navigator)) return resolve(undefined)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+      () => resolve(undefined), // declined or error → no location
+      { timeout: 10_000 },
+    )
+  })
 }
 
 export interface SessionListItem {

@@ -16,9 +16,11 @@ public static class SessionEndpoints
         group.MapGet("", async (string? filter, ISender sender) =>
             Results.Ok(await sender.Send(new GetSessionList.Query(filter))));
 
-        group.MapPost("", async (ISender sender) =>
+        // Optional body carries a captured lat/long (geo opt-in); a plain POST with no body creates
+        // a location-less Session as before (issue 0015).
+        group.MapPost("", async (CreateSession.Request? body, ISender sender) =>
         {
-            var dto = await sender.Send(new CreateSession.Command());
+            var dto = await sender.Send(new CreateSession.Command(body?.Latitude, body?.Longitude));
             return Results.Created($"/api/sessions/{dto.Id}", dto);
         });
 

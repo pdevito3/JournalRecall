@@ -16,12 +16,12 @@ public static class GetUserSettings
         public async Task<UserSettingsDto> Handle(Query request, CancellationToken cancellationToken)
         {
             var userId = currentUser.UserId ?? throw new InvalidOperationException("No authenticated user.");
-            var timeZoneId = await db.Users
+            var settings = await db.Users
                 .Where(u => u.Id == userId)
-                .Select(u => u.TimeZoneId)
-                .FirstOrDefaultAsync(cancellationToken);
+                .Select(u => new UserSettingsDto(u.TimeZoneId, u.LocationCaptureEnabled))
+                .FirstAsync(cancellationToken);
 
-            return new UserSettingsDto(timeZoneId);
+            return settings;
         }
     }
 }
