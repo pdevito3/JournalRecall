@@ -16,8 +16,8 @@ public static class CleanupAgent
     /// <summary>Logical model name; resolved to a keyed <see cref="IChatClient"/> registered as "cleanup".</summary>
     public const string ModelKey = "cleanup";
 
-    // The known moods come straight from the MoodType SmartEnum so the prompt can never drift from the domain.
-    private static readonly string KnownMoods = string.Join(", ", MoodType.Known.Select(m => m.Name));
+    // The known moods come straight from the Mood value object so the prompt can never drift from the domain.
+    private static readonly string KnownMoods = string.Join(", ", Mood.KnownKeys);
 
     private static readonly string Instructions =
         $$"""

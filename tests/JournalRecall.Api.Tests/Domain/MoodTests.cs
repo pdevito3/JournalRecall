@@ -4,19 +4,19 @@ using JournalRecall.Api.Domain.Sessions.Metadata;
 namespace JournalRecall.Api.Tests.Domain;
 
 /// <summary>
-/// Unit tests for the <see cref="Mood"/> value object and its <see cref="MoodType"/> SmartEnum backing:
-/// known moods carry no text, Custom requires free text, parsing is case-insensitive and total, and the
-/// known-mood set excludes Custom.
+/// Unit tests for the <see cref="Mood"/> value object (its SmartEnum backing is a private detail): known
+/// moods carry no text, Custom requires free text, parsing is case-insensitive and total, and the
+/// known-mood keys exclude Custom.
 /// </summary>
 public class MoodTests
 {
     [Fact]
     public void A_known_mood_has_its_name_as_the_key_and_no_custom_value()
     {
-        var mood = Mood.Of(MoodType.Joyful);
+        var mood = Mood.Of("Joyful");
 
-        mood.Type.ShouldBe(MoodType.Joyful);
         mood.Key.ShouldBe("Joyful");
+        mood.IsCustom.ShouldBeFalse();
         mood.CustomValue.ShouldBeNull();
         mood.Display.ShouldBe("Joyful");
     }
@@ -24,10 +24,10 @@ public class MoodTests
     [Fact]
     public void A_custom_mood_carries_trimmed_free_text_and_displays_it()
     {
-        var mood = Mood.Of(MoodType.Custom, "  bittersweet  ");
+        var mood = Mood.Custom("  bittersweet  ");
 
-        mood.Type.ShouldBe(MoodType.Custom);
         mood.Key.ShouldBe("Custom");
+        mood.IsCustom.ShouldBeTrue();
         mood.CustomValue.ShouldBe("bittersweet");
         mood.Display.ShouldBe("bittersweet");
     }
@@ -38,13 +38,14 @@ public class MoodTests
     [InlineData("   ")]
     public void A_custom_mood_without_text_is_rejected(string? text)
     {
-        Should.Throw<ArgumentException>(() => Mood.Of(MoodType.Custom, text));
+        Should.Throw<ArgumentException>(() => Mood.Custom(text!));
+        Should.Throw<ArgumentException>(() => Mood.Of("Custom", text));
     }
 
     [Fact]
     public void A_known_mood_ignores_any_supplied_custom_text()
     {
-        Mood.Of(MoodType.Calm, "ignored").CustomValue.ShouldBeNull();
+        Mood.Of("Calm", "ignored").CustomValue.ShouldBeNull();
     }
 
     [Theory]
@@ -53,13 +54,13 @@ public class MoodTests
     [InlineData("  GRATEFUL ")]
     public void Parsing_a_known_key_is_case_insensitive_and_trims(string key)
     {
-        Mood.Of(key, null).Type.IsCustom.ShouldBeFalse();
+        Mood.Of(key).IsCustom.ShouldBeFalse();
     }
 
     [Fact]
     public void Parsing_an_unknown_key_throws()
     {
-        Should.Throw<ArgumentException>(() => Mood.Of("euphoric", null));
+        Should.Throw<ArgumentException>(() => Mood.Of("euphoric"));
     }
 
     [Fact]
@@ -78,17 +79,17 @@ public class MoodTests
     }
 
     [Fact]
-    public void Known_moods_are_the_ten_pickable_types_excluding_custom()
+    public void Known_keys_are_the_ten_pickable_moods_excluding_custom()
     {
-        MoodType.Known.Count.ShouldBe(10);
-        MoodType.Known.ShouldNotContain(MoodType.Custom);
-        MoodType.List.Count.ShouldBe(11); // the ten known + Custom
+        Mood.KnownKeys.Count.ShouldBe(10);
+        Mood.KnownKeys.ShouldNotContain("Custom");
+        Mood.KnownKeys.ShouldContain("Joyful");
     }
 
     [Fact]
     public void Moods_have_value_equality()
     {
-        Mood.Of(MoodType.Joyful).ShouldBe(Mood.Of(MoodType.Joyful));
-        Mood.Of(MoodType.Custom, "a").ShouldNotBe(Mood.Of(MoodType.Custom, "b"));
+        Mood.Of("Joyful").ShouldBe(Mood.Of("Joyful"));
+        Mood.Custom("a").ShouldNotBe(Mood.Custom("b"));
     }
 }

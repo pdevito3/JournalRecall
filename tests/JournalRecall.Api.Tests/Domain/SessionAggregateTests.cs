@@ -148,9 +148,9 @@ public class SessionAggregateTests
     public void Setting_and_clearing_mood()
     {
         var s = New();
-        s.SetMood(Mood.Of(MoodType.Joyful));
+        s.SetMood(Mood.Of("Joyful"));
         s.MoodKey.ShouldBe("Joyful");
-        s.Mood!.Type.ShouldBe(MoodType.Joyful);
+        s.Mood!.Key.ShouldBe("Joyful");
 
         s.SetMood(null);
         s.MoodKey.ShouldBeNull();
@@ -163,10 +163,10 @@ public class SessionAggregateTests
         var s = New();
         s.SetUserTopics(["work"]);
         s.SetUserPeople(["Sam"]);
-        s.SetMood(Mood.Of(MoodType.Joyful));
+        s.SetMood(Mood.Of("Joyful"));
 
         // Re-suggesting "work"/"Sam" and a mood is suppressed; only the genuinely new items remain.
-        s.ReplaceAiSuggestions(["work", "travel"], ["Sam", "Alex"], Mood.Of(MoodType.Content));
+        s.ReplaceAiSuggestions(["work", "travel"], ["Sam", "Alex"], Mood.Of("Content"));
 
         s.Suggestions.ShouldContain(g => g.Kind == SuggestionKind.Topic && g.Value == "travel");
         s.Suggestions.ShouldContain(g => g.Kind == SuggestionKind.Person && g.Value == "Alex");
@@ -210,11 +210,11 @@ public class SessionAggregateTests
     public void Accepting_a_custom_mood_suggestion_sets_the_mood_with_its_text()
     {
         var s = New();
-        s.ReplaceAiSuggestions([], [], Mood.Of(MoodType.Custom, "wistful"));
+        s.ReplaceAiSuggestions([], [], Mood.Custom("wistful"));
 
         s.AcceptSuggestion(SuggestionKind.Mood, "Custom").ShouldBeTrue();
 
-        s.Mood!.Type.ShouldBe(MoodType.Custom);
+        s.Mood!.IsCustom.ShouldBeTrue();
         s.Mood.CustomValue.ShouldBe("wistful");
     }
 }

@@ -68,7 +68,7 @@ public sealed class Session : BaseEntity
     /// <summary>AI-proposed metadata awaiting accept/reject (CONTEXT.md). Distinct from accepted metadata.</summary>
     public IReadOnlyList<MetadataSuggestion> Suggestions => _suggestions;
 
-    /// <summary>The mood key (a <see cref="Metadata.MoodType"/> name, known or Custom); null when no mood is set.</summary>
+    /// <summary>The mood key (a <see cref="Mood"/> key — a known mood name or "Custom"); null when no mood is set.</summary>
     public string? MoodKey { get; private set; }
 
     /// <summary>The free-text value for a Custom mood; null otherwise.</summary>
