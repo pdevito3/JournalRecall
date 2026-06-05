@@ -30,20 +30,20 @@ are **AFK** (no human review gate). Work them in dependency order.
 | [0022](0022-access-gate-public-auth-config.md) | Access gate (server + client) & public auth config | 9 | 0021 | ready |
 | [0023](0023-operator-controlled-registration.md) | Operator-controlled registration | 9 | 0022 | ready |
 | [0024](0024-temp-passwords-forced-change.md) | Temporary passwords & forced password change | 9 | 0019, 0016 | ready |
-| [0025](0025-test-suite-scaffold-four-projects-adr.md) | Test-suite scaffold: four projects, packages, conventions, ADR-0006 | 10 | — | ready |
-| [0026](0026-sharedtesthelpers-builders-fakers-unit-proof.md) | SharedTestHelpers builders/fakers + unit-layer proof | 10 | 0025 | ready |
-| [0027](0027-integration-harness-reference-tests.md) | Integration harness + reference tests | 10 | 0026 | ready |
-| [0028](0028-functional-harness-reference-tests.md) | Functional harness + reference tests | 10 | 0026 | ready |
-| [0029](0029-tests-readme-decision-tree.md) | `tests/README.md` decision tree | 10 | 0027, 0028 | ready |
-| [0030](0030-migrate-domain-tests-to-unit.md) | Migrate domain tests → UnitTests | 10 | 0026 | ready |
-| [0031](0031-migrate-sessions-area.md) | Migrate Sessions area (sessions, revisions, timeline, journaling-day) | 10 | 0027, 0028 | ready |
-| [0032](0032-migrate-metadata-location.md) | Migrate Metadata & Location | 10 | 0027, 0028 | ready |
-| [0033](0033-migrate-cleanup-corrections.md) | Migrate Cleanup & Corrections | 10 | 0027, 0028 | ready |
-| [0034](0034-migrate-summaries.md) | Migrate Summaries | 10 | 0027, 0028 | ready |
-| [0035](0035-migrate-core-auth.md) | Migrate core auth (login, refresh, cookie hardening, forced change) | 10 | 0028 | ready |
-| [0036](0036-migrate-access-setup-admin.md) | Migrate access gate, setup, admin & registration | 10 | 0028 | ready |
-| [0037](0037-migrate-health-observability.md) | Migrate Health & Observability | 10 | 0027, 0028 | ready |
-| [0038](0038-retire-api-tests.md) | Retire `Api.Tests` | 10 | 0030–0037 | ready |
+| [TEST-0001](TEST-0001-test-suite-scaffold-four-projects-adr.md) | Test-suite scaffold: four projects, packages, conventions, ADR-0006 | 10 | — | ready |
+| [TEST-0002](TEST-0002-sharedtesthelpers-builders-fakers-unit-proof.md) | SharedTestHelpers builders/fakers + unit-layer proof | 10 | TEST-0001 | ready |
+| [TEST-0003](TEST-0003-integration-harness-reference-tests.md) | Integration harness + reference tests | 10 | TEST-0002 | ready |
+| [TEST-0004](TEST-0004-functional-harness-reference-tests.md) | Functional harness + reference tests | 10 | TEST-0002 | ready |
+| [TEST-0005](TEST-0005-tests-readme-decision-tree.md) | `tests/README.md` decision tree | 10 | TEST-0003, TEST-0004 | ready |
+| [TEST-0006](TEST-0006-migrate-domain-tests-to-unit.md) | Migrate domain tests → UnitTests | 10 | TEST-0002 | ready |
+| [TEST-0007](TEST-0007-migrate-sessions-area.md) | Migrate Sessions area (sessions, revisions, timeline, journaling-day) | 10 | TEST-0003, TEST-0004 | ready |
+| [TEST-0008](TEST-0008-migrate-metadata-location.md) | Migrate Metadata & Location | 10 | TEST-0003, TEST-0004 | ready |
+| [TEST-0009](TEST-0009-migrate-cleanup-corrections.md) | Migrate Cleanup & Corrections | 10 | TEST-0003, TEST-0004 | ready |
+| [TEST-0010](TEST-0010-migrate-summaries.md) | Migrate Summaries | 10 | TEST-0003, TEST-0004 | ready |
+| [TEST-0011](TEST-0011-migrate-core-auth.md) | Migrate core auth (login, refresh, cookie hardening, forced change) | 10 | TEST-0004 | ready |
+| [TEST-0012](TEST-0012-migrate-access-setup-admin.md) | Migrate access gate, setup, admin & registration | 10 | TEST-0004 | ready |
+| [TEST-0013](TEST-0013-migrate-health-observability.md) | Migrate Health & Observability | 10 | TEST-0003, TEST-0004 | ready |
+| [TEST-0014](TEST-0014-retire-api-tests.md) | Retire `Api.Tests` | 10 | TEST-0006–TEST-0013 | ready |
 
 ## Suggested order
 
@@ -55,8 +55,8 @@ no AI. **0007** (library port) can run in parallel after 0001. AI features (0008
 0021 → 0022 → 0023**, with **0024** able to run in parallel after **0019**.
 
 **Phase 10** (three-layer test suite + builders/fakers, realizing PRD-0003 / ADR-0006): scaffold
-first — **0025 → 0026**, then the two harnesses **0027** and **0028** in parallel, with **0029**
-(docs) after both. Phase 2 migration runs once **0027/0028** land: **0030** (domain → unit) needs
-only **0026**; the per-area migrations (**0031–0034**, **0037**) need both harnesses, while the
-auth-area migrations (**0035**, **0036**) need only the functional harness. **0038** (delete
-`Api.Tests`) is the capstone — it blocks on every migration (**0030–0037**).
+first — **TEST-0001 → TEST-0002**, then the two harnesses **TEST-0003** and **TEST-0004** in parallel, with **TEST-0005**
+(docs) after both. Phase 2 migration runs once **TEST-0003/TEST-0004** land: **TEST-0006** (domain → unit) needs
+only **TEST-0002**; the per-area migrations (**TEST-0007–TEST-0010**, **TEST-0013**) need both harnesses, while the
+auth-area migrations (**TEST-0011**, **TEST-0012**) need only the functional harness. **TEST-0014** (delete
+`Api.Tests`) is the capstone — it blocks on every migration (**TEST-0006–TEST-0013**).
