@@ -47,6 +47,7 @@
     <PackageVersion Include="MediatR" Version="12.4.1" />
     <PackageVersion Include="Mapster" Version="7.4.0" />
     <PackageVersion Include="QueryKit" Version="1.5.0" />
+    <PackageVersion Include="Ardalis.SmartEnum" Version="8.2.0" />
 
     <!-- Host wiring (resilience + service discovery) -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />

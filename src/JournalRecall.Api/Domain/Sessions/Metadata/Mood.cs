@@ -1,62 +1,76 @@
 namespace JournalRecall.Api.Domain.Sessions.Metadata;
 
 /// <summary>
-/// How the user felt during a Session (CONTEXT.md): a known mood from the app-defined set, or
-/// <see cref="CustomKey"/> which additionally carries a free-text value. A small value object —
-/// persisted on the Session as the scalar key + optional custom text, not as its own table.
+/// How the user felt during a Session (CONTEXT.md): a <see cref="MoodType"/> — one of the known moods,
+/// or <see cref="MoodType.Custom"/> which additionally carries a free-text value. A small value object,
+/// persisted on the Session as the scalar mood key (<see cref="MoodType.Name"/>) + optional custom text,
+/// not as its own table.
 /// </summary>
 public sealed record Mood
 {
-    /// <summary>The app-defined known moods (the "SmartEnum" set). Not user-extensible.</summary>
-    public static readonly IReadOnlyList<string> Known =
-        ["Joyful", "Content", "Calm", "Neutral", "Tired", "Anxious", "Sad", "Angry", "Excited", "Grateful"];
+    /// <summary>The mood as a SmartEnum member — the type-safe core of this value object.</summary>
+    public MoodType Type { get; }
 
-    /// <summary>The reserved key whose value is the user's free text.</summary>
-    public const string CustomKey = "Custom";
-
-    public string Key { get; }
+    /// <summary>The user's free text for a <see cref="MoodType.Custom"/> mood; null for a known mood.</summary>
     public string? CustomValue { get; }
 
-    private Mood(string key, string? customValue)
+    private Mood(MoodType type, string? customValue)
     {
-        Key = key;
+        Type = type;
         CustomValue = customValue;
     }
 
     /// <summary>
-    /// Builds a validated Mood, or throws when the key is unknown or a Custom mood is missing its text.
+    /// Builds a validated Mood from a <see cref="MoodType"/>, requiring free text for
+    /// <see cref="MoodType.Custom"/> and rejecting it for a known mood.
+    /// </summary>
+    public static Mood Of(MoodType type, string? customValue = null)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+
+        if (type.IsCustom)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(customValue);
+            return new Mood(type, customValue.Trim());
+        }
+
+        return new Mood(type, null);
+    }
+
+    /// <summary>
+    /// Builds a validated Mood from a string key (the boundary form used by DTOs/AI), or throws when the
+    /// key is unknown or a Custom mood is missing its text.
     /// </summary>
     public static Mood Of(string key, string? customValue)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        key = key.Trim();
+        if (!MoodType.TryFromName(key.Trim(), ignoreCase: true, out var type))
+            throw new ArgumentException($"Unknown mood '{key}'.", nameof(key));
 
-        if (key.Equals(CustomKey, StringComparison.OrdinalIgnoreCase))
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(customValue, nameof(customValue));
-            return new Mood(CustomKey, customValue.Trim());
-        }
-
-        var known = Known.FirstOrDefault(m => m.Equals(key, StringComparison.OrdinalIgnoreCase))
-            ?? throw new ArgumentException($"Unknown mood '{key}'.", nameof(key));
-        return new Mood(known, null);
+        return Of(type, customValue);
     }
 
-    /// <summary>Non-throwing <see cref="Of"/>: returns false when the key is unknown or Custom lacks text.</summary>
+    /// <summary>Non-throwing <see cref="Of(string, string?)"/>: false when the key is unknown or Custom lacks text.</summary>
     public static bool TryOf(string? key, string? customValue, out Mood mood)
     {
+        mood = null!;
+        if (string.IsNullOrWhiteSpace(key) || !MoodType.TryFromName(key.Trim(), ignoreCase: true, out var type))
+            return false;
+
         try
         {
-            mood = Of(key!, customValue);
+            mood = Of(type, customValue);
             return true;
         }
         catch (ArgumentException)
         {
-            mood = null!;
             return false;
         }
     }
 
-    /// <summary>The user-facing label: the free text for a Custom mood, else the known key.</summary>
-    public string Display => Key == CustomKey ? CustomValue ?? CustomKey : Key;
+    /// <summary>The persisted/serialized key — the <see cref="MoodType.Name"/>.</summary>
+    public string Key => Type.Name;
+
+    /// <summary>The user-facing label: the free text for a Custom mood, else the known mood's name.</summary>
+    public string Display => Type.IsCustom ? CustomValue ?? MoodType.Custom.Name : Type.Name;
 }

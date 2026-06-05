@@ -16,6 +16,7 @@
     <PackageReference Include="MediatR" />
     <PackageReference Include="Mapster" />
     <PackageReference Include="QueryKit" />
+    <PackageReference Include="Ardalis.SmartEnum" />
   </ItemGroup>
 
   <ItemGroup>

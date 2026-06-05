@@ -16,8 +16,11 @@ public static class CleanupAgent
     /// <summary>Logical model name; resolved to a keyed <see cref="IChatClient"/> registered as "cleanup".</summary>
     public const string ModelKey = "cleanup";
 
-    private const string Instructions =
-        """
+    // The known moods come straight from the MoodType SmartEnum so the prompt can never drift from the domain.
+    private static readonly string KnownMoods = string.Join(", ", MoodType.Known.Select(m => m.Name));
+
+    private static readonly string Instructions =
+        $$"""
         You are a journaling cleanup assistant. You are given the Raw text a user wrote or dictated in
         a single journaling session. Produce:
 
@@ -29,8 +32,7 @@ public static class CleanupAgent
         2. "synopsis": a one-to-three sentence recap of this single session, in the third person.
         3. "topics": 0-5 short life-area tags you infer (e.g. "work", "parenthood", "travel").
         4. "people": names of people referenced in the text (0-5).
-        5. "mood": the writer's apparent mood as one of [Joyful, Content, Calm, Neutral, Tired,
-           Anxious, Sad, Angry, Excited, Grateful], or null if unclear.
+        5. "mood": the writer's apparent mood as one of [{{KnownMoods}}], or null if unclear.
 
         These are *suggestions* the user may accept or reject; be conservative and only include what the
         text supports. Respond with ONLY a single JSON object and nothing else, in exactly this shape:
