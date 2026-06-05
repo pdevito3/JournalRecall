@@ -33,6 +33,9 @@ public static class AuthRegistration
         services.AddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
         services.AddScoped<RefreshTokenService>();
 
+        // Operator-controlled registration (issue 0023): app-wide AuthSettings reader/writer.
+        services.AddScoped<AuthSettingsService>();
+
         services.AddIdentityCore<User>(options =>
             {
                 options.User.RequireUniqueEmail = true;

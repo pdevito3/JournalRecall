@@ -28,6 +28,15 @@ export function useSetup() {
   return useMutation({ mutationFn: authApi.setup })
 }
 
+/** Public instance config (needs-setup / self-registration), shared with the route guard's cache. */
+export function useAuthConfig() {
+  return useQuery({
+    queryKey: ['auth', 'config'],
+    queryFn: authApi.fetchAuthConfig,
+    staleTime: 30_000,
+  })
+}
+
 export function useLogout() {
   const queryClient = useQueryClient()
   return useMutation({

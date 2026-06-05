@@ -5,9 +5,11 @@ import {
   useAdminUsers,
   useAiProvider,
   useCreateUser,
+  useRegistrationSettings,
   useSetUserDisabled,
   useSetUserRole,
   useUpdateAiProvider,
+  useUpdateRegistration,
 } from '@/features/admin/useAdmin'
 import { PROVIDERS, ROLES, type AdminUser } from '@/features/admin/api'
 import { Button } from '@/shared/ui/button'
@@ -34,8 +36,35 @@ function Admin() {
         </p>
       </div>
       <Users />
+      <RegistrationSettingsForm />
       <AiProviderForm />
     </section>
+  )
+}
+
+function RegistrationSettingsForm() {
+  const { data: settings } = useRegistrationSettings()
+  const update = useUpdateRegistration()
+  const enabled = settings?.selfRegistrationEnabled ?? false
+
+  return (
+    <div className="space-y-2">
+      <h2 className="text-lg font-medium text-content">Registration</h2>
+      <p className="text-sm text-muted">
+        When open, anyone can create their own account (as a Member). When closed, only an Admin can add
+        users. Closed by default.
+      </p>
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={enabled}
+          disabled={!settings || update.isPending}
+          onChange={(e) => update.mutate({ selfRegistrationEnabled: e.target.checked })}
+        />
+        <span className="text-content">Allow self-registration</span>
+        {update.isError ? <span className="text-sm text-red-400">{update.error.message}</span> : null}
+      </label>
+    </div>
   )
 }
 

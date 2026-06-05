@@ -27,6 +27,22 @@ export function useSetUserDisabled() {
   )
 }
 
+export function useRegistrationSettings() {
+  return useQuery({ queryKey: ['admin', 'registration'], queryFn: adminApi.getRegistration })
+}
+
+export function useUpdateRegistration() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: adminApi.updateRegistration,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'registration'] })
+      // The public auth config exposes the same flag (conditional register link / route guard).
+      queryClient.invalidateQueries({ queryKey: ['auth', 'config'] })
+    },
+  })
+}
+
 export function useAiProvider() {
   return useQuery({ queryKey: ['admin', 'ai-provider'], queryFn: adminApi.getAiProvider })
 }

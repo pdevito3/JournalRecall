@@ -41,6 +41,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
     public DbSet<Correction> Corrections => Set<Correction>();
     public DbSet<Summary> Summaries => Set<Summary>();
     public DbSet<AiProviderSettings> AiProviderSettings => Set<AiProviderSettings>();
+    public DbSet<AuthSettings> AuthSettings => Set<AuthSettings>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -140,6 +141,14 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             provider.ToTable("ai_provider_settings");
             provider.HasKey(p => p.Id);
             provider.Ignore(p => p.DomainEvents);
+            // App-wide (not per-user): no query filter — the admin surface owns this single row.
+        });
+
+        modelBuilder.Entity<AuthSettings>(auth =>
+        {
+            auth.ToTable("auth_settings");
+            auth.HasKey(a => a.Id);
+            auth.Ignore(a => a.DomainEvents);
             // App-wide (not per-user): no query filter — the admin surface owns this single row.
         });
 

@@ -17,3 +17,9 @@ public sealed record AiProviderDto(string Provider, string? Endpoint, string Mod
 
 /// <summary>Set the app-wide AI provider config. A blank ApiKey leaves any existing stored key in place.</summary>
 public sealed record AiProviderRequest(string Provider, string? Endpoint, string? ApiKey, string Model);
+
+/// <summary>Whether the instance is open to self-registration (issue 0023). Closed by default.</summary>
+public sealed record RegistrationSettingsDto(bool SelfRegistrationEnabled);
+
+/// <summary>Toggle self-registration on or off (Admin-only).</summary>
+public sealed record RegistrationSettingsRequest(bool SelfRegistrationEnabled);

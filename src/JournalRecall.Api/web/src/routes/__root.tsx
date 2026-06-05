@@ -2,15 +2,12 @@ import type { ReactNode } from 'react'
 import { createRootRouteWithContext, Link, Outlet, redirect, useNavigate } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
 import { fetchAuthConfig, fetchMe } from '@/features/auth/api'
-import { useLogout, useMe } from '@/features/auth/useAuth'
+import { useAuthConfig, useLogout, useMe } from '@/features/auth/useAuth'
 import { Button } from '@/shared/ui/button'
 
 export interface RouterContext {
   queryClient: QueryClient
 }
-
-// Anonymous client routes that don't require a session (mirrors the server access gate, issue 0022).
-const PUBLIC_ROUTES = ['/login', '/register', '/setup']
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   // Client-side access guard: instant in-app redirects that mirror the server gate, so navigation
@@ -28,9 +25,13 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       if (path !== '/setup') throw redirect({ to: '/setup' })
       return
     }
-    // Already set up: setup is closed; public auth routes stay open.
+    // Already set up: setup is closed; login stays open; register opens only when enabled (issue 0023).
     if (path === '/setup') throw redirect({ to: '/login' })
-    if (PUBLIC_ROUTES.includes(path)) return
+    if (path === '/login') return
+    if (path === '/register') {
+      if (!config.selfRegistrationEnabled) throw redirect({ to: '/login' })
+      return
+    }
 
     // Protected route: require a session (fetchMe silently refreshes an expired access token).
     const me = await context.queryClient.ensureQueryData({ queryKey: ['me'], queryFn: fetchMe })
@@ -73,6 +74,7 @@ function AdminNavLink() {
 
 function AuthControls() {
   const { data: user, isLoading } = useMe()
+  const { data: config } = useAuthConfig()
   const logout = useLogout()
   const navigate = useNavigate()
 
@@ -82,7 +84,7 @@ function AuthControls() {
     return (
       <>
         <NavLink to="/login">Sign in</NavLink>
-        <NavLink to="/register">Register</NavLink>
+        {config?.selfRegistrationEnabled ? <NavLink to="/register">Register</NavLink> : null}
       </>
     )
   }

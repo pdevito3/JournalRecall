@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { AuthForm } from '@/features/auth/components/auth-form'
-import { useLogin } from '@/features/auth/useAuth'
+import { useAuthConfig, useLogin } from '@/features/auth/useAuth'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -9,6 +9,7 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate()
   const login = useLogin()
+  const { data: config } = useAuthConfig()
 
   return (
     <AuthForm
@@ -18,12 +19,15 @@ function LoginPage() {
       error={login.error?.message}
       onSubmit={(credentials) => login.mutate(credentials, { onSuccess: () => navigate({ to: '/' }) })}
       footer={
-        <>
-          New here?{' '}
-          <Link to="/register" className="text-accent hover:underline">
-            Create an account
-          </Link>
-        </>
+        // The "create an account" link appears only when the operator has opened self-registration.
+        config?.selfRegistrationEnabled ? (
+          <>
+            New here?{' '}
+            <Link to="/register" className="text-accent hover:underline">
+              Create an account
+            </Link>
+          </>
+        ) : null
       }
     />
   )

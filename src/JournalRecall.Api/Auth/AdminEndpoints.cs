@@ -66,6 +66,17 @@ public static class AdminEndpoints
         group.MapPost("/users/{id:guid}/enable", (Guid id, UserManager<User> users, RefreshTokenService refreshTokens) =>
             SetDisabled(id, false, users, refreshTokens));
 
+        // --- Operator-controlled registration (issue 0023) ---
+
+        group.MapGet("/registration", async (AuthSettingsService authSettings) =>
+            Results.Ok(new RegistrationSettingsDto(await authSettings.SelfRegistrationEnabledAsync())));
+
+        group.MapPut("/registration", async (RegistrationSettingsRequest body, AuthSettingsService authSettings) =>
+        {
+            await authSettings.SetSelfRegistrationAsync(body.SelfRegistrationEnabled);
+            return Results.NoContent();
+        });
+
         // --- App-wide AI provider config ---
 
         group.MapGet("/ai-provider", async (JournalRecallDbContext db) =>

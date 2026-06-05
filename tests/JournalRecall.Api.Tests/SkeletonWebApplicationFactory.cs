@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Trace;
+using JournalRecall.Api.Auth;
 
 namespace JournalRecall.Api.Tests;
 
@@ -46,14 +48,37 @@ public class SkeletonWebApplicationFactory : WebApplicationFactory<Program>
         {
             services.AddOpenTelemetry().WithTracing(tracing =>
                 tracing.AddInMemoryExporter(ExportedActivities));
+            // Most tests just need to create Users via /api/auth/register, which is closed by default
+            // (issue 0023). Open it for the test instance so those tests need no policy ceremony;
+            // policy-specific tests use a factory that keeps the real closed default (see below).
+            if (SeedSelfRegistration)
+                services.AddHostedService<SelfRegistrationSeeder>();
             ConfigureTestServices(services);
         });
     }
+
+    /// <summary>Whether to seed the test instance with self-registration enabled (default true). Override
+    /// to false to exercise the real closed-by-default behavior.</summary>
+    protected virtual bool SeedSelfRegistration => true;
 
     /// <summary>Hook for subclasses to override host services (e.g. stub the AI chat client).</summary>
     protected virtual void ConfigureTestServices(IServiceCollection services) { }
 
     public string DbPath => _dbPath;
+
+    /// <summary>Enables self-registration after migrations so register-based test setup works. Registered
+    /// last (test ConfigureServices runs after the app's), so it starts after the migration hosted service.</summary>
+    private sealed class SelfRegistrationSeeder(IServiceScopeFactory scopeFactory) : IHostedService
+    {
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<AuthSettingsService>()
+                .SetSelfRegistrationAsync(true, cancellationToken);
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
 
     protected override void Dispose(bool disposing)
     {
@@ -62,4 +87,11 @@ public class SkeletonWebApplicationFactory : WebApplicationFactory<Program>
             foreach (var path in new[] { _dbPath, $"{_dbPath}-shm", $"{_dbPath}-wal" })
                 if (File.Exists(path)) File.Delete(path);
     }
+}
+
+/// <summary>A factory that leaves self-registration at its real default (closed) so registration-policy
+/// and onboarding tests exercise the production default (issue 0023).</summary>
+public sealed class ClosedRegistrationWebApplicationFactory : SkeletonWebApplicationFactory
+{
+    protected override bool SeedSelfRegistration => false;
 }

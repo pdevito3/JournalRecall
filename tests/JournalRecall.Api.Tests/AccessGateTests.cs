@@ -25,7 +25,7 @@ public class AccessGateTests
     [Fact]
     public async Task Anonymous_protected_navigation_redirects_to_setup_on_a_fresh_instance()
     {
-        using var factory = new SkeletonWebApplicationFactory();
+        using var factory = new ClosedRegistrationWebApplicationFactory();
 
         var response = await NoRedirect(factory).GetAsync("/app/sessions");
 
@@ -36,8 +36,8 @@ public class AccessGateTests
     [Fact]
     public async Task Anonymous_protected_navigation_redirects_to_login_once_a_user_exists()
     {
-        using var factory = new SkeletonWebApplicationFactory();
-        await factory.CreateClient().PostAsJsonAsync("/api/auth/register", NewUser());
+        using var factory = new ClosedRegistrationWebApplicationFactory();
+        await factory.CreateClient().PostAsJsonAsync("/api/setup", NewUser()); // a User now exists
 
         var response = await NoRedirect(factory).GetAsync("/app/sessions");
 
@@ -48,7 +48,7 @@ public class AccessGateTests
     [Fact]
     public async Task Allowlisted_public_routes_pass_through_for_anonymous_visitors()
     {
-        using var factory = new SkeletonWebApplicationFactory();
+        using var factory = new ClosedRegistrationWebApplicationFactory();
 
         foreach (var route in new[] { "/app/login", "/app/setup" })
             (await NoRedirect(factory).GetAsync(route)).StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -57,10 +57,10 @@ public class AccessGateTests
     [Fact]
     public async Task An_authenticated_visitor_is_served_the_app_shell()
     {
-        using var factory = new SkeletonWebApplicationFactory();
+        using var factory = new ClosedRegistrationWebApplicationFactory();
         var creds = NewUser();
         var client = factory.CreateClient(); // cookies handled, https base
-        await client.PostAsJsonAsync("/api/auth/register", creds);
+        await client.PostAsJsonAsync("/api/setup", creds); // root Admin; works regardless of registration policy
         await client.PostAsJsonAsync("/api/auth/login", creds);
 
         (await client.GetAsync("/app/sessions")).StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -69,14 +69,14 @@ public class AccessGateTests
     [Fact]
     public async Task Auth_config_is_anonymous_and_reports_needs_setup_flipping_false()
     {
-        using var factory = new SkeletonWebApplicationFactory();
+        using var factory = new ClosedRegistrationWebApplicationFactory();
         var client = factory.CreateClient();
 
         var before = (await client.GetFromJsonAsync<AuthConfig>("/api/auth/config", Json))!;
         before.NeedsSetup.ShouldBeTrue();
-        before.SelfRegistrationEnabled.ShouldBeFalse();
+        before.SelfRegistrationEnabled.ShouldBeFalse(); // closed by default (issue 0023)
 
-        await client.PostAsJsonAsync("/api/auth/register", NewUser());
+        await client.PostAsJsonAsync("/api/setup", NewUser());
 
         var after = (await client.GetFromJsonAsync<AuthConfig>("/api/auth/config", Json))!;
         after.NeedsSetup.ShouldBeFalse();

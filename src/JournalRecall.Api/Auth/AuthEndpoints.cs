@@ -23,15 +23,19 @@ public static class AuthEndpoints
         var group = app.MapGroup("/api");
 
         // Anonymous: drives the access gate and onboarding routing. needsSetup = zero Users exist;
-        // selfRegistrationEnabled is fixed until issue 0023 introduces AuthSettings.
-        group.MapGet("/auth/config", async (UserManager<User> users) =>
+        // selfRegistrationEnabled is the operator-controlled toggle (issue 0023).
+        group.MapGet("/auth/config", async (UserManager<User> users, AuthSettingsService authSettings) =>
         {
             var needsSetup = !await users.Users.AnyAsync();
-            return Results.Ok(new AuthConfigResponse(needsSetup, SelfRegistrationEnabled: false));
+            return Results.Ok(new AuthConfigResponse(needsSetup, await authSettings.SelfRegistrationEnabledAsync()));
         });
 
-        group.MapPost("/auth/register", async (Credentials body, UserManager<User> users) =>
+        group.MapPost("/auth/register", async (Credentials body, UserManager<User> users, AuthSettingsService authSettings) =>
         {
+            // Operator-controlled: a closed instance rejects self-registration server-side (issue 0023).
+            if (!await authSettings.SelfRegistrationEnabledAsync())
+                return Results.Problem("Self-registration is disabled.", statusCode: StatusCodes.Status403Forbidden);
+
             var user = new User { UserName = body.Email, Email = body.Email };
             var result = await users.CreateAsync(user, body.Password);
             if (!result.Succeeded)

@@ -20,13 +20,16 @@ public sealed class AccessGateMiddleware(RequestDelegate next)
 {
     private const string AppBase = "/app";
 
-    // Public SPA routes a signed-out visitor may reach (under the /app basepath).
+    // Public SPA routes a signed-out visitor may always reach (under the /app basepath). The register
+    // route is conditionally public — only when self-registration is enabled (issue 0023).
     private static readonly HashSet<string> PublicRoutes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "/app", "/app/login", "/app/register", "/app/setup",
+        "/app", "/app/login", "/app/setup",
     };
 
-    public async Task InvokeAsync(HttpContext context, UserManager<User> users)
+    private const string RegisterRoute = "/app/register";
+
+    public async Task InvokeAsync(HttpContext context, UserManager<User> users, AuthSettingsService authSettings)
     {
         var path = context.Request.Path;
 
@@ -34,8 +37,9 @@ public sealed class AccessGateMiddleware(RequestDelegate next)
         // are served by the static-file middleware; the SPA fallback uses the same :nonfile rule).
         if (!path.StartsWithSegments(AppBase)
             || path.Value is { } value && Path.HasExtension(value)
+            || context.Request.Cookies.ContainsKey(AuthCookie.AccessName)
             || IsPublicRoute(path)
-            || context.Request.Cookies.ContainsKey(AuthCookie.AccessName))
+            || (IsRegisterRoute(path) && await authSettings.SelfRegistrationEnabledAsync()))
         {
             await next(context);
             return;
@@ -44,6 +48,9 @@ public sealed class AccessGateMiddleware(RequestDelegate next)
         var needsSetup = !await users.Users.AnyAsync();
         context.Response.Redirect(needsSetup ? "/app/setup" : "/app/login");
     }
+
+    private static bool IsRegisterRoute(PathString path) =>
+        string.Equals(path.Value?.TrimEnd('/'), RegisterRoute, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsPublicRoute(PathString path) =>
         path.Value is { } value && PublicRoutes.Contains(value.TrimEnd('/') is "" ? "/app" : value.TrimEnd('/'));

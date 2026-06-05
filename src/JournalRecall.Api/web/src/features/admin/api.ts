@@ -67,6 +67,26 @@ export async function setUserDisabled(id: string, disabled: boolean): Promise<vo
   await ok(res, 'Could not update user')
 }
 
+export interface RegistrationSettings {
+  selfRegistrationEnabled: boolean
+}
+
+export async function getRegistration(): Promise<RegistrationSettings> {
+  const res = await apiFetch('/api/admin/registration', { credentials: 'include' })
+  await ok(res, 'Could not load registration setting')
+  return res.json()
+}
+
+export async function updateRegistration(input: RegistrationSettings): Promise<void> {
+  const res = await apiFetch('/api/admin/registration', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  await ok(res, 'Could not save registration setting')
+}
+
 export async function getAiProvider(): Promise<AiProvider> {
   const res = await apiFetch('/api/admin/ai-provider', { credentials: 'include' })
   await ok(res, 'Could not load AI provider')
