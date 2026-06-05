@@ -44,10 +44,27 @@ export function useRevision(id: string, revisionNumber: number | null) {
   })
 }
 
+export function useSaveCleaned(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (cleanedText: string) => sessionsApi.saveCleaned(id, cleanedText),
+    // A hand-edit appended a Cleaned Revision and flipped the hand-edit flag — refresh both.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['session', id] }),
+  })
+}
+
 export function useCleanedRevisions(id: string) {
   return useQuery({
     queryKey: ['session', id, 'cleaned-revisions'],
     queryFn: () => sessionsApi.getCleanedRevisions(id),
+  })
+}
+
+export function useCleanedRevision(id: string, revisionNumber: number | null) {
+  return useQuery({
+    queryKey: ['session', id, 'cleaned-revisions', revisionNumber],
+    queryFn: () => sessionsApi.getCleanedRevision(id, revisionNumber!),
+    enabled: revisionNumber != null,
   })
 }
 

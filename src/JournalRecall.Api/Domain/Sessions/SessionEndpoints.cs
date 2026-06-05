@@ -46,6 +46,13 @@ public static class SessionEndpoints
             return revision is null ? Results.NotFound() : Results.Ok(revision);
         });
 
+        // Hand-edit the Cleaned copy: appends a Cleaned Revision; never touches Raw (issue 0010).
+        group.MapPut("/{id:guid}/cleaned", async (Guid id, SaveCleaned.Request body, ISender sender) =>
+        {
+            var saved = await sender.Send(new SaveCleaned.Command(id, body.CleanedText));
+            return saved ? Results.NoContent() : Results.NotFound();
+        });
+
         // Manual AI Cleanup → Cleaned copy + Synopsis, never altering Raw (issue 0008). Runs to
         // completion and returns the updated Session (status + Cleaned/Synopsis).
         group.MapPost("/{id:guid}/cleanup", async (Guid id, SessionCleanupRunner cleanup, CancellationToken ct) =>

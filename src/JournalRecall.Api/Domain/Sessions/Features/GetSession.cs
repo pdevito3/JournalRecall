@@ -24,7 +24,8 @@ public static class GetSession
                     s.Id, s.CreatedAt, s.RawDraft, s.CleanedDraft, s.Synopsis,
                     s.CleanupStatus == CleanupStatus.Clean && s.RawRevisions.Count > s.LastCleanedRawRevisionNumber
                         ? CleanupStatus.Stale
-                        : s.CleanupStatus))
+                        : s.CleanupStatus,
+                    s.CleanedHasHandEdits))
                 .FirstOrDefaultAsync(cancellationToken);
         }
     }

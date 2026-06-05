@@ -1,6 +1,6 @@
 # 0010 — Edit Cleaned + re-run warn-and-overwrite + history
 
-**Phase:** 4 · **Type:** AFK · **Status:** todo · **Realizes:** ADR-0003
+**Phase:** 4 · **Type:** AFK · **Status:** done · **Realizes:** ADR-0003
 
 ## What to build
 
@@ -15,12 +15,12 @@ overwriting hand-edits, retain the prior Cleaned **Revision**, and expose the Cl
 
 ## Acceptance criteria
 
-- [ ] The user can edit the Cleaned copy and the edit is saved as a Cleaned Revision.
-- [ ] Re-running Cleanup when the Cleaned copy has hand-edits prompts a confirm before overwriting.
-- [ ] After confirming a re-run, the prior (hand-edited) Cleaned Revision is still retrievable from
+- [x] The user can edit the Cleaned copy and the edit is saved as a Cleaned Revision.
+- [x] Re-running Cleanup when the Cleaned copy has hand-edits prompts a confirm before overwriting.
+- [x] After confirming a re-run, the prior (hand-edited) Cleaned Revision is still retrievable from
       history.
-- [ ] Raw is never affected by editing Cleaned or by re-running.
-- [ ] Re-running when there are **no** hand-edits does not prompt.
+- [x] Raw is never affected by editing Cleaned or by re-running.
+- [x] Re-running when there are **no** hand-edits does not prompt.
 
 ## Blocked by
 

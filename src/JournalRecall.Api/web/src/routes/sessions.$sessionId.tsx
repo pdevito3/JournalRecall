@@ -1,10 +1,13 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import type { CleanupStatus, Session } from '@/features/sessions/api'
+import type { CleanupStatus, RevisionSummary, Session } from '@/features/sessions/api'
 import {
+  useCleanedRevision,
+  useCleanedRevisions,
   useCleanup,
   useRevision,
   useRevisions,
+  useSaveCleaned,
   useSaveDraft,
   useSession,
 } from '@/features/sessions/useSessions'
@@ -22,7 +25,8 @@ function SessionEditor() {
 
   const [text, setText] = useState('')
   const [hydrated, setHydrated] = useState(false)
-  const [viewing, setViewing] = useState<number | null>(null) // a past Revision number, or null
+  const [viewingRaw, setViewingRaw] = useState<number | null>(null)
+  const [viewingCleaned, setViewingCleaned] = useState<number | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Hydrate once from the server, then local state owns the text (survives reloads).
@@ -68,14 +72,7 @@ function SessionEditor() {
           />
         </div>
 
-        {hasCleaned ? (
-          <div className="space-y-2">
-            <PanelLabel>Cleaned (AI)</PanelLabel>
-            <pre className="min-h-[50vh] w-full overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-surface-3 p-4 text-content">
-              {session.cleanedDraft}
-            </pre>
-          </div>
-        ) : null}
+        {hasCleaned ? <CleanedEditor session={session} /> : null}
       </div>
 
       {session.synopsis ? (
@@ -85,13 +82,62 @@ function SessionEditor() {
         </div>
       ) : null}
 
-      <RevisionHistory sessionId={sessionId} viewing={viewing} onView={setViewing} />
+      <RawHistory sessionId={sessionId} viewing={viewingRaw} onView={setViewingRaw} />
+      <CleanedHistory sessionId={sessionId} viewing={viewingCleaned} onView={setViewingCleaned} />
     </section>
   )
 }
 
 function PanelLabel({ children }: { children: ReactNode }) {
   return <h2 className="text-sm font-medium text-muted">{children}</h2>
+}
+
+/** The AI-derived Cleaned copy, hand-editable. Edits debounce-save and append a Cleaned Revision. */
+function CleanedEditor({ session }: { session: Session }) {
+  const saveCleaned = useSaveCleaned(session.id)
+  const [text, setText] = useState(session.cleanedDraft)
+  const serverRef = useRef(session.cleanedDraft)
+  const dirtyRef = useRef(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  // Adopt server-originated changes (e.g. a re-run regenerated the copy), but never clobber a local
+  // edit that hasn't been saved yet.
+  useEffect(() => {
+    if (!dirtyRef.current && session.cleanedDraft !== serverRef.current) {
+      serverRef.current = session.cleanedDraft
+      setText(session.cleanedDraft)
+    }
+  }, [session.cleanedDraft])
+
+  useEffect(() => () => clearTimeout(timer.current), [])
+
+  function onChange(value: string) {
+    setText(value)
+    dirtyRef.current = true
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      saveCleaned.mutate(value, {
+        onSuccess: () => {
+          dirtyRef.current = false
+          serverRef.current = value
+        },
+      })
+    }, 600)
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <PanelLabel>Cleaned (AI · editable)</PanelLabel>
+        <SaveStatus pending={saveCleaned.isPending} success={saveCleaned.isSuccess} error={saveCleaned.isError} />
+      </div>
+      <textarea
+        value={text}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-[50vh] w-full resize-none rounded-lg border border-border bg-surface-3 p-4 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      />
+    </div>
+  )
 }
 
 const STATUS_LABELS: Record<CleanupStatus, string> = {
@@ -108,6 +154,17 @@ function CleanupBar({ session }: { session: Session }) {
   const status: CleanupStatus = running ? 'Running' : session.cleanupStatus
   const isStale = status === 'Stale'
 
+  function handleRun() {
+    // Warn before a re-run overwrites hand-edits — the prior version is kept in history regardless.
+    if (session.cleanedHasHandEdits) {
+      const ok = window.confirm(
+        'Re-running cleanup will overwrite your hand-edited Cleaned copy. The current version is kept in history. Continue?',
+      )
+      if (!ok) return
+    }
+    void run()
+  }
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 p-3">
       <div className="flex items-center gap-3">
@@ -123,20 +180,21 @@ function CleanupBar({ session }: { session: Session }) {
         >
           {STATUS_LABELS[status]}
         </span>
+        {session.cleanedHasHandEdits ? <span className="text-xs text-muted">hand-edited</span> : null}
         {running && progress.length > 0 ? (
           <span className="text-sm text-muted">{progress[progress.length - 1]}</span>
         ) : null}
         {error ? <span className="text-sm text-amber-400">Something went wrong.</span> : null}
       </div>
 
-      <Button variant="primary" onPress={() => void run()} isDisabled={running}>
-        {running ? 'Cleaning…' : isStale ? 'Re-run cleanup' : 'Clean up with AI'}
+      <Button variant="primary" onPress={handleRun} isDisabled={running}>
+        {running ? 'Cleaning…' : isStale || status === 'Clean' || status === 'Failed' ? 'Re-run cleanup' : 'Clean up with AI'}
       </Button>
     </div>
   )
 }
 
-function RevisionHistory({
+function RawHistory({
   sessionId,
   viewing,
   onView,
@@ -147,12 +205,52 @@ function RevisionHistory({
 }) {
   const { data: revisions } = useRevisions(sessionId)
   const { data: revision } = useRevision(sessionId, viewing)
+  return (
+    <RevisionDrilldown title="Raw history" revisions={revisions} viewing={viewing} onView={onView} content={revision?.content} />
+  )
+}
 
+function CleanedHistory({
+  sessionId,
+  viewing,
+  onView,
+}: {
+  sessionId: string
+  viewing: number | null
+  onView: (revisionNumber: number | null) => void
+}) {
+  const { data: revisions } = useCleanedRevisions(sessionId)
+  const { data: revision } = useCleanedRevision(sessionId, viewing)
+  return (
+    <RevisionDrilldown
+      title="Cleaned history"
+      revisions={revisions}
+      viewing={viewing}
+      onView={onView}
+      content={revision?.content}
+    />
+  )
+}
+
+/** Presentational Revision history: a row of versions and a read-only view of the selected one. */
+function RevisionDrilldown({
+  title,
+  revisions,
+  viewing,
+  onView,
+  content,
+}: {
+  title: string
+  revisions: RevisionSummary[] | undefined
+  viewing: number | null
+  onView: (revisionNumber: number | null) => void
+  content: string | undefined
+}) {
   if (!revisions?.length) return null
 
   return (
     <div className="space-y-2 border-t border-border pt-4">
-      <h2 className="text-sm font-medium text-muted">Raw history</h2>
+      <h2 className="text-sm font-medium text-muted">{title}</h2>
       <ul className="flex flex-wrap gap-2">
         {revisions.map((r) => (
           <li key={r.revisionNumber}>
@@ -166,14 +264,14 @@ function RevisionHistory({
         ))}
       </ul>
 
-      {viewing != null && revision ? (
+      {viewing != null && content != null ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Viewing version {revision.revisionNumber} (read-only)</span>
-            <Button onPress={() => onView(null)}>Back to editing</Button>
+            <span className="text-sm text-muted">Viewing version {viewing} (read-only)</span>
+            <Button onPress={() => onView(null)}>Back</Button>
           </div>
           <pre className="max-h-[40vh] overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-surface-3 p-4 text-content">
-            {revision.content}
+            {content}
           </pre>
         </div>
       ) : null}

@@ -11,10 +11,11 @@ public sealed record SessionDto(
     string RawDraft,
     string CleanedDraft,
     string Synopsis,
-    CleanupStatus CleanupStatus)
+    CleanupStatus CleanupStatus,
+    bool CleanedHasHandEdits)
 {
     /// <summary>Projects a loaded Session, surfacing its <see cref="Session.EffectiveCleanupStatus"/>.</summary>
     public static SessionDto From(Session session) => new(
         session.Id, session.CreatedAt, session.RawDraft, session.CleanedDraft, session.Synopsis,
-        session.EffectiveCleanupStatus);
+        session.EffectiveCleanupStatus, session.CleanedHasHandEdits);
 }

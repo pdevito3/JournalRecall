@@ -34,6 +34,12 @@ public sealed class Session : BaseEntity
     /// <summary>The Raw Revision number that the last successful Cleanup read. 0 when never cleaned.</summary>
     public int LastCleanedRawRevisionNumber { get; private set; }
 
+    /// <summary>
+    /// True when the current Cleaned copy carries user hand-edits made since the last AI run — the cue
+    /// to warn before a re-run overwrites them (CONTEXT.md, ADR-0003). Cleared when Cleanup regenerates.
+    /// </summary>
+    public bool CleanedHasHandEdits { get; private set; }
+
     /// <summary>The Raw Revision number captured when the in-flight Cleanup began. Not persisted.</summary>
     private int _cleaningFromRawRevisionNumber;
 
@@ -104,8 +110,27 @@ public sealed class Session : BaseEntity
         _cleanedRevisions.Add(new CleanedRevision(_cleanedRevisions.Count + 1, cleanedText));
         LastCleanedRawRevisionNumber = _cleaningFromRawRevisionNumber;
         CleanupStatus = CleanupStatus.Clean;
+        // A fresh AI copy supersedes any prior hand-edits — the prior Revision stays in history.
+        CleanedHasHandEdits = false;
     }
 
     /// <summary>A failed Cleanup: records the failure without corrupting Raw or any prior Cleaned copy.</summary>
     public void FailCleanup() => CleanupStatus = CleanupStatus.Failed;
+
+    /// <summary>
+    /// A user hand-edit of the Cleaned copy: appends a Cleaned Revision (when the text actually changed)
+    /// and flags the copy as hand-edited so a later re-run warns first. Raw is never touched. Returns
+    /// whether a new Revision was appended.
+    /// </summary>
+    public bool EditCleaned(string cleanedText)
+    {
+        cleanedText ??= string.Empty;
+        if (string.Equals(cleanedText, CleanedDraft, StringComparison.Ordinal))
+            return false;
+
+        CleanedDraft = cleanedText;
+        _cleanedRevisions.Add(new CleanedRevision(_cleanedRevisions.Count + 1, cleanedText));
+        CleanedHasHandEdits = true;
+        return true;
+    }
 }

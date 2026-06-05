@@ -7,6 +7,7 @@ export interface Session {
   cleanedDraft: string
   synopsis: string
   cleanupStatus: CleanupStatus
+  cleanedHasHandEdits: boolean
 }
 
 export async function createSession(): Promise<Session> {
@@ -113,6 +114,16 @@ export async function streamCleanup(
   }
 }
 
+export async function saveCleaned(id: string, cleanedText: string): Promise<void> {
+  const res = await fetch(`/api/sessions/${id}/cleaned`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ cleanedText }),
+  })
+  if (!res.ok) throw new Error('Could not save cleaned copy')
+}
+
 export interface CleanedRevisionSummary {
   revisionNumber: number
   createdAt: string
@@ -121,5 +132,11 @@ export interface CleanedRevisionSummary {
 export async function getCleanedRevisions(id: string): Promise<CleanedRevisionSummary[]> {
   const res = await fetch(`/api/sessions/${id}/cleaned-revisions`, { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load cleaned history')
+  return res.json()
+}
+
+export async function getCleanedRevision(id: string, revisionNumber: number): Promise<Revision> {
+  const res = await fetch(`/api/sessions/${id}/cleaned-revisions/${revisionNumber}`, { credentials: 'include' })
+  if (!res.ok) throw new Error('Could not load cleaned revision')
   return res.json()
 }
