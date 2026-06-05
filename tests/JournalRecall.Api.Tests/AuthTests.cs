@@ -21,7 +21,7 @@ public class AuthTests : IClassFixture<SkeletonWebApplicationFactory>
     private sealed record Credentials(string Email, string Password);
     private sealed record UserDto(Guid Id, string Email);
 
-    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!");
+    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!23");
 
     [Fact]
     public async Task Register_then_login_sets_an_httponly_auth_cookie()

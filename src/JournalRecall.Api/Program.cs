@@ -36,6 +36,9 @@ try
     // issue 0017's AI spans extend the same pipeline.
     app.MapHealthChecks("/api/health");
 
+    // First-run setup: anonymous root-Admin bootstrap, refused once any User exists (PRD-0001).
+    app.MapSetup();
+
     // Auth: register/login (HttpOnly cookie) + /api/me (ADR-0002).
     app.MapAuth();
 

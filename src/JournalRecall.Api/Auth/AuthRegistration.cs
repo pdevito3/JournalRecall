@@ -36,7 +36,13 @@ public static class AuthRegistration
         services.AddIdentityCore<User>(options =>
             {
                 options.User.RequireUniqueEmail = true;
-                options.Password.RequiredLength = 8;
+                // NIST-aligned password policy (PRD-0001): favor length over composition. Identity
+                // defaults the four composition rules to true, so turn them off explicitly.
+                options.Password.RequiredLength = 10;
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequireNonAlphanumeric = false;
             })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<JournalRecallDbContext>();

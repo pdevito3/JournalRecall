@@ -35,7 +35,7 @@ public class SummaryRollupTests : IClassFixture<SummaryWebApplicationFactory>
     private async Task<HttpClient> SignedInClient()
     {
         var client = _factory.CreateClient();
-        var creds = new Credentials($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!");
+        var creds = new Credentials($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!23");
         await client.PostAsJsonAsync("/api/auth/register", creds);
         await client.PostAsJsonAsync("/api/auth/login", creds);
         return client;

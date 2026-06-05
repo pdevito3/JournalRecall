@@ -26,7 +26,7 @@ public class AdminSurfaceTests : IClassFixture<SkeletonWebApplicationFactory>
     private sealed record AdminUserDto(Guid Id, string Email, List<string> Roles, bool IsDisabled);
     private sealed record AiProviderDto(string Provider, string? Endpoint, string Model, bool HasApiKey);
 
-    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!");
+    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!23");
 
     private async Task<HttpClient> RegisterAndLogin(Credentials creds, bool admin)
     {
@@ -56,7 +56,7 @@ public class AdminSurfaceTests : IClassFixture<SkeletonWebApplicationFactory>
         var someId = Guid.NewGuid();
 
         (await member.GetAsync("/api/admin/users")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await member.PostAsJsonAsync("/api/admin/users", new { email = "x@y.z", password = "Passw0rd!", role = "Member" }))
+        (await member.PostAsJsonAsync("/api/admin/users", new { email = "x@y.z", password = "Passw0rd!23", role = "Member" }))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await member.PutAsJsonAsync($"/api/admin/users/{someId}/role", new { role = "Admin" }))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);

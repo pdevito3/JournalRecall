@@ -18,7 +18,7 @@ public class CookieHardeningTests : IClassFixture<SkeletonWebApplicationFactory>
     public CookieHardeningTests(SkeletonWebApplicationFactory factory) => _factory = factory;
 
     private sealed record Credentials(string Email, string Password);
-    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!");
+    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!23");
 
     [Fact]
     public async Task Auth_cookies_are_prefix_hardened_httponly_secure_samesite_strict_and_path_scoped()

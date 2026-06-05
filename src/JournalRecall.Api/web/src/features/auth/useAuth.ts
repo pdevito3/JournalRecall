@@ -24,6 +24,10 @@ export function useRegister() {
   return useMutation({ mutationFn: authApi.register })
 }
 
+export function useSetup() {
+  return useMutation({ mutationFn: authApi.setup })
+}
+
 export function useLogout() {
   const queryClient = useQueryClient()
   return useMutation({

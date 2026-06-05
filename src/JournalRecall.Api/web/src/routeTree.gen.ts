@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SummariesRouteImport } from './routes/summaries'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CorrectionsRouteImport } from './routes/corrections'
@@ -21,6 +22,11 @@ import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessio
 const SummariesRoute = SummariesRouteImport.update({
   id: '/summaries',
   path: '/summaries',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
   '/summaries': typeof SummariesRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
   '/summaries': typeof SummariesRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
   '/summaries': typeof SummariesRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/corrections'
     | '/login'
     | '/register'
+    | '/setup'
     | '/summaries'
     | '/sessions/$sessionId'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/corrections'
     | '/login'
     | '/register'
+    | '/setup'
     | '/summaries'
     | '/sessions/$sessionId'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/corrections'
     | '/login'
     | '/register'
+    | '/setup'
     | '/summaries'
     | '/sessions/$sessionId'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   CorrectionsRoute: typeof CorrectionsRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  SetupRoute: typeof SetupRoute
   SummariesRoute: typeof SummariesRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
 }
@@ -141,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/summaries'
       fullPath: '/summaries'
       preLoaderRoute: typeof SummariesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   CorrectionsRoute: CorrectionsRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  SetupRoute: SetupRoute,
   SummariesRoute: SummariesRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
 }

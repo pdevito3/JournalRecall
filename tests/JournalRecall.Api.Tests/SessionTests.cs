@@ -19,7 +19,7 @@ public class SessionTests : IClassFixture<SkeletonWebApplicationFactory>
     private sealed record Credentials(string Email, string Password);
     private sealed record SessionDto(Guid Id, DateTimeOffset CreatedAt, string RawDraft);
 
-    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!");
+    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!23");
 
     private async Task<HttpClient> SignedInClient()
     {

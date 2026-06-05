@@ -24,7 +24,7 @@ public class RefreshTokenTests : IClassFixture<SkeletonWebApplicationFactory>
     private sealed record Credentials(string Email, string Password);
     private sealed record TokenResponse(string AccessToken, string RefreshToken, DateTimeOffset RefreshTokenExpiresAt);
 
-    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!");
+    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!23");
 
     [Fact]
     public async Task Refresh_with_the_cookie_reestablishes_access_and_rotates_the_refresh_token()

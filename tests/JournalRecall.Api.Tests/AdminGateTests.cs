@@ -18,7 +18,7 @@ public class AdminGateTests : IClassFixture<SkeletonWebApplicationFactory>
     public AdminGateTests(SkeletonWebApplicationFactory factory) => _factory = factory;
 
     private sealed record Credentials(string Email, string Password);
-    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!");
+    private static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", "Passw0rd!23");
 
     [Fact]
     public async Task Anonymous_caller_gets_401()

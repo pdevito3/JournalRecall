@@ -21,6 +21,17 @@ export async function fetchMe(): Promise<AuthUser | null> {
   return res.json()
 }
 
+/** First-run setup: creates the root Admin. 409 once the instance already has a User (PRD-0001). */
+export async function setup(body: Credentials): Promise<void> {
+  const res = await apiFetch('/api/setup', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  })
+  if (res.status === 409) throw new Error('This instance has already been set up.')
+  if (!res.ok) throw await problem(res, 'Setup failed')
+}
+
 export async function register(body: Credentials): Promise<void> {
   const res = await apiFetch('/api/auth/register', {
     method: 'POST',
