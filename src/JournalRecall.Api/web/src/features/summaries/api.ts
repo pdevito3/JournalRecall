@@ -1,3 +1,5 @@
+import { apiFetch } from '@/shared/api/client'
+
 export type SummaryPeriod = 'Day' | 'Week' | 'Month' | 'Quarter' | 'Year'
 export type SummaryStatus = 'Missing' | 'Generating' | 'Ready' | 'Stale'
 
@@ -13,13 +15,13 @@ export interface Summary {
 }
 
 export async function getSummary(period: SummaryPeriod, date: string): Promise<Summary> {
-  const res = await fetch(`/api/summaries/${period.toLowerCase()}/${date}`, { credentials: 'include' })
+  const res = await apiFetch(`/api/summaries/${period.toLowerCase()}/${date}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load summary')
   return res.json()
 }
 
 export async function generateSummary(period: SummaryPeriod, date: string): Promise<Summary> {
-  const res = await fetch(`/api/summaries/${period.toLowerCase()}/${date}/generate`, {
+  const res = await apiFetch(`/api/summaries/${period.toLowerCase()}/${date}/generate`, {
     method: 'POST',
     credentials: 'include',
   })

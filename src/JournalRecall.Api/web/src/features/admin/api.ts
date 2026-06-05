@@ -1,3 +1,5 @@
+import { apiFetch } from '@/shared/api/client'
+
 export interface AdminUser {
   id: string
   email: string
@@ -27,13 +29,13 @@ async function ok(res: Response, message: string): Promise<void> {
 }
 
 export async function getUsers(): Promise<AdminUser[]> {
-  const res = await fetch('/api/admin/users', { credentials: 'include' })
+  const res = await apiFetch('/api/admin/users', { credentials: 'include' })
   await ok(res, 'Could not load users')
   return res.json()
 }
 
 export async function createUser(input: { email: string; password: string; role: string }): Promise<void> {
-  const res = await fetch('/api/admin/users', {
+  const res = await apiFetch('/api/admin/users', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -48,7 +50,7 @@ export async function createUser(input: { email: string; password: string; role:
 }
 
 export async function setUserRole(id: string, role: string): Promise<void> {
-  const res = await fetch(`/api/admin/users/${id}/role`, {
+  const res = await apiFetch(`/api/admin/users/${id}/role`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -58,7 +60,7 @@ export async function setUserRole(id: string, role: string): Promise<void> {
 }
 
 export async function setUserDisabled(id: string, disabled: boolean): Promise<void> {
-  const res = await fetch(`/api/admin/users/${id}/${disabled ? 'disable' : 'enable'}`, {
+  const res = await apiFetch(`/api/admin/users/${id}/${disabled ? 'disable' : 'enable'}`, {
     method: 'POST',
     credentials: 'include',
   })
@@ -66,13 +68,13 @@ export async function setUserDisabled(id: string, disabled: boolean): Promise<vo
 }
 
 export async function getAiProvider(): Promise<AiProvider> {
-  const res = await fetch('/api/admin/ai-provider', { credentials: 'include' })
+  const res = await apiFetch('/api/admin/ai-provider', { credentials: 'include' })
   await ok(res, 'Could not load AI provider')
   return res.json()
 }
 
 export async function updateAiProvider(input: AiProviderInput): Promise<void> {
-  const res = await fetch('/api/admin/ai-provider', {
+  const res = await apiFetch('/api/admin/ai-provider', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',

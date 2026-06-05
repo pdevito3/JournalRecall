@@ -1,3 +1,5 @@
+import { apiFetch } from '@/shared/api/client'
+
 export interface Correction {
   id: string
   canonicalTerm: string
@@ -13,13 +15,13 @@ export interface CorrectionForWrite {
 }
 
 export async function getCorrections(): Promise<Correction[]> {
-  const res = await fetch('/api/me/corrections', { credentials: 'include' })
+  const res = await apiFetch('/api/me/corrections', { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load corrections')
   return res.json()
 }
 
 export async function createCorrection(body: CorrectionForWrite): Promise<Correction> {
-  const res = await fetch('/api/me/corrections', {
+  const res = await apiFetch('/api/me/corrections', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -30,7 +32,7 @@ export async function createCorrection(body: CorrectionForWrite): Promise<Correc
 }
 
 export async function updateCorrection(id: string, body: CorrectionForWrite): Promise<void> {
-  const res = await fetch(`/api/me/corrections/${id}`, {
+  const res = await apiFetch(`/api/me/corrections/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -40,7 +42,7 @@ export async function updateCorrection(id: string, body: CorrectionForWrite): Pr
 }
 
 export async function deleteCorrection(id: string): Promise<void> {
-  const res = await fetch(`/api/me/corrections/${id}`, {
+  const res = await apiFetch(`/api/me/corrections/${id}`, {
     method: 'DELETE',
     credentials: 'include',
   })

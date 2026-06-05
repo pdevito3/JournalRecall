@@ -1,3 +1,5 @@
+import { apiFetch } from '@/shared/api/client'
+
 export interface AuthUser {
   id: string
   email: string
@@ -13,14 +15,14 @@ const jsonHeaders = { 'Content-Type': 'application/json' }
 
 /** Current session, or null when unauthenticated (401). The auth cookie rides along automatically. */
 export async function fetchMe(): Promise<AuthUser | null> {
-  const res = await fetch('/api/me', { credentials: 'include' })
+  const res = await apiFetch('/api/me', { credentials: 'include' })
   if (res.status === 401) return null
   if (!res.ok) throw new Error('Failed to load session')
   return res.json()
 }
 
 export async function register(body: Credentials): Promise<void> {
-  const res = await fetch('/api/auth/register', {
+  const res = await apiFetch('/api/auth/register', {
     method: 'POST',
     headers: jsonHeaders,
     credentials: 'include',
@@ -30,7 +32,7 @@ export async function register(body: Credentials): Promise<void> {
 }
 
 export async function login(body: Credentials): Promise<AuthUser> {
-  const res = await fetch('/api/auth/login', {
+  const res = await apiFetch('/api/auth/login', {
     method: 'POST',
     headers: jsonHeaders,
     credentials: 'include',
@@ -42,7 +44,7 @@ export async function login(body: Credentials): Promise<AuthUser> {
 }
 
 export async function logout(): Promise<void> {
-  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+  await apiFetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
 }
 
 /** Flatten an ASP.NET ValidationProblemDetails body into a single message. */

@@ -34,7 +34,7 @@ public class AuthTests : IClassFixture<SkeletonWebApplicationFactory>
         var login = await client.PostAsJsonAsync("/api/auth/login", creds);
         login.StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        var setCookie = login.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith("jr_auth="));
+        var setCookie = login.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith("__Host-jr_auth="));
         setCookie.ShouldContain("httponly", Case.Insensitive); // not readable from document.cookie
         setCookie.ShouldContain("samesite=strict", Case.Insensitive);
     }
@@ -91,7 +91,7 @@ public class AuthTests : IClassFixture<SkeletonWebApplicationFactory>
 
     private static string ExtractToken(HttpResponseMessage login)
     {
-        var setCookie = login.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith("jr_auth="));
-        return setCookie["jr_auth=".Length..].Split(';')[0];
+        var setCookie = login.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith("__Host-jr_auth="));
+        return setCookie["__Host-jr_auth=".Length..].Split(';')[0];
     }
 }

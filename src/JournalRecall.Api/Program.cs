@@ -28,6 +28,10 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
+    // CSRF defense-in-depth (ADR-0005): mutating /api requests must carry the X-CSRF header. Layered on
+    // the SameSite=Strict auth cookies; placed after auth so it guards every endpoint below.
+    app.UseMiddleware<CsrfMiddleware>();
+
     // Health probe under /api so it shares the SPA's single origin (ADR-0001). Traced + logged so
     // issue 0017's AI spans extend the same pipeline.
     app.MapHealthChecks("/api/health");

@@ -33,14 +33,14 @@ public class RefreshTokenTests : IClassFixture<SkeletonWebApplicationFactory>
         var creds = NewUser();
         await client.PostAsJsonAsync("/api/auth/register", creds);
         var login = await client.PostAsJsonAsync("/api/auth/login", creds);
-        var oldRefresh = CookieValue(login, "jr_refresh");
+        var oldRefresh = CookieValue(login, "__Secure-jr_refresh");
 
         var refresh = await client.PostAsync("/api/auth/refresh", null);
         refresh.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         // Both cookies are re-issued; the refresh token is rotated to a new value.
-        refresh.Headers.GetValues("Set-Cookie").ShouldContain(c => c.StartsWith("jr_auth="));
-        CookieValue(refresh, "jr_refresh").ShouldNotBe(oldRefresh);
+        refresh.Headers.GetValues("Set-Cookie").ShouldContain(c => c.StartsWith("__Host-jr_auth="));
+        CookieValue(refresh, "__Secure-jr_refresh").ShouldNotBe(oldRefresh);
 
         // Access is genuinely re-established with the rotated cookies.
         (await client.GetAsync("/api/me")).StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -54,8 +54,8 @@ public class RefreshTokenTests : IClassFixture<SkeletonWebApplicationFactory>
 
         var deviceA = _factory.CreateClient();
         var deviceB = _factory.CreateClient();
-        var refreshA = CookieValue(await deviceA.PostAsJsonAsync("/api/auth/login", creds), "jr_refresh");
-        var refreshB = CookieValue(await deviceB.PostAsJsonAsync("/api/auth/login", creds), "jr_refresh");
+        var refreshA = CookieValue(await deviceA.PostAsJsonAsync("/api/auth/login", creds), "__Secure-jr_refresh");
+        var refreshB = CookieValue(await deviceB.PostAsJsonAsync("/api/auth/login", creds), "__Secure-jr_refresh");
 
         (await deviceA.PostAsync("/api/auth/logout", null)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
@@ -71,7 +71,7 @@ public class RefreshTokenTests : IClassFixture<SkeletonWebApplicationFactory>
         var creds = NewUser();
         var member = _factory.CreateClient();
         await member.PostAsJsonAsync("/api/auth/register", creds);
-        var refresh = CookieValue(await member.PostAsJsonAsync("/api/auth/login", creds), "jr_refresh");
+        var refresh = CookieValue(await member.PostAsJsonAsync("/api/auth/login", creds), "__Secure-jr_refresh");
 
         var admin = await AdminClient();
         var target = (await admin.GetFromJsonAsync<List<AdminUserDto>>("/api/admin/users", Json))!
@@ -87,7 +87,7 @@ public class RefreshTokenTests : IClassFixture<SkeletonWebApplicationFactory>
         var cookieClient = _factory.CreateClient();
         var creds = NewUser();
         await cookieClient.PostAsJsonAsync("/api/auth/register", creds);
-        var refresh = CookieValue(await cookieClient.PostAsJsonAsync("/api/auth/login", creds), "jr_refresh");
+        var refresh = CookieValue(await cookieClient.PostAsJsonAsync("/api/auth/login", creds), "__Secure-jr_refresh");
 
         var response = await Refresh(refresh);
         response.StatusCode.ShouldBe(HttpStatusCode.OK);

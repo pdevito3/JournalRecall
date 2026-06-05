@@ -1,3 +1,5 @@
+import { apiFetch } from '@/shared/api/client'
+
 export type CleanupStatus = 'NotRun' | 'Running' | 'Clean' | 'Stale' | 'Failed'
 
 /** The app-defined known moods (mirrors the server's Mood.Known). */
@@ -59,7 +61,7 @@ export async function respondToSuggestion(
   suggestion: Suggestion,
   action: 'accept' | 'reject',
 ): Promise<void> {
-  const res = await fetch(`/api/sessions/${id}/suggestions/${action}`, {
+  const res = await apiFetch(`/api/sessions/${id}/suggestions/${action}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -69,7 +71,7 @@ export async function respondToSuggestion(
 }
 
 export async function saveMetadata(id: string, metadata: Metadata): Promise<void> {
-  const res = await fetch(`/api/sessions/${id}/metadata`, {
+  const res = await apiFetch(`/api/sessions/${id}/metadata`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -81,7 +83,7 @@ export async function saveMetadata(id: string, metadata: Metadata): Promise<void
 
 export async function createSession(location?: GeoPoint): Promise<Session> {
   // A captured point is sent only when the user opted in and allowed it; otherwise a plain POST.
-  const res = await fetch('/api/sessions', {
+  const res = await apiFetch('/api/sessions', {
     method: 'POST',
     credentials: 'include',
     ...(location
@@ -117,13 +119,13 @@ export interface SessionListItem {
 
 export async function getSessionList(filter?: string): Promise<SessionListItem[]> {
   const url = filter ? `/api/sessions?filter=${encodeURIComponent(filter)}` : '/api/sessions'
-  const res = await fetch(url, { credentials: 'include' })
+  const res = await apiFetch(url, { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load your timeline')
   return res.json()
 }
 
 export async function getSession(id: string): Promise<Session> {
-  const res = await fetch(`/api/sessions/${id}`, { credentials: 'include' })
+  const res = await apiFetch(`/api/sessions/${id}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Session not found')
   return res.json()
 }
@@ -140,19 +142,19 @@ export interface Revision {
 }
 
 export async function getRevisions(id: string): Promise<RevisionSummary[]> {
-  const res = await fetch(`/api/sessions/${id}/revisions`, { credentials: 'include' })
+  const res = await apiFetch(`/api/sessions/${id}/revisions`, { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load history')
   return res.json()
 }
 
 export async function getRevision(id: string, revisionNumber: number): Promise<Revision> {
-  const res = await fetch(`/api/sessions/${id}/revisions/${revisionNumber}`, { credentials: 'include' })
+  const res = await apiFetch(`/api/sessions/${id}/revisions/${revisionNumber}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load revision')
   return res.json()
 }
 
 export async function saveDraft(id: string, rawText: string): Promise<void> {
-  const res = await fetch(`/api/sessions/${id}/draft`, {
+  const res = await apiFetch(`/api/sessions/${id}/draft`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -174,7 +176,7 @@ export async function streamCleanup(
   id: string,
   onEvent: (event: CleanupEvent) => void,
 ): Promise<void> {
-  const res = await fetch(`/api/sessions/${id}/cleanup/stream`, {
+  const res = await apiFetch(`/api/sessions/${id}/cleanup/stream`, {
     method: 'POST',
     credentials: 'include',
   })
@@ -206,7 +208,7 @@ export async function streamCleanup(
 }
 
 export async function saveCleaned(id: string, cleanedText: string): Promise<void> {
-  const res = await fetch(`/api/sessions/${id}/cleaned`, {
+  const res = await apiFetch(`/api/sessions/${id}/cleaned`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -221,13 +223,13 @@ export interface CleanedRevisionSummary {
 }
 
 export async function getCleanedRevisions(id: string): Promise<CleanedRevisionSummary[]> {
-  const res = await fetch(`/api/sessions/${id}/cleaned-revisions`, { credentials: 'include' })
+  const res = await apiFetch(`/api/sessions/${id}/cleaned-revisions`, { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load cleaned history')
   return res.json()
 }
 
 export async function getCleanedRevision(id: string, revisionNumber: number): Promise<Revision> {
-  const res = await fetch(`/api/sessions/${id}/cleaned-revisions/${revisionNumber}`, { credentials: 'include' })
+  const res = await apiFetch(`/api/sessions/${id}/cleaned-revisions/${revisionNumber}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load cleaned revision')
   return res.json()
 }

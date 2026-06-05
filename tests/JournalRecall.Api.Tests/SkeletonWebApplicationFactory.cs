@@ -18,6 +18,22 @@ public class SkeletonWebApplicationFactory : WebApplicationFactory<Program>
 
     public List<Activity> ExportedActivities { get; } = [];
 
+    public SkeletonWebApplicationFactory()
+    {
+        // Cookie-prefix hardening (issue 0020) makes the auth cookies Secure unconditionally, and the
+        // in-memory CookieContainer only *sends* Secure cookies over https — so address the TestServer
+        // over https (it fakes TLS and sets Request.IsHttps from the URI scheme).
+        ClientOptions.BaseAddress = new Uri("https://localhost");
+    }
+
+    /// <summary>Every test client carries the X-CSRF header so the CSRF middleware (issue 0020) admits its
+    /// mutating requests — mirroring the SPA, which sends it on every mutation.</summary>
+    protected override void ConfigureClient(HttpClient client)
+    {
+        base.ConfigureClient(client);
+        client.DefaultRequestHeaders.Add(JournalRecall.Api.Auth.CsrfMiddleware.HeaderName, "1");
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
