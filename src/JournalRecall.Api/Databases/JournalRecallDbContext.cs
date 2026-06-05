@@ -19,6 +19,13 @@ namespace JournalRecall.Api.Databases;
 /// </summary>
 public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
 {
+    /// <summary>
+    /// The name of the per-User tenant query filter (EF Core 10 named filters). Naming it lets a query
+    /// opt out of *just* tenant scoping via <c>IgnoreQueryFilters([TenantFilter])</c> without disabling
+    /// any other filter — the Privacy invariant stays on by default everywhere.
+    /// </summary>
+    public const string TenantFilter = "Tenant";
+
     private readonly Guid? _currentUserId;
     private readonly TimeProvider _timeProvider;
 
@@ -62,7 +69,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             session.HasIndex(s => s.UserId);
             // Privacy invariant: referencing the instance field makes EF re-evaluate the owner per
             // query, so no User can ever read another User's Sessions (ADR-0002, CONTEXT.md).
-            session.HasQueryFilter(s => s.UserId == _currentUserId);
+            session.HasQueryFilter(TenantFilter, s => s.UserId == _currentUserId);
 
             // The append-only Raw Revision stream is part of the Session aggregate, not an
             // independently-queried/indexed entity (ADR-0003) — hence an owned collection.
@@ -124,7 +131,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             // One Summary per (user, period, anchor date) — the natural key for upsert/lookup.
             summary.HasIndex(s => new { s.UserId, s.Period, s.PeriodDate }).IsUnique();
             // Privacy invariant: scope every Summary query to the current user (ADR-0002, CONTEXT.md).
-            summary.HasQueryFilter(s => s.UserId == _currentUserId);
+            summary.HasQueryFilter(TenantFilter, s => s.UserId == _currentUserId);
         });
 
         modelBuilder.Entity<AiProviderSettings>(provider =>
@@ -144,7 +151,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             // Mishearings are a primitive collection serialized to a single JSON column (EF Core).
             correction.PrimitiveCollection(c => c.Mishearings);
             // Privacy invariant: scope every Correction query to the current user (ADR-0002, CONTEXT.md).
-            correction.HasQueryFilter(c => c.UserId == _currentUserId);
+            correction.HasQueryFilter(TenantFilter, c => c.UserId == _currentUserId);
         });
     }
 
