@@ -1,4 +1,5 @@
 using JournalRecall.Api.Domain.Sessions.DomainEvents;
+using JournalRecall.Api.Domain.Sessions.Metadata;
 
 namespace JournalRecall.Api.Domain.Sessions;
 
@@ -14,6 +15,8 @@ public sealed class Session : BaseEntity
 {
     private readonly List<RawRevision> _rawRevisions = [];
     private readonly List<CleanedRevision> _cleanedRevisions = [];
+    private readonly List<SessionTopic> _topics = [];
+    private readonly List<SessionPerson> _people = [];
 
     public Guid UserId { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
@@ -48,6 +51,21 @@ public sealed class Session : BaseEntity
 
     /// <summary>The append-only Cleaned Revision stream, oldest first (ADR-0003).</summary>
     public IReadOnlyList<CleanedRevision> CleanedRevisions => _cleanedRevisions;
+
+    /// <summary>The Topic tags on this Session (user-set and any accepted AI Suggestions).</summary>
+    public IReadOnlyList<SessionTopic> Topics => _topics;
+
+    /// <summary>The People referenced on this Session (user-set and any accepted AI Suggestions).</summary>
+    public IReadOnlyList<SessionPerson> People => _people;
+
+    /// <summary>The mood key (a known mood or <see cref="Mood.CustomKey"/>); null when no mood is set.</summary>
+    public string? MoodKey { get; private set; }
+
+    /// <summary>The free-text value for a Custom mood; null otherwise.</summary>
+    public string? MoodCustomValue { get; private set; }
+
+    /// <summary>The mood as a value object, or null when unset.</summary>
+    public Mood? Mood => MoodKey is null ? null : Sessions.Metadata.Mood.Of(MoodKey, MoodCustomValue);
 
     /// <summary>The latest Raw Revision number (== the count, since numbers are sequential). 0 when empty.</summary>
     public int LatestRawRevisionNumber => _rawRevisions.Count;
@@ -133,4 +151,37 @@ public sealed class Session : BaseEntity
         CleanedHasHandEdits = true;
         return true;
     }
+
+    /// <summary>
+    /// Replaces the user's Topic tags (provenance <see cref="MetadataProvenance.UserSet"/>), leaving any
+    /// AI-provenance tags intact. Names are trimmed and de-duplicated case-insensitively.
+    /// </summary>
+    public void SetUserTopics(IEnumerable<string> names)
+    {
+        _topics.RemoveAll(t => t.Provenance == MetadataProvenance.UserSet);
+        foreach (var name in Normalize(names))
+            if (!_topics.Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                _topics.Add(new SessionTopic(name, MetadataProvenance.UserSet));
+    }
+
+    /// <summary>Replaces the user's People tags (provenance <see cref="MetadataProvenance.UserSet"/>), leaving AI ones intact.</summary>
+    public void SetUserPeople(IEnumerable<string> names)
+    {
+        _people.RemoveAll(p => p.Provenance == MetadataProvenance.UserSet);
+        foreach (var name in Normalize(names))
+            if (!_people.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                _people.Add(new SessionPerson(name, MetadataProvenance.UserSet));
+    }
+
+    /// <summary>Sets or clears the Session's mood.</summary>
+    public void SetMood(Mood? mood)
+    {
+        MoodKey = mood?.Key;
+        MoodCustomValue = mood?.CustomValue;
+    }
+
+    private static IEnumerable<string> Normalize(IEnumerable<string> names) => (names ?? [])
+        .Select(n => n?.Trim() ?? string.Empty)
+        .Where(n => n.Length > 0)
+        .Distinct(StringComparer.OrdinalIgnoreCase);
 }

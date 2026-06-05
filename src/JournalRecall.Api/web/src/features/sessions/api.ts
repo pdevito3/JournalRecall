@@ -1,5 +1,30 @@
 export type CleanupStatus = 'NotRun' | 'Running' | 'Clean' | 'Stale' | 'Failed'
 
+/** The app-defined known moods (mirrors the server's Mood.Known). */
+export const KNOWN_MOODS = [
+  'Joyful',
+  'Content',
+  'Calm',
+  'Neutral',
+  'Tired',
+  'Anxious',
+  'Sad',
+  'Angry',
+  'Excited',
+  'Grateful',
+] as const
+
+export interface Mood {
+  key: string
+  customValue: string | null
+}
+
+export interface Metadata {
+  topics: string[]
+  people: string[]
+  mood: Mood | null
+}
+
 export interface Session {
   id: string
   createdAt: string
@@ -8,6 +33,20 @@ export interface Session {
   synopsis: string
   cleanupStatus: CleanupStatus
   cleanedHasHandEdits: boolean
+  topics: string[]
+  people: string[]
+  mood: Mood | null
+}
+
+export async function saveMetadata(id: string, metadata: Metadata): Promise<void> {
+  const res = await fetch(`/api/sessions/${id}/metadata`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(metadata),
+  })
+  if (res.status === 400) throw new Error('That mood isn’t recognized')
+  if (!res.ok) throw new Error('Could not save metadata')
 }
 
 export async function createSession(): Promise<Session> {
@@ -22,6 +61,9 @@ export interface SessionListItem {
   createdAt: string
   journalingDay: string // YYYY-MM-DD in the user's timezone
   preview: string
+  topics: string[]
+  people: string[]
+  mood: Mood | null
 }
 
 export async function getSessionList(filter?: string): Promise<SessionListItem[]> {

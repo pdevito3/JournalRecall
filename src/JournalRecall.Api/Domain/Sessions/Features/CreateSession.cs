@@ -1,4 +1,3 @@
-using Mapster;
 using MediatR;
 using JournalRecall.Api.Databases;
 using JournalRecall.Api.Domain.Sessions.Dtos;
@@ -21,7 +20,7 @@ public static class CreateSession
             db.Sessions.Add(session);
             await db.SaveChangesAsync(cancellationToken);
 
-            return session.Adapt<SessionDto>();
+            return SessionDto.From(session);
         }
     }
 }

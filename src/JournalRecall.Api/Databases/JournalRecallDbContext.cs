@@ -43,6 +43,8 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             // Raw Revision stream + LastCleanedRawRevisionNumber (CONTEXT.md), never persisted.
             session.Ignore(s => s.EffectiveCleanupStatus);
             session.Ignore(s => s.LatestRawRevisionNumber);
+            // Mood is a value object reconstructed from the scalar MoodKey/MoodCustomValue columns.
+            session.Ignore(s => s.Mood);
             session.HasIndex(s => s.UserId);
             // Privacy invariant: referencing the instance field makes EF re-evaluate the owner per
             // query, so no User can ever read another User's Sessions (ADR-0002, CONTEXT.md).
@@ -70,6 +72,23 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
                 revision.Property<int>("Id");
                 revision.HasKey("Id");
                 revision.HasIndex("SessionId", nameof(CleanedRevision.RevisionNumber)).IsUnique();
+            });
+
+            // Topic/Person tags are part of the Session aggregate (owned collections), each with a
+            // store-generated shadow PK. Filtered/queried through the Session, not independently.
+            session.OwnsMany(s => s.Topics, topic =>
+            {
+                topic.ToTable("session_topics");
+                topic.WithOwner().HasForeignKey("SessionId");
+                topic.Property<int>("Id");
+                topic.HasKey("Id");
+            });
+            session.OwnsMany(s => s.People, person =>
+            {
+                person.ToTable("session_people");
+                person.WithOwner().HasForeignKey("SessionId");
+                person.Property<int>("Id");
+                person.HasKey("Id");
             });
         });
 

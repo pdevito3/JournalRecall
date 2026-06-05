@@ -1,6 +1,6 @@
 # 0011 — Manual metadata (Topics, People, Mood) + filtering
 
-**Phase:** 5 · **Type:** AFK · **Status:** todo
+**Phase:** 5 · **Type:** AFK · **Status:** done
 
 ## What to build
 
@@ -16,13 +16,13 @@ timeline by them. Every tag records provenance `UserSet`.
 
 ## Acceptance criteria
 
-- [ ] A user can add/remove Topics and People (their own list) on a Session, and set a Mood
+- [x] A user can add/remove Topics and People (their own list) on a Session, and set a Mood
       (including `Custom` with free text).
-- [ ] Manually set metadata is stored with provenance `UserSet`.
-- [ ] The timeline can be filtered by Topic, by Person, and by Mood (QueryKit), returning the
+- [x] Manually set metadata is stored with provenance `UserSet`.
+- [x] The timeline can be filtered by Topic, by Person, and by Mood (QueryKit), returning the
       correct Sessions.
-- [ ] Topics/People are per-user — one user's lists are not visible to another.
-- [ ] Mood `Custom` round-trips its free-text value.
+- [x] Topics/People are per-user — one user's lists are not visible to another.
+- [x] Mood `Custom` round-trips its free-text value.
 
 ## Blocked by
 

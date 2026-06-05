@@ -17,16 +17,34 @@ public static class GetSession
             // returns nothing (Privacy invariant), which the endpoint surfaces as 404. Project so a
             // read doesn't pull the whole Revision history. Stale is derived in SQL: a Clean Session
             // whose Raw Revision count has advanced past the last cleaned Revision reads as Stale.
-            return await db.Sessions
+            var row = await db.Sessions
                 .AsNoTracking()
                 .Where(s => s.Id == request.SessionId)
-                .Select(s => new SessionDto(
-                    s.Id, s.CreatedAt, s.RawDraft, s.CleanedDraft, s.Synopsis,
-                    s.CleanupStatus == CleanupStatus.Clean && s.RawRevisions.Count > s.LastCleanedRawRevisionNumber
+                .Select(s => new
+                {
+                    s.Id,
+                    s.CreatedAt,
+                    s.RawDraft,
+                    s.CleanedDraft,
+                    s.Synopsis,
+                    Status = s.CleanupStatus == CleanupStatus.Clean && s.RawRevisions.Count > s.LastCleanedRawRevisionNumber
                         ? CleanupStatus.Stale
                         : s.CleanupStatus,
-                    s.CleanedHasHandEdits))
+                    s.CleanedHasHandEdits,
+                    Topics = s.Topics.Select(t => t.Name).ToList(),
+                    People = s.People.Select(p => p.Name).ToList(),
+                    s.MoodKey,
+                    s.MoodCustomValue,
+                })
                 .FirstOrDefaultAsync(cancellationToken);
+
+            if (row is null)
+                return null;
+
+            return new SessionDto(
+                row.Id, row.CreatedAt, row.RawDraft, row.CleanedDraft, row.Synopsis, row.Status,
+                row.CleanedHasHandEdits, row.Topics, row.People,
+                row.MoodKey is null ? null : new MoodDto(row.MoodKey, row.MoodCustomValue));
         }
     }
 }

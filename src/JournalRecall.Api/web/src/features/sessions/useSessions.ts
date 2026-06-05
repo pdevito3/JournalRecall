@@ -44,6 +44,17 @@ export function useRevision(id: string, revisionNumber: number | null) {
   })
 }
 
+export function useSaveMetadata(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (metadata: sessionsApi.Metadata) => sessionsApi.saveMetadata(id, metadata),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session', id] })
+      queryClient.invalidateQueries({ queryKey: ['sessions'] }) // timeline chips/filters
+    },
+  })
+}
+
 export function useSaveCleaned(id: string) {
   const queryClient = useQueryClient()
   return useMutation({

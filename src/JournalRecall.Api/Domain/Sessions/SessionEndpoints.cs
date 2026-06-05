@@ -1,5 +1,6 @@
 using MediatR;
 using JournalRecall.AI.Transport;
+using JournalRecall.Api.Domain.Sessions.Dtos;
 using JournalRecall.Api.Domain.Sessions.Features;
 using JournalRecall.Api.Domain.Sessions.Services;
 
@@ -44,6 +45,18 @@ public static class SessionEndpoints
         {
             var revision = await sender.Send(new GetRawRevision.Query(id, revisionNumber));
             return revision is null ? Results.NotFound() : Results.Ok(revision);
+        });
+
+        // Manual metadata (Topics, People, Mood) — all provenance UserSet (issue 0011).
+        group.MapPut("/{id:guid}/metadata", async (Guid id, MetadataForWrite body, ISender sender) =>
+        {
+            var result = await sender.Send(new UpdateMetadata.Command(id, body));
+            return result switch
+            {
+                UpdateMetadata.Result.Ok => Results.NoContent(),
+                UpdateMetadata.Result.NotFound => Results.NotFound(),
+                _ => Results.Problem("Unknown mood.", statusCode: StatusCodes.Status400BadRequest),
+            };
         });
 
         // Hand-edit the Cleaned copy: appends a Cleaned Revision; never touches Raw (issue 0010).

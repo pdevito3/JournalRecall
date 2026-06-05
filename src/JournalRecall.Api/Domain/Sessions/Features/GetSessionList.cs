@@ -21,12 +21,23 @@ public static class GetSessionList
         {
             var query = db.Sessions.AsNoTracking().AsQueryable();
             if (!string.IsNullOrWhiteSpace(request.Filter))
-                query = query.ApplyQueryKitFilter(request.Filter);
+                // The config maps topics/people/mood query names onto the owned metadata (issue 0011);
+                // built-in names like CreatedAt keep working.
+                query = query.ApplyQueryKitFilter(request.Filter, SessionQueryKitConfig.Instance);
 
             // Project to the current-state fields only — the owned Revision history never becomes rows.
             var rows = await query
                 .OrderByDescending(s => s.CreatedAt) // newest first
-                .Select(s => new { s.Id, s.CreatedAt, s.RawDraft })
+                .Select(s => new
+                {
+                    s.Id,
+                    s.CreatedAt,
+                    s.RawDraft,
+                    Topics = s.Topics.Select(t => t.Name).ToList(),
+                    People = s.People.Select(p => p.Name).ToList(),
+                    s.MoodKey,
+                    s.MoodCustomValue,
+                })
                 .ToListAsync(cancellationToken);
 
             var timeZoneId = await CurrentUserTimeZone(cancellationToken);
@@ -35,7 +46,10 @@ public static class GetSessionList
                 s.Id,
                 s.CreatedAt,
                 JournalingDay.For(s.CreatedAt, timeZoneId),
-                Preview(s.RawDraft))).ToList();
+                Preview(s.RawDraft),
+                s.Topics,
+                s.People,
+                s.MoodKey is null ? null : new MoodDto(s.MoodKey, s.MoodCustomValue))).ToList();
         }
 
         private async Task<string?> CurrentUserTimeZone(CancellationToken cancellationToken)

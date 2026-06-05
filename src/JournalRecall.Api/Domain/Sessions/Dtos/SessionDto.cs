@@ -1,9 +1,9 @@
 namespace JournalRecall.Api.Domain.Sessions.Dtos;
 
 /// <summary>
-/// A Session as the client sees it: the Raw draft plus the AI-derived Cleaned copy, Synopsis, and the
-/// effective <see cref="Sessions.CleanupStatus"/> (with Stale derived). <see cref="CleanedDraft"/> and
-/// <see cref="Synopsis"/> are empty until a Cleanup run succeeds.
+/// A Session as the client sees it: the Raw draft plus the AI-derived Cleaned copy, Synopsis, the
+/// effective <see cref="Sessions.CleanupStatus"/> (Stale derived), and the manual metadata (Topics,
+/// People, Mood). <see cref="CleanedDraft"/>/<see cref="Synopsis"/> are empty until a Cleanup succeeds.
 /// </summary>
 public sealed record SessionDto(
     Guid Id,
@@ -12,10 +12,16 @@ public sealed record SessionDto(
     string CleanedDraft,
     string Synopsis,
     CleanupStatus CleanupStatus,
-    bool CleanedHasHandEdits)
+    bool CleanedHasHandEdits,
+    IReadOnlyList<string> Topics,
+    IReadOnlyList<string> People,
+    MoodDto? Mood)
 {
-    /// <summary>Projects a loaded Session, surfacing its <see cref="Session.EffectiveCleanupStatus"/>.</summary>
+    /// <summary>Projects a loaded Session, surfacing its effective status and metadata.</summary>
     public static SessionDto From(Session session) => new(
         session.Id, session.CreatedAt, session.RawDraft, session.CleanedDraft, session.Synopsis,
-        session.EffectiveCleanupStatus, session.CleanedHasHandEdits);
+        session.EffectiveCleanupStatus, session.CleanedHasHandEdits,
+        session.Topics.Select(t => t.Name).ToList(),
+        session.People.Select(p => p.Name).ToList(),
+        session.Mood is { } mood ? new MoodDto(mood.Key, mood.CustomValue) : null);
 }
