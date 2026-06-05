@@ -12,7 +12,7 @@ are **AFK** (no human review gate). Work them in dependency order.
 | [0004](0004-create-view-session-privacy.md) | Create & view a Session (Raw autosave) + per-user privacy | 2 | 0002 | done |
 | [0005](0005-raw-revision-history.md) | Raw Revision history | 2 | 0004 | done |
 | [0006](0006-timeline-querykit-journaling-day.md) | Timeline + QueryKit filters + journaling-day | 2 | 0004 | done |
-| [0007](0007-port-journalrecall-ai.md) | Port `JournalRecall.AI` agent framework | 3 | 0001 | todo |
+| [0007](0007-port-journalrecall-ai.md) | Port `JournalRecall.AI` agent framework | 3 | 0001 | done |
 | [0008](0008-ai-cleanup-cleaned-synopsis.md) | AI Cleanup → Cleaned + Synopsis | 4 | 0007, 0005 | todo |
 | [0009](0009-corrections.md) | Corrections | 4 | 0008 | todo |
 | [0010](0010-edit-cleaned-rerun-warn-history.md) | Edit Cleaned + re-run warn-and-overwrite + history | 4 | 0008 | todo |

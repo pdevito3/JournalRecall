@@ -1,6 +1,6 @@
 # 0007 — Port `JournalRecall.AI` agent framework
 
-**Phase:** 3 · **Type:** AFK (large) · **Status:** todo · **Realizes:** ADR-0004
+**Phase:** 3 · **Type:** AFK (large) · **Status:** done · **Realizes:** ADR-0004
 
 ## What to build
 
@@ -18,13 +18,13 @@ chat/RAG page. v1 features only use single-shot paths, but per ADR-0004 we port 
 
 ## Acceptance criteria
 
-- [ ] The ported test suite is green: pure-core (zero-mock + property) tests, `FakeChatClient`
+- [x] The ported test suite is green: pure-core (zero-mock + property) tests, `FakeChatClient`
       runner tests, tool `AIFunction` schema contract tests, and architecture boundary tests.
-- [ ] `AddJournalRecallAgents(...)` resolves a runner from DI.
-- [ ] A smoke agent runs end-to-end against a `FakeChatClient` and returns an `AgentOutcome`.
-- [ ] The library points at a configurable OpenAI-compatible endpoint (verified against a local/
+- [x] `AddJournalRecallAgents(...)` resolves a runner from DI.
+- [x] A smoke agent runs end-to-end against a `FakeChatClient` and returns an `AgentOutcome`.
+- [x] The library points at a configurable OpenAI-compatible endpoint (verified against a local/
       fake endpoint), with no provider hard-coded.
-- [ ] Telemetry metadata (model, tokens, tool names, latency) is emitted; content capture is off by
+- [x] Telemetry metadata (model, tokens, tool names, latency) is emitted; content capture is off by
       default.
 
 ## Blocked by

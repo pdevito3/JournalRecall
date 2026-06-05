@@ -4,9 +4,16 @@
     <RootNamespace>JournalRecall.AI</RootNamespace>
   </PropertyGroup>
 
-  <!--
-    Phase 0 holds only the observability seed (Telemetry) so the host's OpenTelemetry wiring has a
-    stable source/meter name to attach to. The full agent framework is ported in issue 0007.
-  -->
+  <ItemGroup>
+    <!-- DI / Options / Logging abstractions come from the Microsoft.AspNetCore.App shared framework below. -->
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Polly.Core" />
+    <PackageReference Include="ModelContextProtocol" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Optional ASP.NET Core transports (SSE/NDJSON). Pure agent use does not exercise these types. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
 </Project>

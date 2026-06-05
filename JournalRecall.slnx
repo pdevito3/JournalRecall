@@ -7,6 +7,8 @@
   <Folder Name="/src/">
     <Project Path="src/JournalRecall.AI/JournalRecall.AI.csproj" />
     <Project Path="src/JournalRecall.AI.EntityFrameworkCore/JournalRecall.AI.EntityFrameworkCore.csproj" />
+    <Project Path="src/JournalRecall.AI.OpenAI/JournalRecall.AI.OpenAI.csproj" />
+    <Project Path="src/JournalRecall.AI.SourceGeneration/JournalRecall.AI.SourceGeneration.csproj" />
     <Project Path="src/JournalRecall.Api/JournalRecall.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
