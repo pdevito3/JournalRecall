@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Identity;
 using JournalRecall.Api.Domain.Sessions;
+using JournalRecall.Api.Domain.Summaries;
 using JournalRecall.Api.Services;
 
 namespace JournalRecall.Api.Databases;
@@ -22,6 +23,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
 
     public DbSet<Session> Sessions => Set<Session>();
     public DbSet<Correction> Corrections => Set<Correction>();
+    public DbSet<Summary> Summaries => Set<Summary>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -100,6 +102,17 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
                 suggestion.Property<int>("Id");
                 suggestion.HasKey("Id");
             });
+        });
+
+        modelBuilder.Entity<Summary>(summary =>
+        {
+            summary.ToTable("summaries");
+            summary.HasKey(s => s.Id);
+            summary.Ignore(s => s.DomainEvents);
+            // One Summary per (user, period, anchor date) — the natural key for upsert/lookup.
+            summary.HasIndex(s => new { s.UserId, s.Period, s.PeriodDate }).IsUnique();
+            // Privacy invariant: scope every Summary query to the current user (ADR-0002, CONTEXT.md).
+            summary.HasQueryFilter(s => s.UserId == _currentUserId);
         });
 
         modelBuilder.Entity<Correction>(correction =>

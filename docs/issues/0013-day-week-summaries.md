@@ -1,6 +1,6 @@
 # 0013 — Day & Week Summaries (on-demand)
 
-**Phase:** 6 · **Type:** AFK · **Status:** todo
+**Phase:** 6 · **Type:** AFK · **Status:** done
 
 ## What to build
 

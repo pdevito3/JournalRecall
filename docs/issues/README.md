@@ -13,12 +13,12 @@ are **AFK** (no human review gate). Work them in dependency order.
 | [0005](0005-raw-revision-history.md) | Raw Revision history | 2 | 0004 | done |
 | [0006](0006-timeline-querykit-journaling-day.md) | Timeline + QueryKit filters + journaling-day | 2 | 0004 | done |
 | [0007](0007-port-journalrecall-ai.md) | Port `JournalRecall.AI` agent framework | 3 | 0001 | done |
-| [0008](0008-ai-cleanup-cleaned-synopsis.md) | AI Cleanup → Cleaned + Synopsis | 4 | 0007, 0005 | todo |
-| [0009](0009-corrections.md) | Corrections | 4 | 0008 | todo |
-| [0010](0010-edit-cleaned-rerun-warn-history.md) | Edit Cleaned + re-run warn-and-overwrite + history | 4 | 0008 | todo |
-| [0011](0011-manual-metadata-filtering.md) | Manual metadata (Topics, People, Mood) + filtering | 5 | 0004, 0006 | todo |
-| [0012](0012-ai-metadata-suggestions.md) | AI metadata Suggestions (accept/reject) | 5 | 0008, 0011 | todo |
-| [0013](0013-day-week-summaries.md) | Day & Week Summaries (on-demand) | 6 | 0007, 0004 | todo |
+| [0008](0008-ai-cleanup-cleaned-synopsis.md) | AI Cleanup → Cleaned + Synopsis | 4 | 0007, 0005 | done |
+| [0009](0009-corrections.md) | Corrections | 4 | 0008 | done |
+| [0010](0010-edit-cleaned-rerun-warn-history.md) | Edit Cleaned + re-run warn-and-overwrite + history | 4 | 0008 | done |
+| [0011](0011-manual-metadata-filtering.md) | Manual metadata (Topics, People, Mood) + filtering | 5 | 0004, 0006 | done |
+| [0012](0012-ai-metadata-suggestions.md) | AI metadata Suggestions (accept/reject) | 5 | 0008, 0011 | done |
+| [0013](0013-day-week-summaries.md) | Day & Week Summaries (on-demand) | 6 | 0007, 0004 | done |
 | [0014](0014-period-rollups-staleness.md) | Month/Quarter/Year roll-ups + staleness propagation | 6 | 0013 | todo |
 | [0015](0015-location-opt-in.md) | Location opt-in | 7 | 0004 | todo |
 | [0016](0016-admin-surface.md) | Admin surface: user management + AI provider config | 7 | 0003, 0007 | todo |

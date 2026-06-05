@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SummariesRouteImport } from './routes/summaries'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CorrectionsRouteImport } from './routes/corrections'
@@ -16,6 +17,11 @@ import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 
+const SummariesRoute = SummariesRouteImport.update({
+  id: '/summaries',
+  path: '/summaries',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/summaries': typeof SummariesRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/summaries': typeof SummariesRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/summaries': typeof SummariesRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/corrections'
     | '/login'
     | '/register'
+    | '/summaries'
     | '/sessions/$sessionId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/corrections'
     | '/login'
     | '/register'
+    | '/summaries'
     | '/sessions/$sessionId'
   id:
     | '__root__'
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/corrections'
     | '/login'
     | '/register'
+    | '/summaries'
     | '/sessions/$sessionId'
   fileRoutesById: FileRoutesById
 }
@@ -105,11 +117,19 @@ export interface RootRouteChildren {
   CorrectionsRoute: typeof CorrectionsRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  SummariesRoute: typeof SummariesRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/summaries': {
+      id: '/summaries'
+      path: '/summaries'
+      fullPath: '/summaries'
+      preLoaderRoute: typeof SummariesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -161,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   CorrectionsRoute: CorrectionsRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  SummariesRoute: SummariesRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
 }
 export const routeTree = rootRouteImport

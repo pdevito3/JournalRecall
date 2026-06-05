@@ -2,6 +2,7 @@ using Serilog;
 using JournalRecall.Api.Auth;
 using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Sessions;
+using JournalRecall.Api.Domain.Summaries;
 using JournalRecall.Api.Domain.Users;
 using JournalRecall.Api.Extensions;
 
@@ -39,6 +40,9 @@ try
 
     // Session core: create, autosave Draft, read, timeline (per-user via the global query filter).
     app.MapSessions();
+
+    // On-demand Day & Week Summaries over a period's Sessions (per-user, private).
+    app.MapSummaries();
 
     // Per-user settings (timezone for journaling-day derivation).
     app.MapUserSettings();

@@ -62,7 +62,11 @@ public static class ServiceRegistration
         // ChatModels:cleanup section doesn't fail startup — only an actual run would (Admin configures it).
         services.AddJournalRecallAgents()
             .AddChatModel(JournalRecall.Api.Domain.Sessions.Ai.CleanupAgent.ModelKey,
-                builder.Configuration.GetSection("ChatModels:cleanup"));
+                builder.Configuration.GetSection("ChatModels:cleanup"))
+            .AddChatModel(JournalRecall.Api.Domain.Summaries.Ai.SummaryAgent.ModelKey,
+                builder.Configuration.GetSection("ChatModels:summary"));
         services.AddScoped<SessionCleanupRunner>();
+        services.AddScoped<JournalRecall.Api.Domain.Summaries.Services.SummarySourceReader>();
+        services.AddScoped<JournalRecall.Api.Domain.Summaries.Services.SummaryGenerator>();
     }
 }
