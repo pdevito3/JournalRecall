@@ -37,6 +37,10 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             session.ToTable("sessions");
             session.HasKey(s => s.Id);
             session.Ignore(s => s.DomainEvents);
+            // Derived, not stored: Stale and the latest-Raw-Revision number are computed from the
+            // Raw Revision stream + LastCleanedRawRevisionNumber (CONTEXT.md), never persisted.
+            session.Ignore(s => s.EffectiveCleanupStatus);
+            session.Ignore(s => s.LatestRawRevisionNumber);
             session.HasIndex(s => s.UserId);
             // Privacy invariant: referencing the instance field makes EF re-evaluate the owner per
             // query, so no User can ever read another User's Sessions (ADR-0002, CONTEXT.md).
@@ -53,6 +57,17 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
                 revision.Property<int>("Id");
                 revision.HasKey("Id");
                 revision.HasIndex("SessionId", nameof(RawRevision.RevisionNumber)).IsUnique();
+            });
+
+            // The Cleaned Revision stream mirrors Raw: its own append-only table, part of the Session
+            // aggregate, with a store-generated shadow PK (ADR-0003; see the Raw notes above).
+            session.OwnsMany(s => s.CleanedRevisions, revision =>
+            {
+                revision.ToTable("session_cleaned_revisions");
+                revision.WithOwner().HasForeignKey("SessionId");
+                revision.Property<int>("Id");
+                revision.HasKey("Id");
+                revision.HasIndex("SessionId", nameof(CleanedRevision.RevisionNumber)).IsUnique();
             });
         });
     }

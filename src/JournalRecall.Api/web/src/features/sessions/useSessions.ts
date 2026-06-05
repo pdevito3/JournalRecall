@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as sessionsApi from './api'
 
@@ -41,4 +42,60 @@ export function useRevision(id: string, revisionNumber: number | null) {
     queryFn: () => sessionsApi.getRevision(id, revisionNumber!),
     enabled: revisionNumber != null,
   })
+}
+
+export function useCleanedRevisions(id: string) {
+  return useQuery({
+    queryKey: ['session', id, 'cleaned-revisions'],
+    queryFn: () => sessionsApi.getCleanedRevisions(id),
+  })
+}
+
+/**
+ * Drives an AI Cleanup run, exposing live progress streamed from the server. On completion the cached
+ * Session + its Cleaned history are invalidated so the side-by-side view and status badge refresh.
+ */
+export function useCleanup(id: string) {
+  const queryClient = useQueryClient()
+  const [running, setRunning] = useState(false)
+  const [progress, setProgress] = useState<string[]>([])
+  const [error, setError] = useState(false)
+
+  const run = useCallback(async () => {
+    setRunning(true)
+    setError(false)
+    setProgress([])
+    try {
+      await sessionsApi.streamCleanup(id, (event) => {
+        // Surface a short human line per lifecycle event (progress, not a static spinner).
+        setProgress((prior) => [...prior, labelEvent(event.type)])
+      })
+    } catch {
+      setError(true)
+    } finally {
+      setRunning(false)
+      await queryClient.invalidateQueries({ queryKey: ['session', id] })
+    }
+  }, [id, queryClient])
+
+  return { run, running, progress, error }
+}
+
+function labelEvent(type: string): string {
+  switch (type) {
+    case 'run.started':
+      return 'Starting cleanup…'
+    case 'turn.started':
+      return 'Reading your words…'
+    case 'usage.updated':
+      return 'Polishing…'
+    case 'completed':
+      return 'Done.'
+    case 'stopped':
+      return 'Stopped.'
+    case 'failed':
+      return 'Cleanup failed.'
+    default:
+      return type
+  }
 }

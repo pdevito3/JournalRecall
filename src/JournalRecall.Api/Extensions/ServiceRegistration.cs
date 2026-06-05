@@ -2,8 +2,11 @@ using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Serilog;
+using JournalRecall.AI.DependencyInjection;
+using JournalRecall.AI.OpenAI;
 using JournalRecall.Api.Auth;
 using JournalRecall.Api.Databases;
+using JournalRecall.Api.Domain.Sessions.Services;
 
 namespace JournalRecall.Api.Extensions;
 
@@ -53,5 +56,13 @@ public static class ServiceRegistration
         var assembly = typeof(ServiceRegistration).Assembly;
         TypeAdapterConfig.GlobalSettings.Scan(assembly);
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
+
+        // AI agent runner (ADR-0004) + the BYO OpenAI-compatible "cleanup" model the Cleanup agent
+        // resolves by logical name. The client is built lazily on first use, so a missing/blank
+        // ChatModels:cleanup section doesn't fail startup — only an actual run would (Admin configures it).
+        services.AddJournalRecallAgents()
+            .AddChatModel(JournalRecall.Api.Domain.Sessions.Ai.CleanupAgent.ModelKey,
+                builder.Configuration.GetSection("ChatModels:cleanup"));
+        services.AddScoped<SessionCleanupRunner>();
     }
 }

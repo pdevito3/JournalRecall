@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useRevision, useRevisions, useSaveDraft, useSession } from '@/features/sessions/useSessions'
+import type { CleanupStatus, Session } from '@/features/sessions/api'
+import {
+  useCleanup,
+  useRevision,
+  useRevisions,
+  useSaveDraft,
+  useSession,
+} from '@/features/sessions/useSessions'
 import { Button } from '@/shared/ui/button'
+import { cn } from '@/shared/utils/cn'
 
 export const Route = createFileRoute('/sessions/$sessionId')({
   component: SessionEditor,
@@ -34,7 +42,9 @@ function SessionEditor() {
   }
 
   if (isLoading) return <p className="text-muted">Loading…</p>
-  if (isError) return <p className="text-muted">This session could not be found.</p>
+  if (isError || !session) return <p className="text-muted">This session could not be found.</p>
+
+  const hasCleaned = session.cleanedDraft.length > 0
 
   return (
     <section className="space-y-4">
@@ -43,16 +53,86 @@ function SessionEditor() {
         <SaveStatus pending={saveDraft.isPending} success={saveDraft.isSuccess} error={saveDraft.isError} />
       </div>
 
-      <textarea
-        value={text}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Write freely…"
-        autoFocus
-        className="min-h-[50vh] w-full resize-none rounded-lg border border-border bg-surface-2 p-4 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      />
+      <CleanupBar session={session} />
+
+      {/* Raw and Cleaned side by side once a Cleaned copy exists; Raw alone until then. */}
+      <div className={cn('grid gap-4', hasCleaned && 'lg:grid-cols-2')}>
+        <div className="space-y-2">
+          {hasCleaned ? <PanelLabel>Raw (yours)</PanelLabel> : null}
+          <textarea
+            value={text}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder="Write freely…"
+            autoFocus
+            className="min-h-[50vh] w-full resize-none rounded-lg border border-border bg-surface-2 p-4 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          />
+        </div>
+
+        {hasCleaned ? (
+          <div className="space-y-2">
+            <PanelLabel>Cleaned (AI)</PanelLabel>
+            <pre className="min-h-[50vh] w-full overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-surface-3 p-4 text-content">
+              {session.cleanedDraft}
+            </pre>
+          </div>
+        ) : null}
+      </div>
+
+      {session.synopsis ? (
+        <div className="space-y-1 rounded-lg border border-border bg-surface-2 p-4">
+          <PanelLabel>Synopsis</PanelLabel>
+          <p className="text-content">{session.synopsis}</p>
+        </div>
+      ) : null}
 
       <RevisionHistory sessionId={sessionId} viewing={viewing} onView={setViewing} />
     </section>
+  )
+}
+
+function PanelLabel({ children }: { children: ReactNode }) {
+  return <h2 className="text-sm font-medium text-muted">{children}</h2>
+}
+
+const STATUS_LABELS: Record<CleanupStatus, string> = {
+  NotRun: 'Not cleaned',
+  Running: 'Cleaning…',
+  Clean: 'Clean',
+  Stale: 'Stale — Raw changed since cleanup',
+  Failed: 'Cleanup failed',
+}
+
+function CleanupBar({ session }: { session: Session }) {
+  const { run, running, progress, error } = useCleanup(session.id)
+  // Server status, or the live in-flight status while a run streams.
+  const status: CleanupStatus = running ? 'Running' : session.cleanupStatus
+  const isStale = status === 'Stale'
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 p-3">
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
+            isStale || status === 'Failed'
+              ? 'bg-amber-500/15 text-amber-400'
+              : status === 'Clean'
+                ? 'bg-accent/15 text-accent'
+                : 'bg-surface-3 text-muted',
+          )}
+        >
+          {STATUS_LABELS[status]}
+        </span>
+        {running && progress.length > 0 ? (
+          <span className="text-sm text-muted">{progress[progress.length - 1]}</span>
+        ) : null}
+        {error ? <span className="text-sm text-amber-400">Something went wrong.</span> : null}
+      </div>
+
+      <Button variant="primary" onPress={() => void run()} isDisabled={running}>
+        {running ? 'Cleaning…' : isStale ? 'Re-run cleanup' : 'Clean up with AI'}
+      </Button>
+    </div>
   )
 }
 

@@ -1,6 +1,6 @@
 # 0008 — AI Cleanup → Cleaned + Synopsis
 
-**Phase:** 4 · **Type:** AFK · **Status:** todo · **Realizes:** ADR-0003, ADR-0004
+**Phase:** 4 · **Type:** AFK · **Status:** done · **Realizes:** ADR-0003, ADR-0004
 
 ## What to build
 
@@ -17,13 +17,13 @@ streams progress to the UI.
 
 ## Acceptance criteria
 
-- [ ] Running Cleanup produces a Cleaned copy and a Synopsis; the Raw text is byte-for-byte
+- [x] Running Cleanup produces a Cleaned copy and a Synopsis; the Raw text is byte-for-byte
       unchanged afterward.
-- [ ] A Cleaned Revision is appended; status becomes `Clean`.
-- [ ] Editing Raw after a successful Cleanup flips the status to `Stale` in the UI.
-- [ ] Progress is streamed to the client during the run (not a static spinner), ending in a terminal
+- [x] A Cleaned Revision is appended; status becomes `Clean`.
+- [x] Editing Raw after a successful Cleanup flips the status to `Stale` in the UI.
+- [x] Progress is streamed to the client during the run (not a static spinner), ending in a terminal
       state; a model failure yields `Failed` without corrupting Raw or prior Cleaned.
-- [ ] Tests assert Raw immutability across Cleanup and correct status transitions.
+- [x] Tests assert Raw immutability across Cleanup and correct status transitions.
 
 ## Blocked by
 

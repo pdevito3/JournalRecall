@@ -1,7 +1,12 @@
+export type CleanupStatus = 'NotRun' | 'Running' | 'Clean' | 'Stale' | 'Failed'
+
 export interface Session {
   id: string
   createdAt: string
   rawDraft: string
+  cleanedDraft: string
+  synopsis: string
+  cleanupStatus: CleanupStatus
 }
 
 export async function createSession(): Promise<Session> {
@@ -62,4 +67,59 @@ export async function saveDraft(id: string, rawText: string): Promise<void> {
     body: JSON.stringify({ rawText }),
   })
   if (!res.ok) throw new Error('Autosave failed')
+}
+
+/** A projected agent lifecycle event from the Cleanup SSE stream (the stable wire envelope). */
+export interface CleanupEvent {
+  type: string
+}
+
+/**
+ * Runs AI Cleanup, streaming live progress via Server-Sent Events. Each parsed event is handed to
+ * `onEvent`; the promise resolves when the stream ends (terminal event delivered).
+ */
+export async function streamCleanup(
+  id: string,
+  onEvent: (event: CleanupEvent) => void,
+): Promise<void> {
+  const res = await fetch(`/api/sessions/${id}/cleanup/stream`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+  if (!res.ok || !res.body) throw new Error('Could not start cleanup')
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+
+    // SSE frames are separated by a blank line; each carries one `data: {json}` line.
+    let split: number
+    while ((split = buffer.indexOf('\n\n')) >= 0) {
+      const frame = buffer.slice(0, split)
+      buffer = buffer.slice(split + 2)
+      const line = frame.split('\n').find((l) => l.startsWith('data:'))
+      if (!line) continue
+      try {
+        onEvent(JSON.parse(line.slice('data:'.length).trim()) as CleanupEvent)
+      } catch {
+        // Ignore a partial/garbled frame; the stream continues.
+      }
+    }
+  }
+}
+
+export interface CleanedRevisionSummary {
+  revisionNumber: number
+  createdAt: string
+}
+
+export async function getCleanedRevisions(id: string): Promise<CleanedRevisionSummary[]> {
+  const res = await fetch(`/api/sessions/${id}/cleaned-revisions`, { credentials: 'include' })
+  if (!res.ok) throw new Error('Could not load cleaned history')
+  return res.json()
 }

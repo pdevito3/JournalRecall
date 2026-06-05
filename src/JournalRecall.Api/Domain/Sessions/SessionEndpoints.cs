@@ -1,5 +1,7 @@
 using MediatR;
+using JournalRecall.AI.Transport;
 using JournalRecall.Api.Domain.Sessions.Features;
+using JournalRecall.Api.Domain.Sessions.Services;
 
 namespace JournalRecall.Api.Domain.Sessions;
 
@@ -41,6 +43,38 @@ public static class SessionEndpoints
         group.MapGet("/{id:guid}/revisions/{revisionNumber:int}", async (Guid id, int revisionNumber, ISender sender) =>
         {
             var revision = await sender.Send(new GetRawRevision.Query(id, revisionNumber));
+            return revision is null ? Results.NotFound() : Results.Ok(revision);
+        });
+
+        // Manual AI Cleanup → Cleaned copy + Synopsis, never altering Raw (issue 0008). Runs to
+        // completion and returns the updated Session (status + Cleaned/Synopsis).
+        group.MapPost("/{id:guid}/cleanup", async (Guid id, SessionCleanupRunner cleanup, CancellationToken ct) =>
+        {
+            var dto = await cleanup.RunAsync(id, ct);
+            return dto is null ? Results.NotFound() : Results.Ok(dto);
+        });
+
+        // The same Cleanup run, streamed as Server-Sent Events so the client shows live progress
+        // (not a static spinner), ending in a terminal event (ADR-0005).
+        group.MapPost("/{id:guid}/cleanup/stream", async (Guid id, SessionCleanupRunner cleanup, ISender sender, HttpContext http) =>
+        {
+            // Pre-check existence so a missing Session is a clean 404 rather than an empty stream.
+            if (await sender.Send(new GetSession.Query(id)) is null)
+                return Results.NotFound();
+
+            return AgentResults.Stream(cleanup.StreamAsync(id, http.RequestAborted), StreamTransport.Sse);
+        });
+
+        // Per-Session Cleaned Revision history (drill-down; not part of any list/search index).
+        group.MapGet("/{id:guid}/cleaned-revisions", async (Guid id, ISender sender) =>
+        {
+            var revisions = await sender.Send(new GetCleanedRevisions.Query(id));
+            return revisions is null ? Results.NotFound() : Results.Ok(revisions);
+        });
+
+        group.MapGet("/{id:guid}/cleaned-revisions/{revisionNumber:int}", async (Guid id, int revisionNumber, ISender sender) =>
+        {
+            var revision = await sender.Send(new GetCleanedRevision.Query(id, revisionNumber));
             return revision is null ? Results.NotFound() : Results.Ok(revision);
         });
 

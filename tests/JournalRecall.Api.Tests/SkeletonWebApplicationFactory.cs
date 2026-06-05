@@ -12,7 +12,7 @@ namespace JournalRecall.Api.Tests;
 /// without touching the developer's journalrecall.db. The file is removed on dispose. An in-memory
 /// trace exporter is wired in so tests can assert the OpenTelemetry pipeline actually produces spans.
 /// </summary>
-public sealed class SkeletonWebApplicationFactory : WebApplicationFactory<Program>
+public class SkeletonWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"journalrecall-test-{Guid.NewGuid():N}.db");
 
@@ -27,9 +27,15 @@ public sealed class SkeletonWebApplicationFactory : WebApplicationFactory<Progra
                 ["ConnectionStrings:JournalRecall"] = $"Data Source={_dbPath}",
             }));
         builder.ConfigureServices(services =>
+        {
             services.AddOpenTelemetry().WithTracing(tracing =>
-                tracing.AddInMemoryExporter(ExportedActivities)));
+                tracing.AddInMemoryExporter(ExportedActivities));
+            ConfigureTestServices(services);
+        });
     }
+
+    /// <summary>Hook for subclasses to override host services (e.g. stub the AI chat client).</summary>
+    protected virtual void ConfigureTestServices(IServiceCollection services) { }
 
     public string DbPath => _dbPath;
 

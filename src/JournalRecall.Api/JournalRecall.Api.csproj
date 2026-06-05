@@ -32,6 +32,7 @@
   <ItemGroup>
     <ProjectReference Include="..\JournalRecall.AI\JournalRecall.AI.csproj" />
     <ProjectReference Include="..\JournalRecall.AI.EntityFrameworkCore\JournalRecall.AI.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\JournalRecall.AI.OpenAI\JournalRecall.AI.OpenAI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

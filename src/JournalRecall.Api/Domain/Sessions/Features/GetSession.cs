@@ -15,11 +15,16 @@ public static class GetSession
         {
             // The global query filter scopes this to the current user; another user's id simply
             // returns nothing (Privacy invariant), which the endpoint surfaces as 404. Project so a
-            // read doesn't pull the whole Raw Revision history.
+            // read doesn't pull the whole Revision history. Stale is derived in SQL: a Clean Session
+            // whose Raw Revision count has advanced past the last cleaned Revision reads as Stale.
             return await db.Sessions
                 .AsNoTracking()
                 .Where(s => s.Id == request.SessionId)
-                .Select(s => new SessionDto(s.Id, s.CreatedAt, s.RawDraft))
+                .Select(s => new SessionDto(
+                    s.Id, s.CreatedAt, s.RawDraft, s.CleanedDraft, s.Synopsis,
+                    s.CleanupStatus == CleanupStatus.Clean && s.RawRevisions.Count > s.LastCleanedRawRevisionNumber
+                        ? CleanupStatus.Stale
+                        : s.CleanupStatus))
                 .FirstOrDefaultAsync(cancellationToken);
         }
     }
