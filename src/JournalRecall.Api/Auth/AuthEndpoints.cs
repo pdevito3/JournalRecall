@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using JournalRecall.Api.Domain.Identity;
 
@@ -9,6 +11,8 @@ public static class AuthEndpoints
 {
     public sealed record Credentials(string Email, string Password);
     public sealed record UserResponse(Guid Id, string Email, IReadOnlyList<string> Roles);
+    /// <summary>Public config that drives all anonymous routing (server gate + client guard, issue 0022).</summary>
+    public sealed record AuthConfigResponse(bool NeedsSetup, bool SelfRegistrationEnabled);
     /// <summary>Mobile refresh: the refresh token is presented in the body (web uses the HttpOnly cookie).</summary>
     public sealed record RefreshRequest(string? RefreshToken);
     /// <summary>Mobile refresh response: tokens in the body (web gets cookies + an empty body).</summary>
@@ -17,6 +21,14 @@ public static class AuthEndpoints
     public static IEndpointRouteBuilder MapAuth(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api");
+
+        // Anonymous: drives the access gate and onboarding routing. needsSetup = zero Users exist;
+        // selfRegistrationEnabled is fixed until issue 0023 introduces AuthSettings.
+        group.MapGet("/auth/config", async (UserManager<User> users) =>
+        {
+            var needsSetup = !await users.Users.AnyAsync();
+            return Results.Ok(new AuthConfigResponse(needsSetup, SelfRegistrationEnabled: false));
+        });
 
         group.MapPost("/auth/register", async (Credentials body, UserManager<User> users) =>
         {
@@ -31,7 +43,7 @@ public static class AuthEndpoints
         });
 
         group.MapPost("/auth/login", async (Credentials body, UserManager<User> users, JwtTokenService tokens,
-            RefreshTokenService refreshTokens, HttpRequest request, HttpResponse response) =>
+            RefreshTokenService refreshTokens, IOptions<RefreshTokenOptions> refreshOptions, HttpRequest request, HttpResponse response) =>
         {
             var user = await users.FindByEmailAsync(body.Email);
             if (user is null || !await users.CheckPasswordAsync(user, body.Password))
@@ -46,9 +58,14 @@ public static class AuthEndpoints
 
             // Mint a refresh token for this device first so the access JWT can carry its chain id (ADR-0005).
             var issued = await refreshTokens.IssueAsync(user.Id, DeviceLabel(request));
-            var (token, expiresAt) = tokens.Create(user, roles, issued.ChainId);
-            AuthCookie.SetAccess(response, token, expiresAt);
-            AuthCookie.SetRefresh(response, issued.Token, issued.ExpiresAt);
+            var (token, _) = tokens.Create(user, roles, issued.ChainId);
+            // Cookie lifetime is pure transport on the real wall clock: long enough that a returning User
+            // isn't bounced to /login by the server access-gate on a cold load. The JWT inside still
+            // expires in ~15 min and is silently rotated (issue 0022 / ADR-0005); the token's *domain*
+            // expiry uses the injectable clock, the cookie does not.
+            var cookieExpiry = CookieExpiry(refreshOptions);
+            AuthCookie.SetAccess(response, token, cookieExpiry);
+            AuthCookie.SetRefresh(response, issued.Token, cookieExpiry);
 
             return Results.Ok(new UserResponse(user.Id, user.Email!, roles.ToList()));
         });
@@ -57,7 +74,7 @@ public static class AuthEndpoints
         // and receives the tokens in the body (ADR-0005) — the cookie path never returns the refresh
         // token in the body, preserving HttpOnly.
         group.MapPost("/auth/refresh", async (RefreshRequest? body, UserManager<User> users, JwtTokenService tokens,
-            RefreshTokenService refreshTokens, HttpRequest request, HttpResponse response) =>
+            RefreshTokenService refreshTokens, IOptions<RefreshTokenOptions> refreshOptions, HttpRequest request, HttpResponse response) =>
         {
             var fromCookie = request.Cookies[AuthCookie.RefreshName];
             var isCookieFlow = !string.IsNullOrEmpty(fromCookie);
@@ -82,12 +99,13 @@ public static class AuthEndpoints
             }
 
             var roles = await users.GetRolesAsync(user);
-            var (access, accessExpires) = tokens.Create(user, roles, rotation.ChainId);
+            var (access, _) = tokens.Create(user, roles, rotation.ChainId);
 
             if (isCookieFlow)
             {
-                AuthCookie.SetAccess(response, access, accessExpires);
-                AuthCookie.SetRefresh(response, rotation.Token!, rotation.ExpiresAt!.Value);
+                var cookieExpiry = CookieExpiry(refreshOptions);
+                AuthCookie.SetAccess(response, access, cookieExpiry);
+                AuthCookie.SetRefresh(response, rotation.Token!, cookieExpiry);
                 return Results.Ok();
             }
 
@@ -115,6 +133,11 @@ public static class AuthEndpoints
 
         return app;
     }
+
+    /// <summary>Transport-only cookie lifetime on the real wall clock (the durable session is bounded by
+    /// the server-side refresh token, not the cookie).</summary>
+    private static DateTimeOffset CookieExpiry(IOptions<RefreshTokenOptions> refreshOptions) =>
+        DateTimeOffset.UtcNow + refreshOptions.Value.InactivityWindow;
 
     private static void ClearAuthCookies(HttpResponse response)
     {

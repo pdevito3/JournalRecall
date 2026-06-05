@@ -13,6 +13,18 @@ export interface Credentials {
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
+export interface AuthConfig {
+  needsSetup: boolean
+  selfRegistrationEnabled: boolean
+}
+
+/** Public config that drives anonymous routing (the access gate / client guard). Always reachable. */
+export async function fetchAuthConfig(): Promise<AuthConfig> {
+  const res = await apiFetch('/api/auth/config')
+  if (!res.ok) throw new Error('Failed to load auth config')
+  return res.json()
+}
+
 /** Current session, or null when unauthenticated (401). The auth cookie rides along automatically. */
 export async function fetchMe(): Promise<AuthUser | null> {
   const res = await apiFetch('/api/me', { credentials: 'include' })

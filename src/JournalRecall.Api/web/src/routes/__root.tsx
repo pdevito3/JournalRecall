@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { createRootRouteWithContext, Link, Outlet, useNavigate } from '@tanstack/react-router'
+import { createRootRouteWithContext, Link, Outlet, redirect, useNavigate } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
+import { fetchAuthConfig, fetchMe } from '@/features/auth/api'
 import { useLogout, useMe } from '@/features/auth/useAuth'
 import { Button } from '@/shared/ui/button'
 
@@ -8,7 +9,33 @@ export interface RouterContext {
   queryClient: QueryClient
 }
 
+// Anonymous client routes that don't require a session (mirrors the server access gate, issue 0022).
+const PUBLIC_ROUTES = ['/login', '/register', '/setup']
+
 export const Route = createRootRouteWithContext<RouterContext>()({
+  // Client-side access guard: instant in-app redirects that mirror the server gate, so navigation
+  // doesn't need a round-trip. The server gate still backstops cold loads / deep-links.
+  beforeLoad: async ({ context, location }) => {
+    const path = location.pathname
+    const config = await context.queryClient.ensureQueryData({
+      queryKey: ['auth', 'config'],
+      queryFn: fetchAuthConfig,
+      staleTime: 30_000,
+    })
+
+    // Fresh instance: funnel everyone to setup until the root Admin exists.
+    if (config.needsSetup) {
+      if (path !== '/setup') throw redirect({ to: '/setup' })
+      return
+    }
+    // Already set up: setup is closed; public auth routes stay open.
+    if (path === '/setup') throw redirect({ to: '/login' })
+    if (PUBLIC_ROUTES.includes(path)) return
+
+    // Protected route: require a session (fetchMe silently refreshes an expired access token).
+    const me = await context.queryClient.ensureQueryData({ queryKey: ['me'], queryFn: fetchMe })
+    if (!me) throw redirect({ to: '/login' })
+  },
   component: RootLayout,
 })
 

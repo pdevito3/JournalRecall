@@ -57,6 +57,10 @@ try
     // Per-user Corrections that fix mis-dictations during Cleanup.
     app.MapCorrections();
 
+    // Server access gate (issue 0022): redirect anonymous SPA navigations to /setup or /login before
+    // the app shell is served. Runs before static files so assets still serve freely.
+    app.UseMiddleware<AccessGateMiddleware>();
+
     // Serve the built Vite SPA from wwwroot/app at /app/*, with a fallback to its index.html so
     // client-side routes (e.g. /app/chat) deep-link. "/" redirects into the app.
     app.UseStaticFiles();
