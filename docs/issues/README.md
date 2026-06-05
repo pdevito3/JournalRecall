@@ -24,9 +24,18 @@ are **AFK** (no human review gate). Work them in dependency order.
 | [0016](0016-admin-surface.md) | Admin surface: user management + AI provider config | 7 | 0003, 0007 | done |
 | [0017](0017-ai-lifecycle-observability.md) | AI-lifecycle observability + redaction | 7 | 0008 | done |
 | [0018](0018-single-container-deployment.md) | Single-container deployment | 8 | 0001 | done |
+| [0019](0019-refresh-token-rotation-durable-sessions.md) | Refresh-token rotation & durable sessions | 9 | 0002 | ready |
+| [0020](0020-cookie-hardening-csrf-client-interceptor.md) | Cookie hardening (`__Host-`/`__Secure-`, `X-CSRF`) + client single-flight refresh | 9 | 0019 | ready |
+| [0021](0021-first-run-setup-root-admin.md) | First-run setup & root Admin | 9 | 0019 | ready |
+| [0022](0022-access-gate-public-auth-config.md) | Access gate (server + client) & public auth config | 9 | 0021 | ready |
+| [0023](0023-operator-controlled-registration.md) | Operator-controlled registration | 9 | 0022 | ready |
+| [0024](0024-temp-passwords-forced-change.md) | Temporary passwords & forced password change | 9 | 0019, 0016 | ready |
 
 ## Suggested order
 
 Tracer bullet first: **0001 → 0002 → 0004** gives a usable, private journal (write + re-read) with
 no AI. **0007** (library port) can run in parallel after 0001. AI features (0008–0012), Summaries
 (0013–0014), and the geo/admin/observability/deploy slices follow.
+
+**Phase 9** (auth onboarding & durable sessions, realizing PRD-0001 / ADR-0005): **0019 → 0020 →
+0021 → 0022 → 0023**, with **0024** able to run in parallel after **0019**.

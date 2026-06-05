@@ -2,7 +2,9 @@
 
 ## Status
 
-accepted
+accepted — refined by [ADR-0005](0005-refresh-token-rotation-and-cookie-hardening.md), which adds
+first-party refresh-token rotation for durable sessions and hardens the cookies
+(`__Host-`/`__Secure-` prefixes, `X-CSRF`). The single-JWT model below is unchanged.
 
 ## Context & decision
 
@@ -25,6 +27,7 @@ validates both: `OnMessageReceived` reads the cookie, falling back to the `Autho
 - The browser does **zero** token handling; SignalR authenticates over the cookie automatically.
 - External OIDC is used for **authentication only** — we federate (verify identity, mint our own
   token) rather than store/refresh upstream tokens. So `Duende.AccessTokenManagement`'s core job
-  (refreshing upstream access tokens for downstream calls) has little to do here; expect that
-  dependency to end up thinner than the original stack notes implied.
+  (refreshing upstream access tokens for downstream calls) has little to do here. **Resolved in
+  ADR-0005: it is not used at all** — our own session-refresh need is met by first-party
+  refresh-token rotation, and the library addresses *upstream* tokens, not tokens we issue.
 - Mobile and web share one identity/validation path, differing only in token delivery.
