@@ -1,6 +1,6 @@
 # 0016 — Admin surface: user management + AI provider config
 
-**Phase:** 7 · **Type:** AFK · **Status:** todo · **Realizes:** ADR-0002
+**Phase:** 7 · **Type:** AFK · **Status:** done · **Realizes:** ADR-0002
 
 ## What to build
 

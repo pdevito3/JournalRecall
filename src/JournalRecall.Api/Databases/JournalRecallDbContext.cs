@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using JournalRecall.Api.Domain.Admin;
 using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Identity;
 using JournalRecall.Api.Domain.Sessions;
@@ -24,6 +25,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
     public DbSet<Session> Sessions => Set<Session>();
     public DbSet<Correction> Corrections => Set<Correction>();
     public DbSet<Summary> Summaries => Set<Summary>();
+    public DbSet<AiProviderSettings> AiProviderSettings => Set<AiProviderSettings>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -115,6 +117,14 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             summary.HasIndex(s => new { s.UserId, s.Period, s.PeriodDate }).IsUnique();
             // Privacy invariant: scope every Summary query to the current user (ADR-0002, CONTEXT.md).
             summary.HasQueryFilter(s => s.UserId == _currentUserId);
+        });
+
+        modelBuilder.Entity<AiProviderSettings>(provider =>
+        {
+            provider.ToTable("ai_provider_settings");
+            provider.HasKey(p => p.Id);
+            provider.Ignore(p => p.DomainEvents);
+            // App-wide (not per-user): no query filter — the admin surface owns this single row.
         });
 
         modelBuilder.Entity<Correction>(correction =>

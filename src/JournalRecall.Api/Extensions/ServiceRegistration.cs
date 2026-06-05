@@ -57,18 +57,34 @@ public static class ServiceRegistration
         TypeAdapterConfig.GlobalSettings.Scan(assembly);
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
 
-        // AI agent runner (ADR-0004) + the BYO OpenAI-compatible "cleanup" model the Cleanup agent
-        // resolves by logical name. The client is built lazily on first use, so a missing/blank
-        // ChatModels:cleanup section doesn't fail startup — only an actual run would (Admin configures it).
-        services.AddJournalRecallAgents()
-            .AddChatModel(JournalRecall.Api.Domain.Sessions.Ai.CleanupAgent.ModelKey,
-                builder.Configuration.GetSection("ChatModels:cleanup"))
-            .AddChatModel(JournalRecall.Api.Domain.Summaries.Ai.SummaryAgent.ModelKey,
-                builder.Configuration.GetSection("ChatModels:summary"));
+        // AI agent runner (ADR-0004). The Cleanup/Summary models resolve through a ConfigurableChatClient
+        // that reads the effective provider at call time — the Admin-configured app-wide provider when set
+        // (issue 0016), else the appsettings ChatModels:* fallback the app booted with. So an Admin change
+        // takes effect on the next run without a restart, and a missing config never fails startup.
+        services.AddJournalRecallAgents();
+        services.AddScoped<JournalRecall.Api.Domain.Admin.Services.EffectiveChatModelOptions>();
+        AddConfigurableChatModel(services, JournalRecall.Api.Domain.Sessions.Ai.CleanupAgent.ModelKey,
+            builder.Configuration.GetSection("ChatModels:cleanup"));
+        AddConfigurableChatModel(services, JournalRecall.Api.Domain.Summaries.Ai.SummaryAgent.ModelKey,
+            builder.Configuration.GetSection("ChatModels:summary"));
         services.AddScoped<SessionCleanupRunner>();
         services.AddScoped<JournalRecall.Api.Domain.Summaries.Services.SummarySourceReader>();
         services.AddScoped<JournalRecall.Api.Domain.Summaries.Services.SummaryRollupReader>();
         services.AddScoped<JournalRecall.Api.Domain.Summaries.Services.SummaryStaleness>();
         services.AddScoped<JournalRecall.Api.Domain.Summaries.Services.SummaryGenerator>();
+    }
+
+    /// <summary>
+    /// Registers a logical chat model as a <see cref="JournalRecall.Api.Domain.Admin.Services.ConfigurableChatClient"/>
+    /// keyed by name, with the appsettings section as its boot-time fallback. A test (or a future override)
+    /// can register a keyed <c>IChatClient</c> for the same key afterwards and win.
+    /// </summary>
+    private static void AddConfigurableChatModel(IServiceCollection services, string key, IConfiguration section)
+    {
+        var fallback = new JournalRecall.AI.OpenAI.ChatModelOptions();
+        section.Bind(fallback);
+        services.AddKeyedSingleton<Microsoft.Extensions.AI.IChatClient>(key, (sp, _) =>
+            new JournalRecall.Api.Domain.Admin.Services.ConfigurableChatClient(
+                sp.GetRequiredService<IServiceScopeFactory>(), fallback));
     }
 }

@@ -47,7 +47,11 @@ public static class OpenAIChatModelExtensions
         return builder;
     }
 
-    private static IChatClient CreateChatClient(ChatModelOptions options)
+    /// <summary>
+    /// Builds an <see cref="IChatClient"/> from options directly — for callers that resolve provider
+    /// settings at runtime (e.g. an Admin-configured app-wide provider) rather than at startup.
+    /// </summary>
+    public static IChatClient CreateChatClient(ChatModelOptions options)
     {
         switch (options.Provider)
         {

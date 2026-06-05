@@ -24,6 +24,7 @@ function RootLayout() {
           <NavLink to="/summaries">Summaries</NavLink>
           <NavLink to="/corrections">Corrections</NavLink>
           <NavLink to="/chat">Chat</NavLink>
+          <AdminNavLink />
           <div className="ml-auto flex items-center gap-2">
             <AuthControls />
           </div>
@@ -34,6 +35,13 @@ function RootLayout() {
       </main>
     </div>
   )
+}
+
+/** The admin surface link, shown only to users with the Admin role. */
+function AdminNavLink() {
+  const { data: user } = useMe()
+  if (!user?.roles?.includes('Admin')) return null
+  return <NavLink to="/admin">Admin</NavLink>
 }
 
 function AuthControls() {

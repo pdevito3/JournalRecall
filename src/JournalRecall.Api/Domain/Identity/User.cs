@@ -22,4 +22,10 @@ public sealed class User : IdentityUser<Guid>
     /// (the user may still decline per Session). Strictly per-user — never affects another User.
     /// </summary>
     public bool LocationCaptureEnabled { get; set; }
+
+    /// <summary>
+    /// Set by an Admin to disable the account (issue 0016): a disabled User cannot log in. Their journal
+    /// data is untouched and still strictly private — disabling is an access decision, not a data one.
+    /// </summary>
+    public bool IsDisabled { get; set; }
 }

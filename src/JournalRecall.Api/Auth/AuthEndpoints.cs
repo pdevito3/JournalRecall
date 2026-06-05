@@ -9,7 +9,7 @@ namespace JournalRecall.Api.Auth;
 public static class AuthEndpoints
 {
     public sealed record Credentials(string Email, string Password);
-    public sealed record UserResponse(Guid Id, string Email);
+    public sealed record UserResponse(Guid Id, string Email, IReadOnlyList<string> Roles);
 
     public static IEndpointRouteBuilder MapAuth(this IEndpointRouteBuilder app)
     {
@@ -24,7 +24,7 @@ public static class AuthEndpoints
                     .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray()));
 
             await users.AddToRoleAsync(user, Roles.Member); // Member is the default role
-            return Results.Ok(new UserResponse(user.Id, user.Email!));
+            return Results.Ok(new UserResponse(user.Id, user.Email!, [Roles.Member]));
         });
 
         group.MapPost("/auth/login", async (Credentials body, UserManager<User> users, JwtTokenService tokens, HttpResponse response) =>
@@ -33,11 +33,16 @@ public static class AuthEndpoints
             if (user is null || !await users.CheckPasswordAsync(user, body.Password))
                 return Results.Unauthorized();
 
+            // A disabled account cannot log in (issue 0016) — checked after the password so it doesn't
+            // reveal which accounts exist.
+            if (user.IsDisabled)
+                return Results.Unauthorized();
+
             var roles = await users.GetRolesAsync(user);
             var (token, expiresAt) = tokens.Create(user, roles);
             AuthCookie.Set(response, token, expiresAt);
 
-            return Results.Ok(new UserResponse(user.Id, user.Email!));
+            return Results.Ok(new UserResponse(user.Id, user.Email!, roles.ToList()));
         });
 
         group.MapPost("/auth/logout", (HttpResponse response) =>
@@ -50,7 +55,8 @@ public static class AuthEndpoints
         {
             var id = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
             var email = principal.FindFirstValue(JwtRegisteredClaimNames.Email);
-            return Results.Ok(new UserResponse(Guid.Parse(id!), email ?? ""));
+            var roles = principal.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+            return Results.Ok(new UserResponse(Guid.Parse(id!), email ?? "", roles));
         }).RequireAuthorization();
 
         return app;
