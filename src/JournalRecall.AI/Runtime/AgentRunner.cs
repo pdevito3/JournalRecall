@@ -62,7 +62,15 @@ internal sealed class AgentRunner(
         using var runActivity = Telemetry.ActivitySource.StartActivity(Telemetry.Spans.Run);
         runActivity?.SetTag(Telemetry.Tags.AgentName, definition.Name);
         runActivity?.SetTag(Telemetry.Tags.CorrelationId, context.CorrelationId);
-        logger.LogInformation("Agent {Agent} run started ({CorrelationId})", definition.Name, context.CorrelationId);
+        if (!string.IsNullOrWhiteSpace(definition.ModelName))
+            runActivity?.SetTag(Telemetry.Tags.Model, definition.ModelName);
+
+        // Every structured log emitted during the run is wrapped in a scope carrying the correlation id
+        // (and agent name) so subscribers — the OTLP/Serilog sinks — can correlate it back to the run on
+        // the log's scope/state (issue 0017). A fresh scope per call keeps correlation intact across the
+        // streaming iterator's yield boundaries, where an ambient scope would not survive.
+        LogScoped(context.CorrelationId, definition.Name, () =>
+            logger.LogInformation("Agent {Agent} run started ({CorrelationId})", definition.Name, context.CorrelationId));
 
         yield return new AgentEvent.RunStarted(definition.Name, context.CorrelationId);
 
@@ -129,23 +137,29 @@ internal sealed class AgentRunner(
         {
             var turn = await ExecuteTurnAsync(state, client!, tools, pipeline, progress, runContext, cancellationToken);
             foreach (var @event in turn.Events)
+            {
+                LogEvent(@event, context.CorrelationId, definition.Name);
                 yield return @event;
+            }
 
             state = turn.State;
             if (turn.Terminal is not null)
             {
                 // Surface any progress already delivered, then the terminal event last.
                 while (progress.TryDequeue(out var late))
+                {
+                    LogEvent(late, context.CorrelationId, definition.Name);
                     yield return late;
+                }
 
                 yield return ToTerminalEvent(turn.Terminal);
-                RecordTerminal(runActivity, turn.Terminal, state);
+                RecordTerminal(runActivity, turn.Terminal, state, context);
                 yield break;
             }
         }
     }
 
-    private void RecordTerminal(Activity? runActivity, AgentOutcome outcome, AgentState state)
+    private void RecordTerminal(Activity? runActivity, AgentOutcome outcome, AgentState state, RunContext context)
     {
         var agent = state.Definition.Name;
         runActivity?.SetTag(Telemetry.Tags.TotalTokens, state.TokensUsed);
@@ -157,24 +171,27 @@ internal sealed class AgentRunner(
             _ => "failed",
         };
 
-        switch (outcome)
+        LogScoped(context.CorrelationId, agent, () =>
         {
-            case AgentOutcome.Completed:
-                runActivity?.SetTag(Telemetry.Tags.Outcome, label);
-                logger.LogInformation("Agent {Agent} completed in {Turns} turn(s), {Tokens} tokens",
-                    agent, state.Turn, state.TokensUsed);
-                break;
-            case AgentOutcome.Stopped stopped:
-                runActivity?.SetTag(Telemetry.Tags.Outcome, label);
-                runActivity?.SetTag(Telemetry.Tags.StopReason, stopped.Reason.ToString());
-                logger.LogInformation("Agent {Agent} stopped: {Reason}", agent, stopped.Reason);
-                break;
-            case AgentOutcome.Failed failed:
-                runActivity?.SetTag(Telemetry.Tags.Outcome, label);
-                runActivity?.SetTag(Telemetry.Tags.ErrorType, failed.Exception?.GetType().Name ?? "error");
-                logger.LogError(failed.Exception, "Agent {Agent} failed: {Reason}", agent, failed.Reason);
-                break;
-        }
+            switch (outcome)
+            {
+                case AgentOutcome.Completed:
+                    runActivity?.SetTag(Telemetry.Tags.Outcome, label);
+                    logger.LogInformation("Agent {Agent} completed in {Turns} turn(s), {Tokens} tokens",
+                        agent, state.Turn, state.TokensUsed);
+                    break;
+                case AgentOutcome.Stopped stopped:
+                    runActivity?.SetTag(Telemetry.Tags.Outcome, label);
+                    runActivity?.SetTag(Telemetry.Tags.StopReason, stopped.Reason.ToString());
+                    logger.LogInformation("Agent {Agent} stopped: {Reason}", agent, stopped.Reason);
+                    break;
+                case AgentOutcome.Failed failed:
+                    runActivity?.SetTag(Telemetry.Tags.Outcome, label);
+                    runActivity?.SetTag(Telemetry.Tags.ErrorType, failed.Exception?.GetType().Name ?? "error");
+                    logger.LogError(failed.Exception, "Agent {Agent} failed: {Reason}", agent, failed.Reason);
+                    break;
+            }
+        });
 
         var agentTag = new KeyValuePair<string, object?>("agent", agent);
         var outcomeTag = new KeyValuePair<string, object?>("outcome", label);
@@ -182,6 +199,54 @@ internal sealed class AgentRunner(
         Telemetry.Metrics.Tokens.Add(state.TokensUsed, agentTag);
         Telemetry.Metrics.RunDuration.Record(
             (timeProvider.GetUtcNow() - state.StartedAt).TotalMilliseconds, agentTag, outcomeTag);
+    }
+
+    /// <summary>
+    /// Structured-logging subscriber over the agent event stream (issue 0017). Emits metadata only —
+    /// tool/agent names, turn numbers, token counts, error text — never prompt/response content. Each
+    /// line is scoped with the run's correlation id, so subscribers can correlate it to the run.
+    /// </summary>
+    private void LogEvent(AgentEvent @event, string correlationId, string agentName) => LogScoped(
+        correlationId, agentName, () =>
+        {
+            switch (@event)
+            {
+                case AgentEvent.TurnStarted turn:
+                    logger.LogDebug("Agent turn {Turn} started", turn.Turn);
+                    break;
+                case AgentEvent.ToolInvoking tool:
+                    logger.LogDebug("Tool {Tool} invoking", tool.ToolName);
+                    break;
+                case AgentEvent.ToolSucceeded tool:
+                    logger.LogDebug("Tool {Tool} succeeded", tool.ToolName);
+                    break;
+                case AgentEvent.ToolFailed tool:
+                    logger.LogWarning("Tool {Tool} failed: {Error}", tool.ToolName, tool.Error);
+                    break;
+                case AgentEvent.AgentDelegated delegated:
+                    logger.LogDebug("Delegated to sub-agent {Agent}", delegated.AgentName);
+                    break;
+                case AgentEvent.UsageUpdated usage:
+                    logger.LogDebug("Usage updated: {Tokens} total tokens", usage.TotalTokens);
+                    break;
+            }
+        });
+
+    /// <summary>
+    /// Runs <paramref name="log"/> inside a logging scope carrying the run's correlation id (and agent
+    /// name). A fresh scope per call keeps correlation present on the log scope/state even across the
+    /// streaming iterator's yield boundaries, where a single long-lived ambient scope would not survive.
+    /// </summary>
+    private void LogScoped(string correlationId, string agentName, Action log)
+    {
+        using (logger.BeginScope(new Dictionary<string, object>
+        {
+            [Telemetry.Tags.CorrelationId] = correlationId,
+            [Telemetry.Tags.AgentName] = agentName,
+        }))
+        {
+            log();
+        }
     }
 
     private static void DrainProgress(System.Collections.Concurrent.ConcurrentQueue<AgentEvent> progress, List<AgentEvent> events)
@@ -195,10 +260,13 @@ internal sealed class AgentRunner(
             new KeyValuePair<string, object?>("tool", tool),
             new KeyValuePair<string, object?>("status", status));
 
-    private IChatClient WrapWithTelemetry(IChatClient client) =>
+    private static IChatClient WrapWithTelemetry(IChatClient client) =>
         new ChatClientBuilder(client)
-            .UseOpenTelemetry(sourceName: Telemetry.SourceName,
-                configure: o => o.EnableSensitiveData = _telemetry.CaptureContent)
+            // M.E.AI's GenAI spans contribute model metadata (model, tokens, finish reason). Its
+            // EnableSensitiveData path writes raw prompts/responses verbatim and can NOT be routed through
+            // our redaction hook, so it stays OFF unconditionally — content capture goes only through the
+            // redactor-gated tags we set ourselves (issue 0017). Safe-by-default for an intimate journal.
+            .UseOpenTelemetry(sourceName: Telemetry.SourceName, configure: o => o.EnableSensitiveData = false)
             .Build();
 
     private async Task<TurnResult> ExecuteTurnAsync(

@@ -61,7 +61,12 @@ public static class ServiceRegistration
         // that reads the effective provider at call time — the Admin-configured app-wide provider when set
         // (issue 0016), else the appsettings ChatModels:* fallback the app booted with. So an Admin change
         // takes effect on the next run without a restart, and a missing config never fails startup.
-        services.AddJournalRecallAgents();
+        // Telemetry content policy (issue 0017): metadata is always captured; prompt/response content
+        // capture is opt-in per environment via the "Telemetry" section — default-off for this
+        // intimate-journal domain — and anything captured passes through the redaction hook before
+        // export. Provide a real redactor here when capture is enabled.
+        services.AddJournalRecallAgents()
+            .Telemetry(builder.Configuration.GetSection("Telemetry"));
         services.AddScoped<JournalRecall.Api.Domain.Admin.Services.EffectiveChatModelOptions>();
         AddConfigurableChatModel(services, JournalRecall.Api.Domain.Sessions.Ai.CleanupAgent.ModelKey,
             builder.Configuration.GetSection("ChatModels:cleanup"));

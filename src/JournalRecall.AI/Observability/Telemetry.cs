@@ -49,6 +49,7 @@ public static class Telemetry
     {
         public const string AgentName = "journalrecall.agent.name";
         public const string CorrelationId = "journalrecall.correlation_id";
+        public const string Model = "gen_ai.request.model";
         public const string Turn = "journalrecall.turn";
         public const string Outcome = "journalrecall.outcome";
         public const string StopReason = "journalrecall.stop_reason";
