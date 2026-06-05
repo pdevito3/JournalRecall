@@ -15,7 +15,12 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
 {
     private readonly JwtOptions _options = options.Value;
 
-    public (string Token, DateTimeOffset ExpiresAt) Create(User user, IEnumerable<string> roles)
+    /// <summary>Identifies the refresh-token chain (device session) this access token belongs to, so a
+    /// logout — which receives only the access cookie (Path=/), not the path-scoped refresh cookie — can
+    /// revoke exactly the current device's chain (ADR-0005).</summary>
+    public const string RefreshChainClaim = "refresh_chain";
+
+    public (string Token, DateTimeOffset ExpiresAt) Create(User user, IEnumerable<string> roles, Guid? refreshChainId = null)
     {
         var now = DateTimeOffset.UtcNow;
         var expiresAt = now.AddMinutes(_options.ExpiryMinutes);
@@ -26,6 +31,8 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
             new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
+        if (refreshChainId is { } chainId)
+            claims.Add(new Claim(RefreshChainClaim, chainId.ToString()));
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));

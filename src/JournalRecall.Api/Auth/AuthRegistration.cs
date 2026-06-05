@@ -26,6 +26,13 @@ public static class AuthRegistration
 
         services.AddSingleton<JwtTokenService>();
 
+        // Refresh-token rotation & durable sessions (ADR-0005). Scoped over the DbContext; the service
+        // is the deep module, the store the thin persistence seam.
+        services.AddOptions<RefreshTokenOptions>()
+            .Bind(configuration.GetSection(RefreshTokenOptions.SectionName));
+        services.AddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
+        services.AddScoped<RefreshTokenService>();
+
         services.AddIdentityCore<User>(options =>
             {
                 options.User.RequireUniqueEmail = true;
@@ -65,7 +72,7 @@ public static class AuthRegistration
                     {
                         if (string.IsNullOrEmpty(context.Token))
                         {
-                            var cookie = context.Request.Cookies[AuthCookie.Name];
+                            var cookie = context.Request.Cookies[AuthCookie.AccessName];
                             if (!string.IsNullOrEmpty(cookie))
                                 context.Token = cookie;
                         }

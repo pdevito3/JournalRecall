@@ -9,5 +9,7 @@ public sealed class JwtOptions
     public string SigningKey { get; set; } = "";
     public string Issuer { get; set; } = "JournalRecall";
     public string Audience { get; set; } = "JournalRecall";
-    public int ExpiryMinutes { get; set; } = 60;
+    // Short access-token lifetime so revocation (logout/disable/password-change) takes effect promptly;
+    // the silent refresh-token rotation (ADR-0005) hides the renewal from the User.
+    public int ExpiryMinutes { get; set; } = 15;
 }

@@ -41,6 +41,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
     public DbSet<Correction> Corrections => Set<Correction>();
     public DbSet<Summary> Summaries => Set<Summary>();
     public DbSet<AiProviderSettings> AiProviderSettings => Set<AiProviderSettings>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -140,6 +141,19 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             provider.HasKey(p => p.Id);
             provider.Ignore(p => p.DomainEvents);
             // App-wide (not per-user): no query filter — the admin surface owns this single row.
+        });
+
+        modelBuilder.Entity<RefreshToken>(refreshToken =>
+        {
+            refreshToken.ToTable("refresh_tokens");
+            refreshToken.HasKey(t => t.Id);
+            // Looked up by hash on every refresh — unique so a hash collision can't shadow a token.
+            refreshToken.HasIndex(t => t.TokenHash).IsUnique();
+            // RevokeAll scans by user; reuse-detection revokes by chain.
+            refreshToken.HasIndex(t => t.UserId);
+            refreshToken.HasIndex(t => t.ChainId);
+            // Deliberately NO tenant query filter: refresh runs after the access token has expired, with
+            // no current user established, so a filter would hide the very row being rotated (ADR-0005).
         });
 
         modelBuilder.Entity<Correction>(correction =>

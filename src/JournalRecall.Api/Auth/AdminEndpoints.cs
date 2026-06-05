@@ -61,8 +61,10 @@ public static class AdminEndpoints
             return Results.NoContent();
         });
 
-        group.MapPost("/users/{id:guid}/disable", (Guid id, UserManager<User> users) => SetDisabled(id, true, users));
-        group.MapPost("/users/{id:guid}/enable", (Guid id, UserManager<User> users) => SetDisabled(id, false, users));
+        group.MapPost("/users/{id:guid}/disable", (Guid id, UserManager<User> users, RefreshTokenService refreshTokens) =>
+            SetDisabled(id, true, users, refreshTokens));
+        group.MapPost("/users/{id:guid}/enable", (Guid id, UserManager<User> users, RefreshTokenService refreshTokens) =>
+            SetDisabled(id, false, users, refreshTokens));
 
         // --- App-wide AI provider config ---
 
@@ -96,7 +98,7 @@ public static class AdminEndpoints
         return app;
     }
 
-    private static async Task<IResult> SetDisabled(Guid id, bool disabled, UserManager<User> users)
+    private static async Task<IResult> SetDisabled(Guid id, bool disabled, UserManager<User> users, RefreshTokenService refreshTokens)
     {
         var user = await users.FindByIdAsync(id.ToString());
         if (user is null)
@@ -104,6 +106,12 @@ public static class AdminEndpoints
 
         user.IsDisabled = disabled;
         await users.UpdateAsync(user);
+
+        // Disabling revokes all of the User's sessions so a disabled User is locked out everywhere, not
+        // just at next login — bounded by the short access-token lifetime for any live token (ADR-0005).
+        if (disabled)
+            await refreshTokens.RevokeAllAsync(id);
+
         return Results.NoContent();
     }
 }
