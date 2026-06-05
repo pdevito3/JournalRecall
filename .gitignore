@@ -41,8 +41,8 @@ project.lock.json
 
 ## Node / web
 node_modules/
-web/dist/
-wwwroot/app/
+**/web/dist/
+**/wwwroot/app/
 
 ## Environment / secrets
 .env
