@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using JournalRecall.Api.Domain;
 using JournalRecall.Api.Domain.Admin;
 using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Identity;
@@ -13,14 +14,21 @@ namespace JournalRecall.Api.Databases;
 /// <summary>
 /// The application's single database context (file-based SQLite; ADR-0001). Hosts ASP.NET Core
 /// Identity (issue 0002) and the Session aggregate (issue 0004). A global query filter scopes every
-/// Session query to the current user, enforcing the Privacy invariant at the data layer.
+/// Session query to the current user, enforcing the Privacy invariant at the data layer, and every
+/// <see cref="BaseEntity"/> save stamps audit fields automatically.
 /// </summary>
 public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
 {
     private readonly Guid? _currentUserId;
+    private readonly TimeProvider _timeProvider;
 
-    public JournalRecallDbContext(DbContextOptions<JournalRecallDbContext> options, ICurrentUserService currentUser)
-        : base(options) => _currentUserId = currentUser.UserId;
+    public JournalRecallDbContext(
+        DbContextOptions<JournalRecallDbContext> options, ICurrentUserService currentUser, TimeProvider timeProvider)
+        : base(options)
+    {
+        _currentUserId = currentUser.UserId;
+        _timeProvider = timeProvider;
+    }
 
     public DbSet<Session> Sessions => Set<Session>();
     public DbSet<Correction> Corrections => Set<Correction>();
@@ -138,5 +146,43 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             // Privacy invariant: scope every Correction query to the current user (ADR-0002, CONTEXT.md).
             correction.HasQueryFilter(c => c.UserId == _currentUserId);
         });
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        UpdateAuditFields();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        UpdateAuditFields();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    /// <summary>
+    /// Stamps audit fields on every tracked <see cref="BaseEntity"/> before it is persisted: insert sets
+    /// both creation and modification fields; an update sets only the modification fields. The acting User
+    /// comes from the request scope (null for system/unauthenticated writes). Deletes are real — no soft
+    /// delete. Owned children (Revisions, tags, suggestions) are not <see cref="BaseEntity"/> and keep
+    /// their own domain timestamps.
+    /// </summary>
+    private void UpdateAuditFields()
+    {
+        var now = _timeProvider.GetUtcNow();
+        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    entry.Entity.UpdateCreationProperties(now, _currentUserId);
+                    entry.Entity.UpdateModifiedProperties(now, _currentUserId);
+                    break;
+                case EntityState.Modified:
+                    entry.Entity.UpdateModifiedProperties(now, _currentUserId);
+                    break;
+            }
+        }
     }
 }

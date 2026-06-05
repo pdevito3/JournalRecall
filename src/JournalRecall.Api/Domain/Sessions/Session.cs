@@ -20,7 +20,6 @@ public sealed class Session : BaseEntity
     private readonly List<MetadataSuggestion> _suggestions = [];
 
     public Guid UserId { get; private set; }
-    public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public string RawDraft { get; private set; } = string.Empty;
 
     /// <summary>The optional captured latitude/longitude (CONTEXT.md Location); null unless geo opt-in stamped one.</summary>

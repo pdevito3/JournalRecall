@@ -18,8 +18,6 @@ public sealed class Correction : BaseEntity
     /// <summary>When true, mishearings are substituted deterministically rather than left to the model.</summary>
     public bool HardReplace { get; private set; }
 
-    public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
-
     private Correction() { } // EF
 
     public static Correction Create(Guid userId, string canonicalTerm, IEnumerable<string>? mishearings, bool hardReplace)

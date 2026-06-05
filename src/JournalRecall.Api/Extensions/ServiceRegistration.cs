@@ -39,6 +39,9 @@ public static class ServiceRegistration
                 });
         });
 
+        // The clock the audit interceptor stamps from (overridable in tests).
+        services.AddSingleton(TimeProvider.System);
+
         services.AddDbContext<JournalRecallDbContext>(options =>
             options.UseSqlite(builder.Configuration.GetConnectionString("JournalRecall"))
                 // Demote command-error logging to Debug: the only one in practice is the benign
