@@ -1,5 +1,6 @@
 using Serilog;
 using JournalRecall.Api.Auth;
+using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Sessions;
 using JournalRecall.Api.Domain.Users;
 using JournalRecall.Api.Extensions;
@@ -41,6 +42,9 @@ try
 
     // Per-user settings (timezone for journaling-day derivation).
     app.MapUserSettings();
+
+    // Per-user Corrections that fix mis-dictations during Cleanup.
+    app.MapCorrections();
 
     // Serve the built Vite SPA from wwwroot/app at /app/*, with a fallback to its index.html so
     // client-side routes (e.g. /app/chat) deep-link. "/" redirects into the app.

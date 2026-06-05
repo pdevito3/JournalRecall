@@ -30,12 +30,23 @@ public static class CleanupAgent
         {"cleaned": "...", "synopsis": "..."}
         """;
 
-    /// <summary>The immutable definition. Single turn: no tools, so the first model response is final.</summary>
-    public static AgentDefinition Definition { get; } = Agent.Define("session-cleanup")
-        .UsingModel(ModelKey)
-        .WithInstructions(Instructions)
-        .WithMaxTurns(1)
-        .Build();
+    /// <summary>
+    /// Builds the definition. Single turn: no tools, so the first model response is final. An optional
+    /// <paramref name="correctionHints"/> block (hint-mode Corrections) is appended to the instructions
+    /// so the model fixes known mis-dictations in-context (issue 0009).
+    /// </summary>
+    public static AgentDefinition BuildDefinition(string? correctionHints = null)
+    {
+        var instructions = string.IsNullOrWhiteSpace(correctionHints)
+            ? Instructions
+            : $"{Instructions}\n\n{correctionHints}";
+
+        return Agent.Define("session-cleanup")
+            .UsingModel(ModelKey)
+            .WithInstructions(instructions)
+            .WithMaxTurns(1)
+            .Build();
+    }
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 

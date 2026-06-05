@@ -17,14 +17,19 @@ internal sealed class ScriptableChatClient : IChatClient
     public string? CleanedOverride { get; set; }
     public string Synopsis { get; set; } = "A short recap of the session.";
 
+    /// <summary>The system/instruction text the model last received — lets tests assert prompt injection.</summary>
+    public string LastSystemText { get; private set; } = string.Empty;
+
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var all = messages.ToList();
+        LastSystemText = string.Join("\n", all.Where(m => m.Role == ChatRole.System).Select(m => m.Text));
         if (Throw)
             throw new InvalidOperationException("simulated model failure");
 
-        var raw = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
+        var raw = all.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
         var cleaned = CleanedOverride ?? $"Polished: {raw}";
         var json = JsonSerializer.Serialize(new { cleaned, synopsis = Synopsis });
 

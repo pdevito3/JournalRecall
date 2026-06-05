@@ -21,6 +21,7 @@ function RootLayout() {
           <NavLink to="/" exact>
             Journal
           </NavLink>
+          <NavLink to="/corrections">Corrections</NavLink>
           <NavLink to="/chat">Chat</NavLink>
           <div className="ml-auto flex items-center gap-2">
             <AuthControls />

@@ -1,6 +1,6 @@
 # 0009 — Corrections
 
-**Phase:** 4 · **Type:** AFK · **Status:** todo · **Realizes:** ADR-0003
+**Phase:** 4 · **Type:** AFK · **Status:** done · **Realizes:** ADR-0003
 
 ## What to build
 
@@ -15,12 +15,12 @@ canonical term and common mishearings, with a default AI-context-hint mode and a
 
 ## Acceptance criteria
 
-- [ ] A user can create/edit/delete Corrections scoped to themselves only.
-- [ ] With a Correction `Profisee` ← `prophecy` (hint mode), a Cleanup of Raw containing "prophecy"
+- [x] A user can create/edit/delete Corrections scoped to themselves only.
+- [x] With a Correction `Profisee` ← `prophecy` (hint mode), a Cleanup of Raw containing "prophecy"
       (as the company) yields "Profisee" in the Cleaned copy while Raw is unchanged.
-- [ ] A hard-replace Correction substitutes every occurrence deterministically.
-- [ ] Corrections never alter Raw — only the Cleaned copy.
-- [ ] Another user's Corrections are not visible or applied (per-user isolation test).
+- [x] A hard-replace Correction substitutes every occurrence deterministically.
+- [x] Corrections never alter Raw — only the Cleaned copy.
+- [x] Another user's Corrections are not visible or applied (per-user isolation test).
 
 ## Blocked by
 

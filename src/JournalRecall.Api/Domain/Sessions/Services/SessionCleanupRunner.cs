@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using JournalRecall.AI.Core;
 using JournalRecall.AI.Runtime;
 using JournalRecall.Api.Databases;
+using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Sessions.Ai;
 using JournalRecall.Api.Domain.Sessions.Dtos;
 
@@ -33,10 +34,14 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
         session.BeginCleanup();
         await db.SaveChangesAsync(cancellationToken);
 
+        // The caller's Corrections (per-user via the global query filter): hint-mode entries go into
+        // the prompt; hard-replace entries are substituted deterministically after the model runs.
+        var corrections = await db.Corrections.AsNoTracking().ToListAsync(cancellationToken);
+        var definition = CleanupAgent.BuildDefinition(CorrectionApplier.BuildHintContext(corrections));
         var context = new RunContext { Subject = session.UserId.ToString() };
 
         await foreach (var @event in runner.StreamAsync(
-            CleanupAgent.Definition, Conversation.FromUser(rawText), context, cancellationToken))
+            definition, Conversation.FromUser(rawText), context, cancellationToken))
         {
             var terminal = @event switch
             {
@@ -48,7 +53,7 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
 
             if (terminal is not null)
             {
-                Apply(session, terminal);
+                Apply(session, terminal, corrections);
                 await db.SaveChangesAsync(cancellationToken);
             }
 
@@ -69,11 +74,12 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
         return SessionDto.From(session);
     }
 
-    private static void Apply(Session session, AgentOutcome outcome)
+    private static void Apply(Session session, AgentOutcome outcome, IReadOnlyList<Correction> corrections)
     {
         if (outcome is AgentOutcome.Completed completed
             && CleanupAgent.TryParse(completed, out var cleaned, out var synopsis))
-            session.CompleteCleanup(cleaned, synopsis);
+            // Hard-replace Corrections are applied deterministically to the Cleaned copy only.
+            session.CompleteCleanup(CorrectionApplier.ApplyHardReplacements(cleaned, corrections), synopsis);
         else
             // A model failure, a guardrail stop, or unparseable output: record the failure. Raw and any
             // prior Cleaned copy are untouched (acceptance criteria).

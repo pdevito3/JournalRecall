@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as CorrectionsRouteImport } from './routes/corrections'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
@@ -23,6 +24,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorrectionsRoute = CorrectionsRouteImport.update({
+  id: '/corrections',
+  path: '/corrections',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatRoute = ChatRouteImport.update({
@@ -44,6 +50,7 @@ const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
@@ -59,19 +67,33 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chat' | '/login' | '/register' | '/sessions/$sessionId'
+  fullPaths:
+    | '/'
+    | '/chat'
+    | '/corrections'
+    | '/login'
+    | '/register'
+    | '/sessions/$sessionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chat' | '/login' | '/register' | '/sessions/$sessionId'
+  to:
+    | '/'
+    | '/chat'
+    | '/corrections'
+    | '/login'
+    | '/register'
+    | '/sessions/$sessionId'
   id:
     | '__root__'
     | '/'
     | '/chat'
+    | '/corrections'
     | '/login'
     | '/register'
     | '/sessions/$sessionId'
@@ -80,6 +102,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChatRoute: typeof ChatRoute
+  CorrectionsRoute: typeof CorrectionsRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
@@ -99,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corrections': {
+      id: '/corrections'
+      path: '/corrections'
+      fullPath: '/corrections'
+      preLoaderRoute: typeof CorrectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat': {
@@ -128,6 +158,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChatRoute: ChatRoute,
+  CorrectionsRoute: CorrectionsRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,

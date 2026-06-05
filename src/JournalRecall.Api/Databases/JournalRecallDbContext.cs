@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Identity;
 using JournalRecall.Api.Domain.Sessions;
 using JournalRecall.Api.Services;
@@ -20,6 +21,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
         : base(options) => _currentUserId = currentUser.UserId;
 
     public DbSet<Session> Sessions => Set<Session>();
+    public DbSet<Correction> Corrections => Set<Correction>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -69,6 +71,18 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
                 revision.HasKey("Id");
                 revision.HasIndex("SessionId", nameof(CleanedRevision.RevisionNumber)).IsUnique();
             });
+        });
+
+        modelBuilder.Entity<Correction>(correction =>
+        {
+            correction.ToTable("corrections");
+            correction.HasKey(c => c.Id);
+            correction.Ignore(c => c.DomainEvents);
+            correction.HasIndex(c => c.UserId);
+            // Mishearings are a primitive collection serialized to a single JSON column (EF Core).
+            correction.PrimitiveCollection(c => c.Mishearings);
+            // Privacy invariant: scope every Correction query to the current user (ADR-0002, CONTEXT.md).
+            correction.HasQueryFilter(c => c.UserId == _currentUserId);
         });
     }
 }
