@@ -6,6 +6,7 @@ using JournalRecall.Api.Databases;
 using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Sessions.Ai;
 using JournalRecall.Api.Domain.Sessions.Dtos;
+using JournalRecall.Api.Domain.Summaries.Services;
 
 namespace JournalRecall.Api.Domain.Sessions.Services;
 
@@ -15,7 +16,7 @@ namespace JournalRecall.Api.Domain.Sessions.Services;
 /// success, Failed otherwise) — all without ever touching Raw (issue 0008, ADR-0003/0004). The runner's
 /// event stream is surfaced verbatim so the endpoint can stream live progress to the client.
 /// </summary>
-public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner runner)
+public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner runner, SummaryStaleness staleness)
 {
     /// <summary>
     /// Runs Cleanup, yielding each lifecycle event as it occurs. The Session's terminal state is
@@ -55,6 +56,11 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
             {
                 Apply(session, terminal, corrections);
                 await db.SaveChangesAsync(cancellationToken);
+
+                // A successful run rewrote the Cleaned copy, which the period Summaries read — invalidate
+                // the day's Summary chain so it offers regeneration (issue 0014; CONTEXT.md).
+                if (session.CleanupStatus == CleanupStatus.Clean)
+                    await staleness.MarkStaleForSessionAsync(session, cancellationToken);
             }
 
             yield return @event;

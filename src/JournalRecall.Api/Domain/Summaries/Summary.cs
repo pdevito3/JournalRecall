@@ -45,4 +45,15 @@ public sealed class Summary : BaseEntity
         GeneratedAt = DateTimeOffset.UtcNow;
         Status = SummaryStatus.Ready;
     }
+
+    /// <summary>
+    /// Marks a Ready Summary <see cref="SummaryStatus.Stale"/> because something beneath it changed
+    /// (issue 0014). A no-op when it is not Ready (Generating/Missing/already Stale), so an in-flight run
+    /// is never disturbed and the content is left intact for the regenerate affordance.
+    /// </summary>
+    public void MarkStale()
+    {
+        if (Status == SummaryStatus.Ready)
+            Status = SummaryStatus.Stale;
+    }
 }

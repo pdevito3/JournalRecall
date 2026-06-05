@@ -1,6 +1,6 @@
 # 0014 — Month/Quarter/Year roll-ups + staleness propagation
 
-**Phase:** 6 · **Type:** AFK · **Status:** todo
+**Phase:** 6 · **Type:** AFK · **Status:** done
 
 ## What to build
 

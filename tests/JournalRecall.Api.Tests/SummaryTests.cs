@@ -30,7 +30,7 @@ public class SummaryTests : IClassFixture<SummaryWebApplicationFactory>
     private sealed record Credentials(string Email, string Password);
     private sealed record SessionDto(Guid Id);
     private sealed record SummaryDto(
-        string Period, DateOnly PeriodDate, string Status, string Content, int SessionCount, DateTimeOffset? GeneratedAt);
+        string Period, DateOnly PeriodDate, string Status, string Content, int SourceCount, DateTimeOffset? GeneratedAt);
 
     private async Task<HttpClient> SignedInClient()
     {
@@ -90,7 +90,7 @@ public class SummaryTests : IClassFixture<SummaryWebApplicationFactory>
         summary.PeriodDate.ShouldBe(new DateOnly(2026, 3, 15));
         summary.Status.ShouldBe("Ready");
         summary.Content.ShouldBe("They went running and felt great.");
-        summary.SessionCount.ShouldBe(1);
+        summary.SourceCount.ShouldBe(1);
         summary.GeneratedAt.ShouldNotBeNull();
 
         // It's now persisted: a fresh read returns the same Ready Summary without regenerating.
@@ -111,7 +111,7 @@ public class SummaryTests : IClassFixture<SummaryWebApplicationFactory>
         summary.Period.ShouldBe("Week");
         summary.PeriodDate.ShouldBe(new DateOnly(2026, 3, 16)); // anchored on the ISO Monday
         summary.Status.ShouldBe("Ready");
-        summary.SessionCount.ShouldBe(2);
+        summary.SourceCount.ShouldBe(2);
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public class SummaryTests : IClassFixture<SummaryWebApplicationFactory>
         var summary = await Generate(client, "week", "2026-07-02");
 
         summary.PeriodDate.ShouldBe(new DateOnly(2026, 6, 29)); // ISO Monday, regardless of month
-        summary.SessionCount.ShouldBe(2);                       // only the two in-week days
+        summary.SourceCount.ShouldBe(2);                       // only the two in-week days
 
         var prompt = _factory.Summary.LastUserText;
         prompt.ShouldContain("Last day of June.");
@@ -186,7 +186,7 @@ public class SummaryTests : IClassFixture<SummaryWebApplicationFactory>
 
         view.Status.ShouldBe("Missing");     // generation is user-triggered only — a read does nothing
         view.Content.ShouldBeEmpty();
-        view.SessionCount.ShouldBe(1);        // …but it reports there is something to summarize
+        view.SourceCount.ShouldBe(1);        // …but it reports there is something to summarize
         _factory.Summary.CallCount.ShouldBe(before);
     }
 
@@ -201,7 +201,7 @@ public class SummaryTests : IClassFixture<SummaryWebApplicationFactory>
         var bob = await SignedInClient();
         var bobView = await Get(bob, "day", "2026-08-01");
         bobView.Status.ShouldBe("Missing");   // Bob can't see Alice's Summary
-        bobView.SessionCount.ShouldBe(0);      // nor her Sessions
+        bobView.SourceCount.ShouldBe(0);      // nor her Sessions
 
         // Bob generating the same period is a no-op (he has no Sessions) and never touches Alice's.
         (await Generate(bob, "day", "2026-08-01")).Status.ShouldBe("Missing");
@@ -209,10 +209,11 @@ public class SummaryTests : IClassFixture<SummaryWebApplicationFactory>
     }
 
     [Fact]
-    public async Task An_unsupported_period_is_rejected()
+    public async Task An_unknown_period_or_malformed_date_is_rejected()
     {
         var client = await SignedInClient();
-        (await client.GetAsync("/api/summaries/month/2026-08-01")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-        (await client.PostAsync("/api/summaries/month/2026-08-01/generate", null)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await client.GetAsync("/api/summaries/decade/2026-08-01")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await client.PostAsync("/api/summaries/decade/2026-08-01/generate", null)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await client.GetAsync("/api/summaries/day/notadate")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 }

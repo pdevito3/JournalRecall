@@ -1,12 +1,14 @@
-export type SummaryPeriod = 'Day' | 'Week'
+export type SummaryPeriod = 'Day' | 'Week' | 'Month' | 'Quarter' | 'Year'
 export type SummaryStatus = 'Missing' | 'Generating' | 'Ready' | 'Stale'
+
+export const PERIODS: SummaryPeriod[] = ['Day', 'Week', 'Month', 'Quarter', 'Year']
 
 export interface Summary {
   period: SummaryPeriod
-  periodDate: string // YYYY-MM-DD anchor (a Day's date, or a Week's ISO Monday)
+  periodDate: string // YYYY-MM-DD anchor (a Day's date, a Week's ISO Monday, else the period's first day)
   status: SummaryStatus
   content: string
-  sessionCount: number
+  sourceCount: number // Sessions for a Day/Week, lower-level Summaries for a roll-up
   generatedAt: string | null
 }
 

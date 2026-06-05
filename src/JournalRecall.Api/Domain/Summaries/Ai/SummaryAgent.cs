@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.Extensions.AI;
 using JournalRecall.AI.Core;
+using JournalRecall.Api.Domain.Summaries.Services;
 
 namespace JournalRecall.Api.Domain.Summaries.Ai;
 
@@ -17,14 +18,16 @@ public static class SummaryAgent
 
     private const string Instructions =
         """
-        You are a reflective journaling assistant. You are given the entries a user wrote across a single
-        time period (a day or a week), in chronological order. Write a short, cohesive narrative summary
-        of that period — a few sentences to a couple of short paragraphs.
+        You are a reflective journaling assistant. You are given the material for a single time period —
+        either the journal entries the user wrote (for a day or week) or the lower-level summaries that
+        make up a longer period (a month from its days, a quarter from its months, a year from its
+        quarters), in chronological order. Write a short, cohesive narrative summary of that period — a
+        few sentences for a day, up to a couple of short paragraphs for a longer one.
 
         - Capture the throughline: what happened, recurring themes, the writer's mood and any shifts.
         - Write about the user in the third person ("they"), in a warm, plain voice.
-        - Summarize and synthesize across entries; do not just restate each one in order.
-        - Use only what the entries support. Do not invent events, people, or feelings.
+        - Summarize and synthesize across the material; do not just restate each item in order.
+        - Use only what the material supports. Do not invent events, people, or feelings.
         - Respond with ONLY the narrative prose — no preamble, headings, bullet lists, or quotes.
         """;
 
@@ -50,6 +53,29 @@ public static class SummaryAgent
         var sb = new StringBuilder().AppendLine(header).AppendLine();
         for (var i = 0; i < entries.Count; i++)
             sb.Append("Entry ").Append(i + 1).Append(": ").AppendLine(entries[i]).AppendLine();
+        return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>
+    /// Assembles the user prompt for a roll-up period from its child Summaries: a period header followed
+    /// by each child's narrative, labeled with its tier and date so the model can synthesize across them.
+    /// </summary>
+    public static string BuildRollupPrompt(
+        SummaryPeriod period, DateOnly anchor, IReadOnlyList<ChildSummary> children)
+    {
+        var (start, end) = SummaryPeriods.CalendarRange(period, anchor);
+        var header = period switch
+        {
+            SummaryPeriod.Month => $"Daily summaries for {start:MMMM yyyy}:",
+            SummaryPeriod.Quarter => $"Monthly summaries for the quarter {start:yyyy-MM} to {end:yyyy-MM}:",
+            SummaryPeriod.Year => $"Quarterly summaries for {start:yyyy}:",
+            _ => $"Summaries for {start:yyyy-MM-dd} to {end:yyyy-MM-dd}:",
+        };
+
+        var sb = new StringBuilder().AppendLine(header).AppendLine();
+        foreach (var child in children)
+            sb.Append(child.Period).Append(" of ").Append($"{child.Anchor:yyyy-MM-dd}")
+                .Append(": ").AppendLine(child.Content).AppendLine();
         return sb.ToString().TrimEnd();
     }
 

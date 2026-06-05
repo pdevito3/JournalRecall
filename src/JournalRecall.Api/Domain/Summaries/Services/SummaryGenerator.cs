@@ -9,13 +9,19 @@ using JournalRecall.Api.Services;
 namespace JournalRecall.Api.Domain.Summaries.Services;
 
 /// <summary>
-/// Generates (or refreshes) a Day/Week Summary on demand (issue 0013): it upserts the Summary keyed by
-/// (user, period, anchor), marks it Generating, drives the agent over the period's Session texts, and
-/// folds the narrative back in as Ready. No background scheduler — generation is always user-triggered.
-/// A period with no Sessions is a no-op that reports <see cref="SummaryStatus.Missing"/>.
+/// Generates (or refreshes) a Summary on demand (issues 0013/0014): it upserts the Summary keyed by
+/// (user, period, anchor), marks it Generating, drives the agent over its source material — the period's
+/// Session texts for a Day/Week, or the existing lower-level Summaries for a Month/Quarter/Year — and
+/// folds the narrative back in as Ready. Completing a run propagates staleness up the chain. No
+/// background scheduler. A period with no source material is a no-op reporting <see cref="SummaryStatus.Missing"/>.
 /// </summary>
 public sealed class SummaryGenerator(
-    JournalRecallDbContext db, IAgentRunner runner, SummarySourceReader sources, ICurrentUserService currentUser)
+    JournalRecallDbContext db,
+    IAgentRunner runner,
+    SummarySourceReader sources,
+    SummaryRollupReader rollups,
+    SummaryStaleness staleness,
+    ICurrentUserService currentUser)
 {
     public async Task<SummaryDto> GenerateAsync(
         SummaryPeriod period, DateOnly date, CancellationToken cancellationToken = default)
@@ -23,10 +29,11 @@ public sealed class SummaryGenerator(
         var userId = currentUser.UserId ?? throw new InvalidOperationException("No authenticated user.");
         var anchor = SummaryPeriods.Anchor(period, date);
 
-        var entries = await sources.ReadAsync(period, anchor, cancellationToken);
+        // Source material: Sessions for Day/Week, else the existing lower-level Summaries.
+        var (prompt, sourceCount) = await BuildPrompt(period, anchor, cancellationToken);
 
-        // Nothing to summarize: don't persist an empty Summary (acceptance — only periods with Sessions).
-        if (entries.Count == 0)
+        // Nothing to summarize: don't persist an empty Summary (only periods with material get one).
+        if (sourceCount == 0)
             return SummaryDto.Missing(period, anchor, 0);
 
         var summary = await db.Summaries
@@ -40,19 +47,33 @@ public sealed class SummaryGenerator(
         summary.BeginGeneration();
         await db.SaveChangesAsync(cancellationToken);
 
-        var content = await Run(period, anchor, entries, userId, cancellationToken);
+        var content = await Run(prompt, userId, cancellationToken);
 
-        summary.Complete(content, entries.Count);
+        summary.Complete(content, sourceCount);
         await db.SaveChangesAsync(cancellationToken);
 
-        return SummaryDto.From(summary, entries.Count);
+        // This period's content changed, so anything that rolls it up is now out of date (issue 0014).
+        await staleness.PropagateAboveAsync(period, anchor, cancellationToken);
+
+        return SummaryDto.From(summary, sourceCount);
     }
 
-    private async Task<string> Run(
-        SummaryPeriod period, DateOnly anchor, IReadOnlyList<string> entries, Guid userId, CancellationToken ct)
+    private async Task<(string Prompt, int SourceCount)> BuildPrompt(
+        SummaryPeriod period, DateOnly anchor, CancellationToken ct)
+    {
+        if (SummaryPeriods.IsSessionLevel(period))
+        {
+            var entries = await sources.ReadAsync(period, anchor, ct);
+            return (SummaryAgent.BuildPrompt(period, anchor, entries), entries.Count);
+        }
+
+        var children = await rollups.ReadAsync(period, anchor, ct);
+        return (SummaryAgent.BuildRollupPrompt(period, anchor, children), children.Count);
+    }
+
+    private async Task<string> Run(string prompt, Guid userId, CancellationToken ct)
     {
         var definition = SummaryAgent.BuildDefinition();
-        var prompt = SummaryAgent.BuildPrompt(period, anchor, entries);
         var context = new RunContext { Subject = userId.ToString() };
 
         await foreach (var @event in runner.StreamAsync(definition, Conversation.FromUser(prompt), context, ct))
