@@ -148,8 +148,9 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             correction.HasKey(c => c.Id);
             correction.Ignore(c => c.DomainEvents);
             correction.HasIndex(c => c.UserId);
-            // Mishearings are a primitive collection serialized to a single JSON column (EF Core).
-            correction.PrimitiveCollection(c => c.Mishearings);
+            // Mishearings are a primitive collection serialized to a single JSON column (EF Core),
+            // read/written through the read-only property's backing field.
+            correction.PrimitiveCollection(c => c.Mishearings).UsePropertyAccessMode(PropertyAccessMode.Field);
             // Privacy invariant: scope every Correction query to the current user (ADR-0002, CONTEXT.md).
             correction.HasQueryFilter(TenantFilter, c => c.UserId == _currentUserId);
         });

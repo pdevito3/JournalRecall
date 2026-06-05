@@ -9,11 +9,16 @@ namespace JournalRecall.Api.Domain.Corrections;
 /// </summary>
 public sealed class Correction : BaseEntity
 {
+    private readonly List<string> _mishearings = [];
+
     public Guid UserId { get; private set; }
     public string CanonicalTerm { get; private set; } = string.Empty;
 
-    /// <summary>The common mishearings this Correction fixes. Stored as a primitive collection (JSON column).</summary>
-    public List<string> Mishearings { get; private set; } = [];
+    /// <summary>
+    /// The common mishearings this Correction fixes. Exposed read-only over a backing field so callers
+    /// can't mutate the stored list; EF persists it as a primitive collection (JSON column) via the field.
+    /// </summary>
+    public IReadOnlyList<string> Mishearings => _mishearings;
 
     /// <summary>When true, mishearings are substituted deterministically rather than left to the model.</summary>
     public bool HardReplace { get; private set; }
@@ -36,11 +41,11 @@ public sealed class Correction : BaseEntity
         ArgumentException.ThrowIfNullOrWhiteSpace(canonicalTerm);
         CanonicalTerm = canonicalTerm.Trim();
         // Normalize: trim, drop blanks/dupes (case-insensitive), and drop any that equal the canonical.
-        Mishearings = (mishearings ?? [])
+        _mishearings.Clear();
+        _mishearings.AddRange((mishearings ?? [])
             .Select(m => m?.Trim() ?? string.Empty)
             .Where(m => m.Length > 0 && !m.Equals(CanonicalTerm, StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .Distinct(StringComparer.OrdinalIgnoreCase));
         HardReplace = hardReplace;
     }
 }
