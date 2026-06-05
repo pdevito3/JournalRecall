@@ -1,0 +1,34 @@
+# Home-lab deployment (issue 0018, realizes ADR-0001): ONE container serving /api + /app, owning a
+# file-based SQLite database on a named volume. No external database service.
+#
+#   docker compose up -d --build      # build + run
+#   docker compose down               # stop (keeps the volume → data persists)
+#   docker compose down -v            # stop AND delete the data volume
+#
+# Override JWT__SIGNINGKEY and the host port via a .env file or your shell before deploying.
+
+name: journalrecall
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: journalrecall
+    ports:
+      # host:container — published on 8080 by default (override with JOURNALRECALL_PORT).
+      - "${JOURNALRECALL_PORT:-8080}:8080"
+    environment:
+      # SQLite .db lives on the mounted volume at /data so it survives restarts/upgrades.
+      ConnectionStrings__JournalRecall: "Data Source=/data/journalrecall.db"
+      # The app fails startup unless a >=32-byte signing key is present (AuthRegistration,
+      # ValidateOnStart). Override this in production — do not ship the default key.
+      Jwt__SigningKey: "${JWT__SIGNINGKEY:-change-me-in-production-please-use-a-32byte+-secret}"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    volumes:
+      # Named volume holding the .db (and -wal/-shm) files. Documented path: /data.
+      - journalrecall-data:/data
+    restart: unless-stopped
+
+volumes:
+  journalrecall-data:

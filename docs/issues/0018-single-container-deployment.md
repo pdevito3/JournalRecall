@@ -1,6 +1,6 @@
 # 0018 — Single-container deployment
 
-**Phase:** 8 · **Type:** AFK · **Status:** todo · **Realizes:** ADR-0001
+**Phase:** 8 · **Type:** AFK · **Status:** done · **Realizes:** ADR-0001
 
 ## What to build
 

@@ -1,0 +1,37 @@
+# Keep the build context lean — everything the multi-stage Dockerfile needs is restored/built
+# inside the image, not copied from local build output.
+
+# .NET build output
+**/bin/
+**/obj/
+artifacts/
+publish/
+
+# Node / Vite build output + deps
+**/node_modules/
+**/web/dist/
+**/wwwroot/app/
+
+# Local SQLite data (the container owns its own .db on a volume)
+*.db
+*.db-shm
+*.db-wal
+
+# VCS / IDE / OS cruft
+.git/
+.github/
+.idea/
+.vs/
+.vscode/
+.claude/
+**/.DS_Store
+Thumbs.db
+
+# Env / secrets — never bake these into the image
+.env
+*.local.json
+appsettings.*.local.json
+
+# Docs / tests aren't needed in the runtime image build
+tests/
+docs/
