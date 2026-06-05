@@ -59,6 +59,22 @@ export async function setUserRole(id: string, role: string): Promise<void> {
   await ok(res, 'Could not change role')
 }
 
+/** Reset a user to a new temporary password they must replace on next sign-in (issue 0024). */
+export async function resetUserPassword(id: string, password: string): Promise<void> {
+  const res = await apiFetch(`/api/admin/users/${id}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ password }),
+  })
+  if (res.status === 400) {
+    const body = await res.json().catch(() => null)
+    const errors = body?.errors as Record<string, string[]> | undefined
+    throw new Error(errors ? Object.values(errors).flat().join(' ') : 'Could not reset password')
+  }
+  await ok(res, 'Could not reset password')
+}
+
 export async function setUserDisabled(id: string, disabled: boolean): Promise<void> {
   const res = await apiFetch(`/api/admin/users/${id}/${disabled ? 'disable' : 'enable'}`, {
     method: 'POST',

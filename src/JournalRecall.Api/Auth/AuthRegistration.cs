@@ -48,7 +48,8 @@ public static class AuthRegistration
                 options.Password.RequireNonAlphanumeric = false;
             })
             .AddRoles<IdentityRole<Guid>>()
-            .AddEntityFrameworkStores<JournalRecallDbContext>();
+            .AddEntityFrameworkStores<JournalRecallDbContext>()
+            .AddDefaultTokenProviders(); // password-reset tokens for Admin reset (issue 0024)
 
         var jwt = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
         var signingKey = string.IsNullOrWhiteSpace(jwt.SigningKey)

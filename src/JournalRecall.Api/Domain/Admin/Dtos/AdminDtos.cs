@@ -9,6 +9,9 @@ public sealed record CreateUserRequest(string Email, string Password, string Rol
 /// <summary>Assign a User's single role (Admin or Member).</summary>
 public sealed record SetRoleRequest(string Role);
 
+/// <summary>Reset a User to a new temporary password they must replace on next sign-in (issue 0024).</summary>
+public sealed record ResetPasswordRequest(string Password);
+
 /// <summary>
 /// The app-wide AI provider config as read by the admin surface. The API key is never returned — only
 /// whether one is set — so a stored secret can't leak back out.

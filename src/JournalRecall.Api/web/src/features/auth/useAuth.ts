@@ -37,6 +37,15 @@ export function useAuthConfig() {
   })
 }
 
+export function useChangePassword() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: authApi.changePassword,
+    // Refetch the session so the forced-change flag (and the guard) release.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ME_KEY }),
+  })
+}
+
 export function useLogout() {
   const queryClient = useQueryClient()
   return useMutation({

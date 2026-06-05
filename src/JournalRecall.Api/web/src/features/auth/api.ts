@@ -4,6 +4,8 @@ export interface AuthUser {
   id: string
   email: string
   roles: string[]
+  /** True while the user holds a temporary password and must set their own (issue 0024). */
+  mustChangePassword: boolean
 }
 
 export interface Credentials {
@@ -64,6 +66,16 @@ export async function login(body: Credentials): Promise<AuthUser> {
   if (res.status === 401) throw new Error('Invalid email or password')
   if (!res.ok) throw await problem(res, 'Login failed')
   return res.json()
+}
+
+/** Set a new password (clears the forced-change flag; revokes the user's other sessions). */
+export async function changePassword(body: { currentPassword: string; newPassword: string }): Promise<void> {
+  const res = await apiFetch('/api/auth/change-password', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw await problem(res, 'Could not change password')
 }
 
 export async function logout(): Promise<void> {

@@ -10,7 +10,9 @@ namespace JournalRecall.Api.Auth;
 public static class AuthEndpoints
 {
     public sealed record Credentials(string Email, string Password);
-    public sealed record UserResponse(Guid Id, string Email, IReadOnlyList<string> Roles);
+    public sealed record UserResponse(Guid Id, string Email, IReadOnlyList<string> Roles, bool MustChangePassword = false);
+    /// <summary>Change-own-password (issue 0024): clears the forced-change flag and revokes other sessions.</summary>
+    public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
     /// <summary>Public config that drives all anonymous routing (server gate + client guard, issue 0022).</summary>
     public sealed record AuthConfigResponse(bool NeedsSetup, bool SelfRegistrationEnabled);
     /// <summary>Mobile refresh: the refresh token is presented in the body (web uses the HttpOnly cookie).</summary>
@@ -62,7 +64,7 @@ public static class AuthEndpoints
 
             // Mint a refresh token for this device first so the access JWT can carry its chain id (ADR-0005).
             var issued = await refreshTokens.IssueAsync(user.Id, DeviceLabel(request));
-            var (token, _) = tokens.Create(user, roles, issued.ChainId);
+            var (token, _) = tokens.Create(user, roles, issued.ChainId, user.MustChangePassword);
             // Cookie lifetime is pure transport on the real wall clock: long enough that a returning User
             // isn't bounced to /login by the server access-gate on a cold load. The JWT inside still
             // expires in ~15 min and is silently rotated (issue 0022 / ADR-0005); the token's *domain*
@@ -71,7 +73,7 @@ public static class AuthEndpoints
             AuthCookie.SetAccess(response, token, cookieExpiry);
             AuthCookie.SetRefresh(response, issued.Token, cookieExpiry);
 
-            return Results.Ok(new UserResponse(user.Id, user.Email!, roles.ToList()));
+            return Results.Ok(new UserResponse(user.Id, user.Email!, roles.ToList(), user.MustChangePassword));
         });
 
         // Rotates the refresh token and mints a fresh access JWT. Web reads/writes cookies; mobile passes
@@ -103,7 +105,9 @@ public static class AuthEndpoints
             }
 
             var roles = await users.GetRolesAsync(user);
-            var (access, _) = tokens.Create(user, roles, rotation.ChainId);
+            // Re-stamp the forced-change flag from the current DB state so an Admin reset takes effect on
+            // the next refresh (issue 0024), even on a live session.
+            var (access, _) = tokens.Create(user, roles, rotation.ChainId, user.MustChangePassword);
 
             if (isCookieFlow)
             {
@@ -132,7 +136,42 @@ public static class AuthEndpoints
             var id = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
             var email = principal.FindFirstValue(JwtRegisteredClaimNames.Email);
             var roles = principal.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
-            return Results.Ok(new UserResponse(Guid.Parse(id!), email ?? "", roles));
+            var mustChange = principal.FindFirstValue(JwtTokenService.MustChangePasswordClaim) == "true";
+            return Results.Ok(new UserResponse(Guid.Parse(id!), email ?? "", roles, mustChange));
+        }).RequireAuthorization();
+
+        // Change-own-password (issue 0024): clears the forced-change flag and revokes the User's other
+        // sessions (the 0019 deferral). On the web cookie flow this device is re-established so the User
+        // stays signed in here. Allowlisted by the password-change sentinel.
+        group.MapPost("/auth/change-password", async (ChangePasswordRequest body, UserManager<User> users,
+            JwtTokenService tokens, RefreshTokenService refreshTokens, IOptions<RefreshTokenOptions> refreshOptions,
+            ClaimsPrincipal principal, HttpRequest request, HttpResponse response) =>
+        {
+            var id = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            var user = id is null ? null : await users.FindByIdAsync(id);
+            if (user is null)
+                return Results.Unauthorized();
+
+            var result = await users.ChangePasswordAsync(user, body.CurrentPassword, body.NewPassword);
+            if (!result.Succeeded)
+                return Results.ValidationProblem(result.Errors.GroupBy(e => e.Code)
+                    .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray()));
+
+            if (user.MustChangePassword)
+            {
+                user.MustChangePassword = false;
+                await users.UpdateAsync(user);
+            }
+
+            // Revoke every existing session, then re-establish THIS device (ADR-0005).
+            await refreshTokens.RevokeAllAsync(user.Id);
+            var roles = await users.GetRolesAsync(user);
+            var issued = await refreshTokens.IssueAsync(user.Id, DeviceLabel(request));
+            var (access, _) = tokens.Create(user, roles, issued.ChainId, mustChangePassword: false);
+            var cookieExpiry = CookieExpiry(refreshOptions);
+            AuthCookie.SetAccess(response, access, cookieExpiry);
+            AuthCookie.SetRefresh(response, issued.Token, cookieExpiry);
+            return Results.NoContent();
         }).RequireAuthorization();
 
         return app;

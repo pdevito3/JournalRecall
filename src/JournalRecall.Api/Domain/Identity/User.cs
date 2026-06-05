@@ -28,4 +28,11 @@ public sealed class User : IdentityUser<Guid>
     /// data is untouched and still strictly private — disabling is an access decision, not a data one.
     /// </summary>
     public bool IsDisabled { get; set; }
+
+    /// <summary>
+    /// True when the User must replace a temporary password before doing anything else (issue 0024): set
+    /// on Admin-create and Admin-reset, cleared when the User sets their own password. While set, the
+    /// server confines them to the change-password flow (the password-change sentinel).
+    /// </summary>
+    public bool MustChangePassword { get; set; }
 }

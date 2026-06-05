@@ -32,6 +32,10 @@ try
     // the SameSite=Strict auth cookies; placed after auth so it guards every endpoint below.
     app.UseMiddleware<CsrfMiddleware>();
 
+    // Forced-password-change sentinel (issue 0024): a User with a temporary password is blocked from all
+    // but a small allowlist until they set their own password.
+    app.UseMiddleware<PasswordChangeSentinelMiddleware>();
+
     // Health probe under /api so it shares the SPA's single origin (ADR-0001). Traced + logged so
     // issue 0017's AI spans extend the same pipeline.
     app.MapHealthChecks("/api/health");

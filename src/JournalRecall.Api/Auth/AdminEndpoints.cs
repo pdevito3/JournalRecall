@@ -36,7 +36,8 @@ public static class AdminEndpoints
         group.MapPost("/users", async (CreateUserRequest body, UserManager<User> users) =>
         {
             var role = body.Role == Roles.Admin ? Roles.Admin : Roles.Member;
-            var user = new User { UserName = body.Email, Email = body.Email };
+            // Admin-created accounts get a temporary password the User must replace on first sign-in (0024).
+            var user = new User { UserName = body.Email, Email = body.Email, MustChangePassword = true };
             var result = await users.CreateAsync(user, body.Password);
             if (!result.Succeeded)
                 return Results.ValidationProblem(result.Errors.GroupBy(e => e.Code)
@@ -45,6 +46,27 @@ public static class AdminEndpoints
             await users.AddToRoleAsync(user, role);
             return Results.Created($"/api/admin/users/{user.Id}",
                 new AdminUserDto(user.Id, user.Email!, [role], user.IsDisabled));
+        });
+
+        // Admin password reset (issue 0024): set a new temporary password the User must replace, and
+        // revoke their existing sessions. Recovery without email.
+        group.MapPost("/users/{id:guid}/reset-password", async (Guid id, ResetPasswordRequest body,
+            UserManager<User> users, RefreshTokenService refreshTokens) =>
+        {
+            var user = await users.FindByIdAsync(id.ToString());
+            if (user is null)
+                return Results.NotFound();
+
+            var token = await users.GeneratePasswordResetTokenAsync(user);
+            var result = await users.ResetPasswordAsync(user, token, body.Password);
+            if (!result.Succeeded)
+                return Results.ValidationProblem(result.Errors.GroupBy(e => e.Code)
+                    .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray()));
+
+            user.MustChangePassword = true;
+            await users.UpdateAsync(user);
+            await refreshTokens.RevokeAllAsync(id);
+            return Results.NoContent();
         });
 
         group.MapPut("/users/{id:guid}/role", async (Guid id, SetRoleRequest body, UserManager<User> users) =>

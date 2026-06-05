@@ -21,6 +21,12 @@ export function useSetUserRole() {
   return useUsersMutation(({ id, role }: { id: string; role: string }) => adminApi.setUserRole(id, role))
 }
 
+export function useResetUserPassword() {
+  return useUsersMutation(({ id, password }: { id: string; password: string }) =>
+    adminApi.resetUserPassword(id, password),
+  )
+}
+
 export function useSetUserDisabled() {
   return useUsersMutation(({ id, disabled }: { id: string; disabled: boolean }) =>
     adminApi.setUserDisabled(id, disabled),

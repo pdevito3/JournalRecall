@@ -15,6 +15,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CorrectionsRouteImport } from './routes/corrections'
 import { Route as ChatRouteImport } from './routes/chat'
+import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
@@ -49,6 +50,11 @@ const ChatRoute = ChatRouteImport.update({
   path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChangePasswordRoute = ChangePasswordRouteImport.update({
+  id: '/change-password',
+  path: '/change-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -68,6 +74,7 @@ const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/change-password': typeof ChangePasswordRoute
   '/chat': typeof ChatRoute
   '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/change-password': typeof ChangePasswordRoute
   '/chat': typeof ChatRoute
   '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/change-password': typeof ChangePasswordRoute
   '/chat': typeof ChatRoute
   '/corrections': typeof CorrectionsRoute
   '/login': typeof LoginRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/change-password'
     | '/chat'
     | '/corrections'
     | '/login'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/change-password'
     | '/chat'
     | '/corrections'
     | '/login'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/change-password'
     | '/chat'
     | '/corrections'
     | '/login'
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  ChangePasswordRoute: typeof ChangePasswordRoute
   ChatRoute: typeof ChatRoute
   CorrectionsRoute: typeof CorrectionsRoute
   LoginRoute: typeof LoginRoute
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/change-password': {
+      id: '/change-password'
+      path: '/change-password'
+      fullPath: '/change-password'
+      preLoaderRoute: typeof ChangePasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -218,6 +238,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  ChangePasswordRoute: ChangePasswordRoute,
   ChatRoute: ChatRoute,
   CorrectionsRoute: CorrectionsRoute,
   LoginRoute: LoginRoute,

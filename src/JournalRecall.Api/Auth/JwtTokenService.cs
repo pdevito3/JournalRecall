@@ -20,7 +20,13 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
     /// revoke exactly the current device's chain (ADR-0005).</summary>
     public const string RefreshChainClaim = "refresh_chain";
 
-    public (string Token, DateTimeOffset ExpiresAt) Create(User user, IEnumerable<string> roles, Guid? refreshChainId = null)
+    /// <summary>Present (and "true") while the User must replace a temporary password (issue 0024). The
+    /// password-change sentinel reads it from the access token; it is re-stamped on refresh from the
+    /// current DB state and cleared once the User sets their own password.</summary>
+    public const string MustChangePasswordClaim = "must_change_password";
+
+    public (string Token, DateTimeOffset ExpiresAt) Create(
+        User user, IEnumerable<string> roles, Guid? refreshChainId = null, bool mustChangePassword = false)
     {
         var now = DateTimeOffset.UtcNow;
         var expiresAt = now.AddMinutes(_options.ExpiryMinutes);
@@ -33,6 +39,8 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
         };
         if (refreshChainId is { } chainId)
             claims.Add(new Claim(RefreshChainClaim, chainId.ToString()));
+        if (mustChangePassword)
+            claims.Add(new Claim(MustChangePasswordClaim, "true"));
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));

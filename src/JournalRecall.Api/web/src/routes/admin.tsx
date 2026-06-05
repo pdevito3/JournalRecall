@@ -6,6 +6,7 @@ import {
   useAiProvider,
   useCreateUser,
   useRegistrationSettings,
+  useResetUserPassword,
   useSetUserDisabled,
   useSetUserRole,
   useUpdateAiProvider,
@@ -99,6 +100,7 @@ function Users() {
                     </option>
                   ))}
                 </select>
+                <ResetPasswordControl userId={u.id} />
                 <Button onPress={() => setDisabled.mutate({ id: u.id, disabled: !u.isDisabled })}>
                   {u.isDisabled ? 'Enable' : 'Disable'}
                 </Button>
@@ -113,6 +115,46 @@ function Users() {
 
 function roleOf(u: AdminUser): string {
   return u.roles.includes('Admin') ? 'Admin' : 'Member'
+}
+
+function ResetPasswordControl({ userId }: { userId: string }) {
+  const reset = useResetUserPassword()
+  const [open, setOpen] = useState(false)
+  const [password, setPassword] = useState('')
+
+  if (!open) {
+    return <Button onPress={() => setOpen(true)}>Reset password</Button>
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="text"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Temporary password"
+        className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      />
+      <Button
+        variant="primary"
+        isDisabled={reset.isPending || password.length === 0}
+        onPress={() =>
+          reset.mutate(
+            { id: userId, password },
+            {
+              onSuccess: () => {
+                setPassword('')
+                setOpen(false)
+              },
+            },
+          )
+        }
+      >
+        {reset.isPending ? 'Saving…' : 'Save'}
+      </Button>
+      <Button onPress={() => { setOpen(false); setPassword('') }}>Cancel</Button>
+    </div>
+  )
 }
 
 function CreateUserForm() {
@@ -144,11 +186,12 @@ function CreateUserForm() {
           className="rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
       </Field>
-      <Field label="Password">
+      <Field label="Temporary password">
         <input
-          type="password"
+          type="text"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          placeholder="they must change it on first sign-in"
           className="rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
       </Field>

@@ -36,6 +36,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     // Protected route: require a session (fetchMe silently refreshes an expired access token).
     const me = await context.queryClient.ensureQueryData({ queryKey: ['me'], queryFn: fetchMe })
     if (!me) throw redirect({ to: '/login' })
+
+    // Forced password change (issue 0024): confine the user to the change-password screen until done.
+    if (me.mustChangePassword && path !== '/change-password') throw redirect({ to: '/change-password' })
   },
   component: RootLayout,
 })
