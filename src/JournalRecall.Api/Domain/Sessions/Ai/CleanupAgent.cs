@@ -1,13 +1,15 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using JournalRecall.AI.Core;
+using JournalRecall.Api.Domain.Sessions.Metadata;
 
 namespace JournalRecall.Api.Domain.Sessions.Ai;
 
 /// <summary>
 /// The single-shot AI Cleanup agent (ADR-0004): it reads a Session's Raw text and returns a polished
-/// Cleaned copy plus a Synopsis as a structured JSON object. Expressed through the agent runner per
-/// ADR-0004 even though it needs no tools — the deferred chat/RAG page reuses the same machinery.
+/// Cleaned copy, a Synopsis, and metadata Suggestions (Topics/People/Mood) as a structured JSON object.
+/// Expressed through the agent runner per ADR-0004 even though it needs no tools — the deferred chat/RAG
+/// page reuses the same machinery.
 /// </summary>
 public static class CleanupAgent
 {
@@ -17,7 +19,7 @@ public static class CleanupAgent
     private const string Instructions =
         """
         You are a journaling cleanup assistant. You are given the Raw text a user wrote or dictated in
-        a single journaling session. Produce two things:
+        a single journaling session. Produce:
 
         1. "cleaned": a lightly polished copy of the Raw text. Fix typos, punctuation, capitalization,
            spacing, and obvious dictation/transcription errors. Do NOT change the meaning, the voice,
@@ -25,9 +27,14 @@ public static class CleanupAgent
            user's wording wherever it is already correct. If the Raw text is empty, return an empty
            string.
         2. "synopsis": a one-to-three sentence recap of this single session, in the third person.
+        3. "topics": 0-5 short life-area tags you infer (e.g. "work", "parenthood", "travel").
+        4. "people": names of people referenced in the text (0-5).
+        5. "mood": the writer's apparent mood as one of [Joyful, Content, Calm, Neutral, Tired,
+           Anxious, Sad, Angry, Excited, Grateful], or null if unclear.
 
-        Respond with ONLY a single JSON object and nothing else, in exactly this shape:
-        {"cleaned": "...", "synopsis": "..."}
+        These are *suggestions* the user may accept or reject; be conservative and only include what the
+        text supports. Respond with ONLY a single JSON object and nothing else, in exactly this shape:
+        {"cleaned": "...", "synopsis": "...", "topics": ["..."], "people": ["..."], "mood": "..." }
         """;
 
     /// <summary>
@@ -50,17 +57,24 @@ public static class CleanupAgent
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    private sealed record CleanupOutput(string? Cleaned, string? Synopsis);
+    private sealed record CleanupOutput(
+        string? Cleaned, string? Synopsis, string[]? Topics, string[]? People, string? Mood);
+
+    /// <summary>The parsed Cleanup output: the Cleaned copy, Synopsis, and proposed metadata Suggestions.</summary>
+    public sealed record Parsed(
+        string Cleaned,
+        string Synopsis,
+        IReadOnlyList<string> Topics,
+        IReadOnlyList<string> People,
+        Mood? Mood);
 
     /// <summary>
-    /// Parses the agent's terminal output into the Cleaned copy + Synopsis. Returns false when the run
-    /// produced no usable JSON — the caller treats that as a Cleanup failure (Raw and any prior Cleaned
-    /// copy stay intact).
+    /// Parses the agent's terminal output. Returns false when the run produced no usable JSON — the
+    /// caller treats that as a Cleanup failure (Raw and any prior Cleaned copy stay intact).
     /// </summary>
-    public static bool TryParse(AgentOutcome.Completed outcome, out string cleaned, out string synopsis)
+    public static bool TryParse(AgentOutcome.Completed outcome, out Parsed result)
     {
-        cleaned = string.Empty;
-        synopsis = string.Empty;
+        result = null!;
 
         var text = outcome.Messages
             .LastOrDefault(m => m.Role == ChatRole.Assistant)?
@@ -80,8 +94,17 @@ public static class CleanupAgent
             if (parsed?.Cleaned is null)
                 return false;
 
-            cleaned = parsed.Cleaned;
-            synopsis = parsed.Synopsis ?? string.Empty;
+            // A bare mood key (no Custom free text from the model); drop it if not a known mood.
+            Mood? mood = null;
+            if (!string.IsNullOrWhiteSpace(parsed.Mood))
+                Mood.TryOf(parsed.Mood, null, out mood);
+
+            result = new Parsed(
+                parsed.Cleaned,
+                parsed.Synopsis ?? string.Empty,
+                parsed.Topics ?? [],
+                parsed.People ?? [],
+                mood);
             return true;
         }
         catch (JsonException)

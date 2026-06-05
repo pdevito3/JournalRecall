@@ -20,6 +20,11 @@ internal sealed class ScriptableChatClient : IChatClient
     /// <summary>The system/instruction text the model last received — lets tests assert prompt injection.</summary>
     public string LastSystemText { get; private set; } = string.Empty;
 
+    /// <summary>Metadata Suggestions the fake emits alongside the Cleaned copy (issue 0012).</summary>
+    public string[] SuggestTopics { get; set; } = [];
+    public string[] SuggestPeople { get; set; } = [];
+    public string? SuggestMood { get; set; }
+
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
@@ -31,7 +36,14 @@ internal sealed class ScriptableChatClient : IChatClient
 
         var raw = all.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
         var cleaned = CleanedOverride ?? $"Polished: {raw}";
-        var json = JsonSerializer.Serialize(new { cleaned, synopsis = Synopsis });
+        var json = JsonSerializer.Serialize(new
+        {
+            cleaned,
+            synopsis = Synopsis,
+            topics = SuggestTopics,
+            people = SuggestPeople,
+            mood = SuggestMood,
+        });
 
         return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, json))
         {

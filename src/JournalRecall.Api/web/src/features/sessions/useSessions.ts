@@ -55,6 +55,18 @@ export function useSaveMetadata(id: string) {
   })
 }
 
+export function useRespondToSuggestion(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ suggestion, action }: { suggestion: sessionsApi.Suggestion; action: 'accept' | 'reject' }) =>
+      sessionsApi.respondToSuggestion(id, suggestion, action),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session', id] })
+      queryClient.invalidateQueries({ queryKey: ['sessions'] }) // accepted tags show on the timeline
+    },
+  })
+}
+
 export function useSaveCleaned(id: string) {
   const queryClient = useQueryClient()
   return useMutation({

@@ -90,6 +90,16 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
                 person.Property<int>("Id");
                 person.HasKey("Id");
             });
+
+            // Pending AI metadata Suggestions (issue 0012): an owned collection on the Session, with a
+            // store-generated shadow PK. Promoted to Topics/People/Mood on accept, dropped on reject.
+            session.OwnsMany(s => s.Suggestions, suggestion =>
+            {
+                suggestion.ToTable("session_metadata_suggestions");
+                suggestion.WithOwner().HasForeignKey("SessionId");
+                suggestion.Property<int>("Id");
+                suggestion.HasKey("Id");
+            });
         });
 
         modelBuilder.Entity<Correction>(correction =>

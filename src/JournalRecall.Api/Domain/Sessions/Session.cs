@@ -17,6 +17,7 @@ public sealed class Session : BaseEntity
     private readonly List<CleanedRevision> _cleanedRevisions = [];
     private readonly List<SessionTopic> _topics = [];
     private readonly List<SessionPerson> _people = [];
+    private readonly List<MetadataSuggestion> _suggestions = [];
 
     public Guid UserId { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
@@ -57,6 +58,9 @@ public sealed class Session : BaseEntity
 
     /// <summary>The People referenced on this Session (user-set and any accepted AI Suggestions).</summary>
     public IReadOnlyList<SessionPerson> People => _people;
+
+    /// <summary>AI-proposed metadata awaiting accept/reject (CONTEXT.md). Distinct from accepted metadata.</summary>
+    public IReadOnlyList<MetadataSuggestion> Suggestions => _suggestions;
 
     /// <summary>The mood key (a known mood or <see cref="Mood.CustomKey"/>); null when no mood is set.</summary>
     public string? MoodKey { get; private set; }
@@ -184,4 +188,76 @@ public sealed class Session : BaseEntity
         .Select(n => n?.Trim() ?? string.Empty)
         .Where(n => n.Length > 0)
         .Distinct(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Replaces the pending AI Suggestions with a fresh set from a Cleanup run. Suggestions that would
+    /// duplicate metadata the Session already carries are dropped (AI never duplicates or overwrites
+    /// existing metadata, CONTEXT.md): an existing Topic/Person name, or any mood already set.
+    /// </summary>
+    public void ReplaceAiSuggestions(
+        IEnumerable<string> topics, IEnumerable<string> people, Mood? mood)
+    {
+        _suggestions.Clear();
+
+        foreach (var name in Normalize(topics))
+            if (!_topics.Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                AddSuggestion(SuggestionKind.Topic, name);
+
+        foreach (var name in Normalize(people))
+            if (!_people.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                AddSuggestion(SuggestionKind.Person, name);
+
+        // Only suggest a mood when none is set — never overwrite an existing (user or accepted) mood.
+        if (mood is not null && MoodKey is null)
+            AddSuggestion(SuggestionKind.Mood, mood.Key, mood.CustomValue);
+    }
+
+    private void AddSuggestion(SuggestionKind kind, string value, string? moodCustomValue = null)
+    {
+        if (!_suggestions.Any(s => s.Matches(kind, value)))
+            _suggestions.Add(new MetadataSuggestion(kind, value, moodCustomValue));
+    }
+
+    /// <summary>
+    /// Accepts a pending Suggestion: promotes it to metadata with provenance
+    /// <see cref="MetadataProvenance.AiSuggested"/> (never duplicating or overwriting UserSet metadata)
+    /// and removes it from the pending list. Returns false when no such Suggestion exists.
+    /// </summary>
+    public bool AcceptSuggestion(SuggestionKind kind, string value)
+    {
+        var suggestion = _suggestions.FirstOrDefault(s => s.Matches(kind, value));
+        if (suggestion is null)
+            return false;
+
+        switch (kind)
+        {
+            case SuggestionKind.Topic:
+                if (!_topics.Any(t => t.Name.Equals(suggestion.Value, StringComparison.OrdinalIgnoreCase)))
+                    _topics.Add(new SessionTopic(suggestion.Value, MetadataProvenance.AiSuggested));
+                break;
+            case SuggestionKind.Person:
+                if (!_people.Any(p => p.Name.Equals(suggestion.Value, StringComparison.OrdinalIgnoreCase)))
+                    _people.Add(new SessionPerson(suggestion.Value, MetadataProvenance.AiSuggested));
+                break;
+            case SuggestionKind.Mood:
+                // Never overwrite an existing mood (UserSet wins; CONTEXT.md).
+                if (MoodKey is null && Mood.TryOf(suggestion.Value, suggestion.MoodCustomValue, out var accepted))
+                    SetMood(accepted);
+                break;
+        }
+
+        _suggestions.Remove(suggestion);
+        return true;
+    }
+
+    /// <summary>Rejects a pending Suggestion: removes it without promoting. Returns false when not found.</summary>
+    public bool RejectSuggestion(SuggestionKind kind, string value)
+    {
+        var suggestion = _suggestions.FirstOrDefault(s => s.Matches(kind, value));
+        if (suggestion is null)
+            return false;
+
+        _suggestions.Remove(suggestion);
+        return true;
+    }
 }

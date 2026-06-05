@@ -76,13 +76,18 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
 
     private static void Apply(Session session, AgentOutcome outcome, IReadOnlyList<Correction> corrections)
     {
-        if (outcome is AgentOutcome.Completed completed
-            && CleanupAgent.TryParse(completed, out var cleaned, out var synopsis))
+        if (outcome is AgentOutcome.Completed completed && CleanupAgent.TryParse(completed, out var parsed))
+        {
             // Hard-replace Corrections are applied deterministically to the Cleaned copy only.
-            session.CompleteCleanup(CorrectionApplier.ApplyHardReplacements(cleaned, corrections), synopsis);
+            session.CompleteCleanup(CorrectionApplier.ApplyHardReplacements(parsed.Cleaned, corrections), parsed.Synopsis);
+            // The same run proposes metadata Suggestions (issue 0012) — pending until accepted/rejected.
+            session.ReplaceAiSuggestions(parsed.Topics, parsed.People, parsed.Mood);
+        }
         else
+        {
             // A model failure, a guardrail stop, or unparseable output: record the failure. Raw and any
             // prior Cleaned copy are untouched (acceptance criteria).
             session.FailCleanup();
+        }
     }
 }

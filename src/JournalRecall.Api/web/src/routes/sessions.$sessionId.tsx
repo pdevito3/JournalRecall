@@ -1,10 +1,12 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { KNOWN_MOODS, type CleanupStatus, type RevisionSummary, type Session } from '@/features/sessions/api'
+import type { Suggestion } from '@/features/sessions/api'
 import {
   useCleanedRevision,
   useCleanedRevisions,
   useCleanup,
+  useRespondToSuggestion,
   useRevision,
   useRevisions,
   useSaveCleaned,
@@ -83,6 +85,8 @@ function SessionEditor() {
         </div>
       ) : null}
 
+      <SuggestionChips session={session} />
+
       <MetadataEditor session={session} />
 
       <RawHistory sessionId={sessionId} viewing={viewingRaw} onView={setViewingRaw} />
@@ -93,6 +97,49 @@ function SessionEditor() {
 
 function PanelLabel({ children }: { children: ReactNode }) {
   return <h2 className="text-sm font-medium text-muted">{children}</h2>
+}
+
+/** AI metadata Suggestions from the last Cleanup, each accept/reject-able (issue 0012). */
+function SuggestionChips({ session }: { session: Session }) {
+  const respond = useRespondToSuggestion(session.id)
+  if (session.suggestions.length === 0) return null
+
+  function label(s: Suggestion): string {
+    const prefix = s.kind === 'Topic' ? '#' : s.kind === 'Person' ? '@' : ''
+    return s.kind === 'Mood' ? `mood: ${s.moodCustomValue ?? s.value}` : `${prefix}${s.value}`
+  }
+
+  return (
+    <div className="space-y-2 rounded-lg border border-dashed border-border bg-surface-2 p-4">
+      <PanelLabel>AI suggestions</PanelLabel>
+      <ul className="flex flex-wrap gap-2">
+        {session.suggestions.map((s) => (
+          <li
+            key={`${s.kind}:${s.value}`}
+            className="flex items-center gap-1 rounded-full border border-border bg-surface-3 py-0.5 pl-3 pr-1 text-sm text-content"
+          >
+            <span>{label(s)}</span>
+            <button
+              type="button"
+              aria-label={`Accept ${label(s)}`}
+              className="ml-1 rounded-full px-1.5 text-accent hover:bg-accent/15"
+              onClick={() => respond.mutate({ suggestion: s, action: 'accept' })}
+            >
+              ✓
+            </button>
+            <button
+              type="button"
+              aria-label={`Reject ${label(s)}`}
+              className="rounded-full px-1.5 text-muted hover:bg-surface-2 hover:text-content"
+              onClick={() => respond.mutate({ suggestion: s, action: 'reject' })}
+            >
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 const NO_MOOD = ''

@@ -1,6 +1,6 @@
 # 0012 — AI metadata Suggestions (accept/reject)
 
-**Phase:** 5 · **Type:** AFK · **Status:** todo
+**Phase:** 5 · **Type:** AFK · **Status:** done
 
 ## What to build
 
@@ -15,12 +15,12 @@ overwritten.
 
 ## Acceptance criteria
 
-- [ ] A Cleanup run yields metadata Suggestions distinct from accepted metadata.
-- [ ] Accepting a Suggestion adds it as metadata with provenance `AiSuggested`; rejecting removes it
+- [x] A Cleanup run yields metadata Suggestions distinct from accepted metadata.
+- [x] Accepting a Suggestion adds it as metadata with provenance `AiSuggested`; rejecting removes it
       from the suggestion list.
-- [ ] A Topic/Person/Mood the user already set as `UserSet` is not overwritten or duplicated by AI.
-- [ ] Suggestions are scoped to the owning user only.
-- [ ] Tests cover accept, reject, and the no-overwrite-of-UserSet rule.
+- [x] A Topic/Person/Mood the user already set as `UserSet` is not overwritten or duplicated by AI.
+- [x] Suggestions are scoped to the owning user only.
+- [x] Tests cover accept, reject, and the no-overwrite-of-UserSet rule.
 
 ## Blocked by
 

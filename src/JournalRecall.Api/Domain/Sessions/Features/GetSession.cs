@@ -35,6 +35,8 @@ public static class GetSession
                     People = s.People.Select(p => p.Name).ToList(),
                     s.MoodKey,
                     s.MoodCustomValue,
+                    Suggestions = s.Suggestions
+                        .Select(g => new SuggestionDto(g.Kind, g.Value, g.MoodCustomValue)).ToList(),
                 })
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -44,7 +46,8 @@ public static class GetSession
             return new SessionDto(
                 row.Id, row.CreatedAt, row.RawDraft, row.CleanedDraft, row.Synopsis, row.Status,
                 row.CleanedHasHandEdits, row.Topics, row.People,
-                row.MoodKey is null ? null : new MoodDto(row.MoodKey, row.MoodCustomValue));
+                row.MoodKey is null ? null : new MoodDto(row.MoodKey, row.MoodCustomValue),
+                row.Suggestions);
         }
     }
 }

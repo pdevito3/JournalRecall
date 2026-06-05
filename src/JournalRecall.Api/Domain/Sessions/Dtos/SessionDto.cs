@@ -15,13 +15,15 @@ public sealed record SessionDto(
     bool CleanedHasHandEdits,
     IReadOnlyList<string> Topics,
     IReadOnlyList<string> People,
-    MoodDto? Mood)
+    MoodDto? Mood,
+    IReadOnlyList<SuggestionDto> Suggestions)
 {
-    /// <summary>Projects a loaded Session, surfacing its effective status and metadata.</summary>
+    /// <summary>Projects a loaded Session, surfacing its effective status, metadata, and AI Suggestions.</summary>
     public static SessionDto From(Session session) => new(
         session.Id, session.CreatedAt, session.RawDraft, session.CleanedDraft, session.Synopsis,
         session.EffectiveCleanupStatus, session.CleanedHasHandEdits,
         session.Topics.Select(t => t.Name).ToList(),
         session.People.Select(p => p.Name).ToList(),
-        session.Mood is { } mood ? new MoodDto(mood.Key, mood.CustomValue) : null);
+        session.Mood is { } mood ? new MoodDto(mood.Key, mood.CustomValue) : null,
+        session.Suggestions.Select(s => new SuggestionDto(s.Kind, s.Value, s.MoodCustomValue)).ToList());
 }

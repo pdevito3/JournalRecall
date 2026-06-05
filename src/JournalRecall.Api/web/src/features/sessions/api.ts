@@ -25,6 +25,14 @@ export interface Metadata {
   mood: Mood | null
 }
 
+export type SuggestionKind = 'Topic' | 'Person' | 'Mood'
+
+export interface Suggestion {
+  kind: SuggestionKind
+  value: string
+  moodCustomValue: string | null
+}
+
 export interface Session {
   id: string
   createdAt: string
@@ -36,6 +44,21 @@ export interface Session {
   topics: string[]
   people: string[]
   mood: Mood | null
+  suggestions: Suggestion[]
+}
+
+export async function respondToSuggestion(
+  id: string,
+  suggestion: Suggestion,
+  action: 'accept' | 'reject',
+): Promise<void> {
+  const res = await fetch(`/api/sessions/${id}/suggestions/${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ kind: suggestion.kind, value: suggestion.value }),
+  })
+  if (!res.ok) throw new Error(`Could not ${action} suggestion`)
 }
 
 export async function saveMetadata(id: string, metadata: Metadata): Promise<void> {

@@ -59,6 +59,19 @@ public static class SessionEndpoints
             };
         });
 
+        // Accept/reject an AI metadata Suggestion (issue 0012). Accept promotes it (AiSuggested).
+        group.MapPost("/{id:guid}/suggestions/accept", async (Guid id, SuggestionRef body, ISender sender) =>
+        {
+            var handled = await sender.Send(new RespondToSuggestion.Command(id, body.Kind, body.Value, Accept: true));
+            return handled ? Results.NoContent() : Results.NotFound();
+        });
+
+        group.MapPost("/{id:guid}/suggestions/reject", async (Guid id, SuggestionRef body, ISender sender) =>
+        {
+            var handled = await sender.Send(new RespondToSuggestion.Command(id, body.Kind, body.Value, Accept: false));
+            return handled ? Results.NoContent() : Results.NotFound();
+        });
+
         // Hand-edit the Cleaned copy: appends a Cleaned Revision; never touches Raw (issue 0010).
         group.MapPut("/{id:guid}/cleaned", async (Guid id, SaveCleaned.Request body, ISender sender) =>
         {

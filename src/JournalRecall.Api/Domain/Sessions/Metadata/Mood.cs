@@ -42,6 +42,21 @@ public sealed record Mood
         return new Mood(known, null);
     }
 
+    /// <summary>Non-throwing <see cref="Of"/>: returns false when the key is unknown or Custom lacks text.</summary>
+    public static bool TryOf(string? key, string? customValue, out Mood mood)
+    {
+        try
+        {
+            mood = Of(key!, customValue);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            mood = null!;
+            return false;
+        }
+    }
+
     /// <summary>The user-facing label: the free text for a Custom mood, else the known key.</summary>
     public string Display => Key == CustomKey ? CustomValue ?? CustomKey : Key;
 }
