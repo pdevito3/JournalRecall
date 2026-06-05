@@ -44,6 +44,18 @@ are **AFK** (no human review gate). Work them in dependency order.
 | [TEST-0012](TEST-0012-migrate-access-setup-admin.md) | Migrate access gate, setup, admin & registration | 10 | TEST-0004 | ready |
 | [TEST-0013](TEST-0013-migrate-health-observability.md) | Migrate Health & Observability | 10 | TEST-0003, TEST-0004 | ready |
 | [TEST-0014](TEST-0014-retire-api-tests.md) | Retire `Api.Tests` | 10 | TEST-0006–TEST-0013 | ready |
+| [FORM-001](FORM-001-deps-forms-pattern-adr.md) | Dependencies + forms-pattern ADR | 11 | — | ready |
+| [FORM-002](FORM-002-problemerror-problemdetails-parser.md) | `ProblemError` + ProblemDetails parser (API-client seam) | 11 | — | ready |
+| [FORM-003](FORM-003-apply-server-errors-helper.md) | `applyServerErrors(form, error)` helper | 11 | FORM-001, FORM-002 | ready |
+| [FORM-004](FORM-004-shared-schema-fragments.md) | Shared schema fragments (password + email) | 11 | FORM-001 | ready |
+| [FORM-005](FORM-005-bound-field-components-formshell.md) | Bound field components + `FormShell` | 11 | FORM-001 | ready |
+| [FORM-006](FORM-006-convert-login-form.md) | Convert login form | 11 | FORM-003, FORM-004, FORM-005 | ready |
+| [FORM-007](FORM-007-convert-register-setup-forms.md) | Convert register + setup forms | 11 | FORM-003, FORM-004, FORM-005 | ready |
+| [FORM-008](FORM-008-convert-change-password-form.md) | Convert change-password form | 11 | FORM-003, FORM-004, FORM-005 | ready |
+| [FORM-009](FORM-009-convert-corrections-create-form.md) | Convert Corrections create form | 11 | FORM-003, FORM-005 | ready |
+| [FORM-010](FORM-010-convert-create-user-form.md) | Convert create-user (admin) form | 11 | FORM-003, FORM-004, FORM-005 | ready |
+| [FORM-011](FORM-011-convert-ai-provider-config-form.md) | Convert AI-provider config form | 11 | FORM-003, FORM-005 | ready |
+| [FORM-012](FORM-012-convert-session-metadata-editor.md) | Convert Session Metadata editor | 11 | FORM-003, FORM-005 | ready |
 
 ## Suggested order
 
@@ -60,3 +72,11 @@ first — **TEST-0001 → TEST-0002**, then the two harnesses **TEST-0003** and 
 only **TEST-0002**; the per-area migrations (**TEST-0007–TEST-0010**, **TEST-0013**) need both harnesses, while the
 auth-area migrations (**TEST-0011**, **TEST-0012**) need only the functional harness. **TEST-0014** (delete
 `Api.Tests`) is the capstone — it blocks on every migration (**TEST-0006–TEST-0013**).
+
+**Phase 11** (forms on `@tanstack/react-form` + zod, realizing PRD-0004): big-bang — build the shared
+modules first, then convert all eight forms. Foundation: **FORM-001** (deps + ADR), **FORM-002**
+(`ProblemError`) can start immediately and in parallel; **FORM-003** (`applyServerErrors`) needs
+FORM-001 + FORM-002; **FORM-004** (schema fragments) and **FORM-005** (field components + `FormShell`)
+need only FORM-001. Once FORM-003/004/005 land, the seven conversions (**FORM-006–FORM-012**) all run
+in parallel — auth forms (**FORM-006/007/008**) and create-user (**FORM-010**) also need the schema
+fragments (FORM-004).
