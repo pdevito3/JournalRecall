@@ -5,6 +5,9 @@ import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
 import { meQueryOptions, selectIsAdmin } from '@/features/auth/useAuth'
 import {
+  adminUsersQueryOptions,
+  aiProviderQueryOptions,
+  registrationSettingsQueryOptions,
   useAdminUsers,
   useAiProvider,
   useCreateUser,
@@ -38,6 +41,14 @@ export async function ensureAdmin(queryClient: QueryClient): Promise<void> {
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: ({ context }) => ensureAdmin(context.queryClient),
+  // Prime the page's first-paint queries during navigation (kills the mount→fetch waterfall).
+  // Components keep reading via useQuery, so focus/reconnect refetch, dedup, and GC stay intact.
+  loader: ({ context: { queryClient } }) =>
+    Promise.all([
+      queryClient.ensureQueryData(adminUsersQueryOptions()),
+      queryClient.ensureQueryData(registrationSettingsQueryOptions()),
+      queryClient.ensureQueryData(aiProviderQueryOptions()),
+    ]),
   component: Admin,
 })
 

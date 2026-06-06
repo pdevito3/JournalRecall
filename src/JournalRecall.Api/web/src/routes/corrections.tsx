@@ -3,6 +3,7 @@ import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
 import type { Correction } from '@/features/corrections/api'
 import {
+  correctionsQueryOptions,
   useCorrections,
   useCreateCorrection,
   useDeleteCorrection,
@@ -12,6 +13,9 @@ import { CheckboxField, FormShell, TextField, applyServerErrors } from '@/shared
 import { Button } from '@/shared/ui/button'
 
 export const Route = createFileRoute('/corrections')({
+  // Prime the corrections list during navigation (kills the mount→fetch waterfall). The component
+  // keeps reading via useQuery, so focus/reconnect refetch, dedup, and GC stay intact.
+  loader: ({ context: { queryClient } }) => queryClient.ensureQueryData(correctionsQueryOptions()),
   component: CorrectionsPage,
 })
 
