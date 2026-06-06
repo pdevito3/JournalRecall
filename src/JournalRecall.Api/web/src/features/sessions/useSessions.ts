@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { KNOWN_MOODS } from './api'
 import * as sessionsApi from './api'
@@ -80,8 +80,11 @@ export function useSessionList(filter?: string) {
   return useQuery(sessionListQueryOptions(filter))
 }
 
+// Primed (awaited) by the Session-detail route loader — read via Suspense so the router's default
+// pending/error components own the loading and failure states (FE-011). The Revision streams stay on
+// useQuery because the loader only prefetches them (non-awaited) — they must tolerate not-yet-loaded.
 export function useSession(id: string) {
-  return useQuery(sessionQueryOptions(id))
+  return useSuspenseQuery(sessionQueryOptions(id))
 }
 
 export function useSaveDraft(id: string) {

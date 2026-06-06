@@ -1,4 +1,4 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import * as adminApi from './api'
 
 export function adminUsersQueryOptions() {
@@ -13,8 +13,10 @@ export function aiProviderQueryOptions() {
   return queryOptions({ queryKey: ['admin', 'ai-provider'], queryFn: adminApi.getAiProvider })
 }
 
+// Primed (awaited) by the Admin route loader — read via Suspense so the router's default pending/error
+// components own the loading and failure states (FE-011).
 export function useAdminUsers() {
-  return useQuery(adminUsersQueryOptions())
+  return useSuspenseQuery(adminUsersQueryOptions())
 }
 
 function useUsersMutation<TArgs>(fn: (args: TArgs) => Promise<void>) {
@@ -46,7 +48,7 @@ export function useSetUserDisabled() {
 }
 
 export function useRegistrationSettings() {
-  return useQuery(registrationSettingsQueryOptions())
+  return useSuspenseQuery(registrationSettingsQueryOptions())
 }
 
 export function useUpdateRegistration() {
@@ -62,7 +64,7 @@ export function useUpdateRegistration() {
 }
 
 export function useAiProvider() {
-  return useQuery(aiProviderQueryOptions())
+  return useSuspenseQuery(aiProviderQueryOptions())
 }
 
 export function useUpdateAiProvider() {

@@ -27,7 +27,7 @@ const correctionFormSchema = z.object({
 type CorrectionFormValues = z.infer<typeof correctionFormSchema>
 
 function CorrectionsPage() {
-  const { data: corrections, isLoading } = useCorrections()
+  const { data: corrections } = useCorrections()
   const create = useCreateCorrection()
 
   const form = useForm({
@@ -80,9 +80,7 @@ function CorrectionsPage() {
         </form.Field>
       </FormShell>
 
-      {isLoading ? (
-        <p className="text-muted">Loading…</p>
-      ) : corrections && corrections.length > 0 ? (
+      {corrections.length > 0 ? (
         <ul className="space-y-2">
           {corrections.map((c) => (
             <CorrectionRow key={c.id} correction={c} />

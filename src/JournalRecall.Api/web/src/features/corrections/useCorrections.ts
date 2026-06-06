@@ -1,4 +1,4 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import * as correctionsApi from './api'
 
 const key = ['corrections']
@@ -7,8 +7,10 @@ export function correctionsQueryOptions() {
   return queryOptions({ queryKey: key, queryFn: correctionsApi.getCorrections })
 }
 
+// Primed (awaited) by the Corrections route loader — read via Suspense so the router's default
+// pending/error components own the loading and failure states (FE-011).
 export function useCorrections() {
-  return useQuery(correctionsQueryOptions())
+  return useSuspenseQuery(correctionsQueryOptions())
 }
 
 export function useCreateCorrection() {

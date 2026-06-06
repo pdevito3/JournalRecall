@@ -72,7 +72,7 @@ function Admin() {
 function RegistrationSettingsForm() {
   const { data: settings } = useRegistrationSettings()
   const update = useUpdateRegistration()
-  const enabled = settings?.selfRegistrationEnabled ?? false
+  const enabled = settings.selfRegistrationEnabled
 
   return (
     <div className="space-y-2">
@@ -85,7 +85,7 @@ function RegistrationSettingsForm() {
         <input
           type="checkbox"
           checked={enabled}
-          disabled={!settings || update.isPending}
+          disabled={update.isPending}
           onChange={(e) => update.mutate({ selfRegistrationEnabled: e.target.checked })}
         />
         <span className="text-content">Allow self-registration</span>
@@ -104,37 +104,33 @@ function Users() {
     <div className="space-y-4">
       <h2 className="text-lg font-medium text-content">Users</h2>
       <CreateUserForm />
-      {!users ? (
-        <p className="text-muted">Loading users…</p>
-      ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border">
-          {users.map((u) => (
-            <li key={u.id} className="flex flex-wrap items-center gap-3 p-3">
-              <span className="text-content">{u.username}</span>
-              {u.isDisabled ? (
-                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-400">disabled</span>
-              ) : null}
-              <div className="ml-auto flex items-center gap-2">
-                <select
-                  value={roleOf(u)}
-                  onChange={(e) => setRole.mutate({ id: u.id, role: e.target.value })}
-                  className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-                <ResetPasswordControl userId={u.id} />
-                <Button onPress={() => setDisabled.mutate({ id: u.id, disabled: !u.isDisabled })}>
-                  {u.isDisabled ? 'Enable' : 'Disable'}
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="divide-y divide-border rounded-lg border border-border">
+        {users.map((u) => (
+          <li key={u.id} className="flex flex-wrap items-center gap-3 p-3">
+            <span className="text-content">{u.username}</span>
+            {u.isDisabled ? (
+              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-400">disabled</span>
+            ) : null}
+            <div className="ml-auto flex items-center gap-2">
+              <select
+                value={roleOf(u)}
+                onChange={(e) => setRole.mutate({ id: u.id, role: e.target.value })}
+                className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+              <ResetPasswordControl userId={u.id} />
+              <Button onPress={() => setDisabled.mutate({ id: u.id, disabled: !u.isDisabled })}>
+                {u.isDisabled ? 'Enable' : 'Disable'}
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -248,11 +244,7 @@ function AiProviderForm() {
           effect on the next run.
         </p>
       </div>
-      {!provider ? (
-        <p className="text-muted">Loading…</p>
-      ) : (
-        <AiProviderFormInner provider={provider} />
-      )}
+      <AiProviderFormInner provider={provider} />
     </div>
   )
 }

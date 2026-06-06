@@ -36,7 +36,7 @@ export const Route = createFileRoute('/sessions/$sessionId')({
 
 function SessionEditor() {
   const { sessionId } = Route.useParams()
-  const { data: session, isLoading, isError } = useSession(sessionId)
+  const { data: session } = useSession(sessionId)
   const saveDraft = useSaveDraft(sessionId)
 
   const [text, setText] = useState('')
@@ -47,7 +47,7 @@ function SessionEditor() {
 
   // Hydrate once from the server, then local state owns the text (survives reloads).
   useEffect(() => {
-    if (session && !hydrated) {
+    if (!hydrated) {
       setText(session.rawDraft)
       setHydrated(true)
     }
@@ -60,9 +60,6 @@ function SessionEditor() {
     clearTimeout(timer.current)
     timer.current = setTimeout(() => saveDraft.mutate(value), 600) // debounced autosave
   }
-
-  if (isLoading) return <p className="text-muted">Loading…</p>
-  if (isError || !session) return <p className="text-muted">This session could not be found.</p>
 
   const hasCleaned = session.cleanedDraft.length > 0
 
