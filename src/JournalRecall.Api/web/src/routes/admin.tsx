@@ -244,9 +244,16 @@ function AiProviderForm() {
           effect on the next run.
         </p>
       </div>
-      <AiProviderFormInner provider={provider} />
+      <AiProviderFormInner key={aiProviderKey(provider)} provider={provider} />
     </div>
   )
+}
+
+// Change-token for the AI-provider form: the singleton config DTO carries no revision field, so derive
+// one from its values. When a saved change lands (this admin or another), the key changes and the form
+// remounts, re-seeding its defaults from the fresh server values instead of the ones captured at mount.
+function aiProviderKey(provider: AiProvider): string {
+  return JSON.stringify([provider.provider, provider.endpoint, provider.model, provider.hasApiKey])
 }
 
 function AiProviderFormInner({ provider }: { provider: AiProvider }) {

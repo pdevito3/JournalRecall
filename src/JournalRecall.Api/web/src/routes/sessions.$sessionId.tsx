@@ -102,7 +102,7 @@ function SessionEditor({ sessionId }: { sessionId: string }) {
 
       <SuggestionChips session={session} />
 
-      <MetadataEditor session={session} />
+      <MetadataEditor key={metadataKey(session)} session={session} />
 
       <RawHistory sessionId={sessionId} viewing={viewingRaw} onView={setViewingRaw} />
       <CleanedHistory sessionId={sessionId} viewing={viewingCleaned} onView={setViewingCleaned} />
@@ -180,6 +180,13 @@ export const metadataSchema = z
   })
 
 type MetadataFormValues = z.infer<typeof metadataSchema>
+
+// Change-token for the metadata editor: the Session DTO carries no revision field, so derive one from
+// the metadata values themselves. When the server changes them (accepted Suggestion, Cleanup re-run),
+// this key changes and the editor remounts, re-seeding its defaults from the fresh server values.
+function metadataKey(session: Session): string {
+  return JSON.stringify([session.topics, session.people, session.mood])
+}
 
 /** Per-Session manual metadata: Topics, People, and a Mood (known or Custom free text). */
 function MetadataEditor({ session }: { session: Session }) {
