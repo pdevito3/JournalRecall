@@ -1,4 +1,4 @@
-# 0034 — Migrate Summaries
+# TEST-0010 — Migrate Summaries
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -25,5 +25,5 @@ Redistribute the Summary feature tests, driving the Summary AI flow through the 
 
 ## Blocked by
 
-- #0027
-- #0028
+- #TEST-0003
+- #TEST-0004

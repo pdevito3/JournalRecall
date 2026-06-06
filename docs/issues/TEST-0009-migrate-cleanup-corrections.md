@@ -1,4 +1,4 @@
-# 0033 — Migrate Cleanup & Corrections
+# TEST-0009 — Migrate Cleanup & Corrections
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -25,5 +25,5 @@ Redistribute the AI Cleanup and Corrections feature tests, driving the AI flows 
 
 ## Blocked by
 
-- #0027
-- #0028
+- #TEST-0003
+- #TEST-0004

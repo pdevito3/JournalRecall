@@ -1,4 +1,4 @@
-# 0036 — Migrate access gate, setup, admin & registration
+# TEST-0012 — Migrate access gate, setup, admin & registration
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -27,4 +27,4 @@ integration layer. Suite stays green.
 
 ## Blocked by
 
-- #0028
+- #TEST-0004

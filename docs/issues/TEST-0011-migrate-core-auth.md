@@ -1,4 +1,4 @@
-# 0035 — Migrate core auth (login, refresh, cookie hardening, forced change)
+# TEST-0011 — Migrate core auth (login, refresh, cookie hardening, forced change)
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -23,4 +23,4 @@ auth pipeline and must always use real auth (never the fake-auth bypass). Suite 
 
 ## Blocked by
 
-- #0028
+- #TEST-0004

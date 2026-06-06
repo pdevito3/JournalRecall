@@ -1,4 +1,4 @@
-# 0031 — Migrate Sessions area (sessions, revisions, timeline, journaling-day)
+# TEST-0007 — Migrate Sessions area (sessions, revisions, timeline, journaling-day)
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -23,5 +23,5 @@ codes/JSON/headers stay **functional**. Suite stays green.
 
 ## Blocked by
 
-- #0027
-- #0028
+- #TEST-0003
+- #TEST-0004

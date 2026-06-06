@@ -1,4 +1,4 @@
-# 0028 — Functional harness + reference tests
+# TEST-0004 — Functional harness + reference tests
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -6,7 +6,7 @@
 
 The full-web-host layer: real auth flow, CSRF, the access gate, status codes, JSON shapes, and SSE.
 Default is **real auth**; fake auth is opt-in and never routes around middleware. Proven by reference
-tests on the Session pilot. Can run in parallel with #0027.
+tests on the Session pilot. Can run in parallel with #TEST-0003.
 
 - **`TestingWebApplicationFactory`** — boots the real host; `CreateAuthenticatedClientAsync()` runs the
   genuine register→login flow and returns an `HttpClient` carrying the real cookie/bearer + `X-CSRF`
@@ -34,4 +34,4 @@ tests on the Session pilot. Can run in parallel with #0027.
 
 ## Blocked by
 
-- #0026
+- #TEST-0002

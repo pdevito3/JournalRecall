@@ -1,4 +1,4 @@
-# 0037 — Migrate Health & Observability
+# TEST-0013 — Migrate Health & Observability
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -23,5 +23,5 @@ integration or functional depending on whether HTTP is the thing under test. Sui
 
 ## Blocked by
 
-- #0027
-- #0028
+- #TEST-0003
+- #TEST-0004

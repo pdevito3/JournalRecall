@@ -1,4 +1,4 @@
-# 0025 — Test-suite scaffold: four projects, packages, conventions, ADR-0006
+# TEST-0001 — Test-suite scaffold: four projects, packages, conventions, ADR-0006
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003, ADR-0006
 

@@ -1,4 +1,4 @@
-# 0032 — Migrate Metadata & Location
+# TEST-0008 — Migrate Metadata & Location
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -23,5 +23,5 @@ Suite stays green.
 
 ## Blocked by
 
-- #0027
-- #0028
+- #TEST-0003
+- #TEST-0004

@@ -1,4 +1,4 @@
-# 0027 — Integration harness + reference tests
+# TEST-0003 — Integration harness + reference tests
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -34,4 +34,4 @@ on the Session pilot.
 
 ## Blocked by
 
-- #0026
+- #TEST-0002

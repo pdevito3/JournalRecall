@@ -1,4 +1,4 @@
-# 0030 — Migrate domain tests → UnitTests
+# TEST-0006 — Migrate domain tests → UnitTests
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -24,4 +24,4 @@ steps on builders where it helps. First Phase 2 slice; proves the unit layer at 
 
 ## Blocked by
 
-- #0026
+- #TEST-0002

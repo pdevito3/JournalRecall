@@ -1,4 +1,4 @@
-# 0038 — Retire `Api.Tests`
+# TEST-0014 — Retire `Api.Tests`
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -25,11 +25,11 @@ three-layer structure. Suite stays green.
 
 ## Blocked by
 
-- #0030
-- #0031
-- #0032
-- #0033
-- #0034
-- #0035
-- #0036
-- #0037
+- #TEST-0006
+- #TEST-0007
+- #TEST-0008
+- #TEST-0009
+- #TEST-0010
+- #TEST-0011
+- #TEST-0012
+- #TEST-0013

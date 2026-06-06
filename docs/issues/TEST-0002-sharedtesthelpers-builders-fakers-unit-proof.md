@@ -1,4 +1,4 @@
-# 0026 — SharedTestHelpers builders/fakers + unit-layer proof
+# TEST-0002 — SharedTestHelpers builders/fakers + unit-layer proof
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -34,4 +34,4 @@ milliseconds with no host or DB.
 
 ## Blocked by
 
-- #0025
+- #TEST-0001

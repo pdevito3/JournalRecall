@@ -1,4 +1,4 @@
-# 0029 — `tests/README.md` decision tree
+# TEST-0005 — `tests/README.md` decision tree
 
 **Phase:** 10 · **Type:** AFK · **Status:** ready · **Realizes:** PRD-0003
 
@@ -28,5 +28,5 @@ re-deriving the strategy. Closes Phase 1.
 
 ## Blocked by
 
-- #0027
-- #0028
+- #TEST-0003
+- #TEST-0004
