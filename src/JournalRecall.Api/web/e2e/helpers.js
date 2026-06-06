@@ -105,10 +105,98 @@ async function login(page, opts) {
   return { username, password }
 }
 
+// startSession — PRECONDITION: signed in, on a page with the "Start a session" button (the journal home).
+// Creates a Session, lands on its editor, optionally writes `text` into the Raw draft and waits for the
+// debounced autosave to report "Saved". Returns the new session id (parsed from the URL).
+async function startSession(page, text) {
+  await page.getByRole('button', { name: 'Start a session' }).click()
+  await page.waitForURL((url) => /\/sessions\/[^/]+/.test(String(url)))
+  const id = String(page.url()).replace(/[?#].*$/, '').split('/sessions/')[1]
+
+  const draft = page.getByPlaceholder('Write freely…') // the Raw editor textarea
+  await draft.waitFor({ state: 'visible' })
+  if (text) {
+    await draft.fill(text)
+    // Debounced autosave (600ms) → the SaveStatus flips to "Saved". Wait on that, not a sleep.
+    await page.getByText('Saved', { exact: true }).first().waitFor({ state: 'visible' })
+  }
+  return id
+}
+
+// openFromTimeline — PRECONDITION: on the journal home. Clicks the timeline entry whose preview contains
+// `marker` (a per-run text written into that Session), landing on that Session's editor. This is how a
+// user reaches a Session, and it exercises client-side navigation + the route loader (FE-007/008).
+async function openFromTimeline(page, marker) {
+  await page.getByRole('link', { name: new RegExp(marker) }).first().click()
+  await page.waitForURL((url) => /\/sessions\/[^/]+/.test(String(url)))
+  await page.getByPlaceholder('Write freely…').waitFor({ state: 'visible' })
+}
+
 // Convenience: the form-level error banner text (Form.Errors renders role="alert"). Scope to a region
 // when roles repeat on a page.
 async function bannerText(scope) {
   const alert = scope.getByRole('alert')
   if ((await alert.count()) === 0) return ''
   return (await alert.first().innerText()).trim()
+}
+
+// expectText — poll until `locator` is present AND its text contains `needle`, then return the full text.
+// Built on the FE-030 `waitFor` shim (the sandbox has no `expect`): unlike `locator.waitFor`, this gates
+// on the element's *content*, which is what flows asserting "heading B shows B's text" actually need.
+async function expectText(locator, needle, opts) {
+  const message = (opts && opts.message) || `text "${needle}"`
+  return waitFor(
+    async () => {
+      if ((await locator.count()) === 0) return false
+      const text = (await locator.first().innerText()) || ''
+      return text.includes(needle) ? text : false
+    },
+    { message: message, timeout: opts && opts.timeout },
+  )
+}
+
+// expectValue — like expectText but for form controls (input/textarea), polling `inputValue()` instead of
+// innerText. Used by flows that assert a textarea/field shows the right *value* (e.g. each Session's own
+// Raw draft). Built on the FE-030 `waitFor` shim.
+async function expectValue(locator, needle, opts) {
+  const message = (opts && opts.message) || `value "${needle}"`
+  return waitFor(
+    async () => {
+      if ((await locator.count()) === 0) return false
+      const value = (await locator.first().inputValue()) || ''
+      return value.includes(needle) ? value : false
+    },
+    { message: message, timeout: opts && opts.timeout },
+  )
+}
+
+// captureFailure — on a failed flow, save a full-page screenshot and print the role="alert" banner text,
+// so a failing run leaves enough to diagnose without a re-run (FE-030). Best-effort: never throws.
+async function captureFailure(page, name) {
+  try {
+    await saveScreenshot(await page.screenshot({ fullPage: true }), `fail-${name}.png`)
+    console.log(`captured screenshot: fail-${name}.png (in ~/.dev-browser/tmp/)`)
+  } catch (error) {
+    console.log('screenshot capture failed:', String(error))
+  }
+  try {
+    const banner = await bannerText(page)
+    if (banner) console.log(`role=alert: ${banner}`)
+  } catch (error) {
+    // ignore — banner is a diagnostic nicety
+  }
+}
+
+// runFlow — the standard flow wrapper (FE-030): opens a named page, runs the body, prints `NAME: PASS`,
+// and on any throw captures a screenshot + alert text then re-throws (so the runner still exits non-zero).
+async function runFlow(name, body) {
+  const page = await browser.getPage(name)
+  try {
+    await body(page)
+    console.log(`${name.toUpperCase()}: PASS`)
+  } catch (error) {
+    console.log(`${name.toUpperCase()}: FAIL — ${String(error)}`)
+    await captureFailure(page, name)
+    throw error
+  }
 }
