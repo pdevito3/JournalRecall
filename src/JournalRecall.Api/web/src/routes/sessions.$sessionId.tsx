@@ -2,8 +2,6 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
-import { KNOWN_MOODS, type CleanupStatus, type RevisionSummary, type Session } from '@/features/sessions/api'
-import type { Suggestion } from '@/features/sessions/api'
 import { FormShell, TextField, SelectField, applyServerErrors } from '@/shared/forms'
 import {
   cleanedRevisionsQueryOptions,
@@ -19,7 +17,12 @@ import {
   useSaveDraft,
   useSaveMetadata,
   useSession,
-} from '@/features/sessions/useSessions'
+  KNOWN_MOODS,
+  type CleanupStatus,
+  type RevisionSummary,
+  type Session,
+  type Suggestion,
+} from '@/features/sessions'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils/cn'
 

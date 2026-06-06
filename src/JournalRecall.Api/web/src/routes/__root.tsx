@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { createRootRouteWithContext, Link, Outlet, redirect, useNavigate } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
-import { authConfigQueryOptions, meQueryOptions, useAuthConfig, useIsAdmin, useLogout, useMe } from '@/features/auth/useAuth'
+import { authConfigQueryOptions, meQueryOptions, useAuthConfig, useIsAdmin, useLogout, useMe } from '@/features/auth'
 import { Button } from '@/shared/ui/button'
 
 export interface RouterContext {

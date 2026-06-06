@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from '@tanstack/react-form'
 import { FormShell, TextField, applyServerErrors, usernameSchema } from '@/shared/forms'
-import { useAuthConfig, useLogin } from '@/features/auth/useAuth'
+import { useAuthConfig, useLogin } from '@/features/auth'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,

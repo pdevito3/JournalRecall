@@ -1,14 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
-import type { Correction } from '@/features/corrections/api'
 import {
   correctionsQueryOptions,
   useCorrections,
   useCreateCorrection,
   useDeleteCorrection,
   useUpdateCorrection,
-} from '@/features/corrections/useCorrections'
+  type Correction,
+} from '@/features/corrections'
 import { CheckboxField, FormShell, TextField, applyServerErrors } from '@/shared/forms'
 import { Button } from '@/shared/ui/button'
 

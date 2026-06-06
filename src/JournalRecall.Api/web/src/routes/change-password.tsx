@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from '@tanstack/react-form'
 import { FormShell, TextField, applyServerErrors, passwordSchema, passwordsMatch } from '@/shared/forms'
-import { useChangePassword, useMe } from '@/features/auth/useAuth'
+import { useChangePassword, useMe } from '@/features/auth'
 
 export const Route = createFileRoute('/change-password')({
   component: ChangePasswordPage,

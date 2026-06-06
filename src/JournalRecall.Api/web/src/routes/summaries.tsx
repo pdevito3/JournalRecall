@@ -1,14 +1,15 @@
 import { useEffect, useMemo } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useMe } from '@/features/auth/useAuth'
+import { useMe } from '@/features/auth'
 import {
   summaryQueryOptions,
   summarySearchSchema,
   todayYmd,
   useGenerateSummary,
   useSummary,
-} from '@/features/summaries/useSummaries'
-import { PERIODS, type SummaryPeriod } from '@/features/summaries/api'
+  PERIODS,
+  type SummaryPeriod,
+} from '@/features/summaries'
 import { Button } from '@/shared/ui/button'
 
 export const Route = createFileRoute('/summaries')({

@@ -1,14 +1,14 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useMe } from '@/features/auth/useAuth'
+import { useMe } from '@/features/auth'
 import {
   buildSessionFilter,
+  captureLocation,
   sessionListQueryOptions,
+  Timeline,
   timelineSearchSchema,
   useCreateSession,
-} from '@/features/sessions/useSessions'
-import { captureLocation } from '@/features/sessions/api'
-import { useSettings, useUpdateSettings } from '@/features/settings/useSettings'
-import { Timeline } from '@/features/sessions/components/timeline'
+} from '@/features/sessions'
+import { useSettings, useUpdateSettings } from '@/features/settings'
 import { Button } from '@/shared/ui/button'
 
 export const Route = createFileRoute('/')({

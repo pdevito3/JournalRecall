@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from '@tanstack/react-form'
 import { FormShell, TextField, applyServerErrors, usernameSchema, passwordSchema, passwordsMatch } from '@/shared/forms'
-import { useLogin, useSetup } from '@/features/auth/useAuth'
+import { useLogin, useSetup } from '@/features/auth'
 
 export const Route = createFileRoute('/setup')({
   component: SetupPage,

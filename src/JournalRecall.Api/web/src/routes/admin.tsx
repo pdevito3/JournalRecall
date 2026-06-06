@@ -3,7 +3,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
-import { meQueryOptions, selectIsAdmin } from '@/features/auth/useAuth'
+import { meQueryOptions, selectIsAdmin } from '@/features/auth'
 import {
   adminUsersQueryOptions,
   aiProviderQueryOptions,
@@ -17,8 +17,11 @@ import {
   useSetUserRole,
   useUpdateAiProvider,
   useUpdateRegistration,
-} from '@/features/admin/useAdmin'
-import { PROVIDERS, ROLES, type AdminUser, type AiProvider } from '@/features/admin/api'
+  PROVIDERS,
+  ROLES,
+  type AdminUser,
+  type AiProvider,
+} from '@/features/admin'
 import { Button } from '@/shared/ui/button'
 import {
   applyServerErrors,
