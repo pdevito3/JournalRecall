@@ -17,9 +17,45 @@ import boundaries from 'eslint-plugin-boundaries'
 //      `src/features/sessions/components/timeline.tsx` may freely import
 //      `@/features/sessions/api` / `useSessions`.
 //
-// FE-023 (NICE) can extend the `rules` block below with a naming/derive
-// guardrail (e.g. a no-restricted-syntax or custom rule) without touching the
-// element/boundary wiring.
+// ───────────────────────────────────────────────────────────────────────────
+// FE-023 (NICE) — conventions & review guardrails for the boundary work.
+//
+// PROMOTE-TO-`shared` CRITERION. When code is needed by more than one feature,
+// decide where it lives by this test:
+//   • used by ≥2 features AND domain-agnostic  →  promote to `src/shared/*`
+//     (e.g. the API client, generic UI, formatting/validation utilities).
+//   • otherwise (feature-specific, or only one other consumer)  →  keep it in
+//     its OWN feature vertical and let the consumer reach it through that
+//     feature's barrel, OR lift it to the route and pass it down as props
+//     (see FE-017: the timeline's settings access was passed from the route
+//     rather than promoted, because only one feature consumed it).
+//   Never create a feature→feature deep edge to share code — the boundary rule
+//   above rejects it.
+//
+// FILE-NAMING CONVENTIONS (enforced by review):
+//   • files & folders: kebab-case        (session-editor.tsx, apply-server-errors.ts)
+//   • React hooks:     useX camelCase     (useSessions, useIsAdmin)
+//   • feature public API: a single `index.ts` barrel per feature; only the
+//     barrel is importable from outside the feature.
+//   • types/constants/fetchers may be split into sibling modules behind the
+//     barrel (see sessions: types.ts / constants.ts / api.ts).
+//
+// DERIVE-DON'T-SYNC GUARDRAIL (review). REJECT a `useEffect` that calls a
+// setState from server/query data to "hydrate" or "sync" local state, e.g.:
+//
+//     const [text, setText] = useState('')
+//     useEffect(() => { if (data) setText(data.draft) }, [data])   // ✗ stale-prone
+//
+// Instead DERIVE at render, or RESET via `key` on entity identity (+ a
+// change-token when the DTO exposes one) so a fresh server value re-seeds the
+// component by remount. This anti-pattern was removed across FE-013 (Session
+// editor), FE-014 (Metadata + AI-provider forms), FE-015 (Cleaned editor) and
+// FE-016 (timezone default). It is a documented review guardrail rather than a
+// lint rule: a precise AST rule ("setState from query data inside an effect")
+// can't be expressed in core ESLint without false positives, and a heuristic
+// `no-restricted-syntax` for "useEffect + setState" would flag legitimate
+// effects (subscriptions, debounced autosave). Catch it in review instead.
+// ───────────────────────────────────────────────────────────────────────────
 
 export default tseslint.config(
   // Generated + non-source: never lint.
