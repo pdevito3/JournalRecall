@@ -1,7 +1,26 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as authApi from './api'
+import type { AuthUser } from './api'
 
 const ME_KEY = ['me'] as const
+
+const ADMIN_ROLE = 'Admin'
+
+/**
+ * The one place the roles slice of the `me` payload is read. `null` (signed out) → no roles.
+ * Module-level so it's a stable reference React Query can use for `select` memoization.
+ */
+export function selectRoles(me: AuthUser | null | undefined): string[] {
+  return me?.roles ?? []
+}
+
+/**
+ * The single definition of the Admin-role rule. Today that's exactly the `Admin` role — no hierarchy.
+ * Every "is this user an admin?" check (nav, Admin route) must route through here so it can't drift.
+ */
+export function selectIsAdmin(me: AuthUser | null | undefined): boolean {
+  return selectRoles(me).includes(ADMIN_ROLE)
+}
 
 /**
  * Single source of truth for the current-session query: key, `queryFn`, and `staleTime` defined once.
@@ -31,6 +50,16 @@ export function authConfigQueryOptions() {
 /** The current session. `data` is the user, or null when signed out. */
 export function useMe() {
   return useQuery(meQueryOptions())
+}
+
+/** The current user's roles, derived from the `me` query (empty when signed out). */
+export function useAuthRoles(): string[] {
+  return useQuery({ ...meQueryOptions(), select: selectRoles }).data ?? []
+}
+
+/** Whether the current user is an Admin, derived from the `me` query (the single Admin-role rule). */
+export function useIsAdmin(): boolean {
+  return useQuery({ ...meQueryOptions(), select: selectIsAdmin }).data ?? false
 }
 
 export function useLogin() {

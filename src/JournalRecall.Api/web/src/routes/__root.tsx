@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { createRootRouteWithContext, Link, Outlet, redirect, useNavigate } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
-import { authConfigQueryOptions, meQueryOptions, useAuthConfig, useLogout, useMe } from '@/features/auth/useAuth'
+import { authConfigQueryOptions, meQueryOptions, useAuthConfig, useIsAdmin, useLogout, useMe } from '@/features/auth/useAuth'
 import { Button } from '@/shared/ui/button'
 
 export interface RouterContext {
@@ -65,8 +65,7 @@ function RootLayout() {
 
 /** The admin surface link, shown only to users with the Admin role. */
 function AdminNavLink() {
-  const { data: user } = useMe()
-  if (!user?.roles?.includes('Admin')) return null
+  if (!useIsAdmin()) return null
   return <NavLink to="/admin">Admin</NavLink>
 }
 

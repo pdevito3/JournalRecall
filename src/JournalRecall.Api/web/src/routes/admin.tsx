@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
-import { useMe } from '@/features/auth/useAuth'
+import { useIsAdmin, useMe } from '@/features/auth/useAuth'
 import {
   useAdminUsers,
   useAiProvider,
@@ -30,10 +30,11 @@ export const Route = createFileRoute('/admin')({
 })
 
 function Admin() {
-  const { data: user, isLoading } = useMe()
+  const { isLoading } = useMe()
+  const isAdmin = useIsAdmin()
 
   if (isLoading) return <p className="text-muted">Loading…</p>
-  if (!user?.roles?.includes('Admin')) {
+  if (!isAdmin) {
     return <p className="text-muted">You don’t have access to this page.</p>
   }
 
