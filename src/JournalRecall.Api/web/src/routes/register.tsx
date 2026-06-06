@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from '@tanstack/react-form'
-import { FormShell, TextField, applyServerErrors, usernameSchema, passwordSchema, passwordsMatch } from '@/shared/forms'
+import { Form, TextField, createForm, usernameSchema, passwordSchema, passwordsMatch } from '@/shared/forms'
 import { useLogin, useRegister } from '@/features/auth'
 
 export const Route = createFileRoute('/register')({
@@ -17,6 +17,8 @@ const registerSchema = z
     confirmPassword: z.string(),
   })
   .superRefine(passwordsMatch())
+
+const { Field, applyServerErrors } = createForm<typeof registerSchema>()
 
 function RegisterPage() {
   const navigate = useNavigate()
@@ -40,11 +42,9 @@ function RegisterPage() {
   })
 
   return (
-    <FormShell
+    <Form
       form={form}
       title="Create your account"
-      submitLabel="Create account"
-      pendingLabel="Creating account…"
       footer={
         <>
           Already have an account?{' '}
@@ -54,15 +54,17 @@ function RegisterPage() {
         </>
       }
     >
-      <form.Field name="username">
+      <Field name="username">
         {(field) => <TextField field={field} label="Username" autoFocus autoComplete="username" />}
-      </form.Field>
-      <form.Field name="password">
+      </Field>
+      <Field name="password">
         {(field) => <TextField field={field} label="Password" type="password" autoComplete="new-password" />}
-      </form.Field>
-      <form.Field name="confirmPassword">
+      </Field>
+      <Field name="confirmPassword">
         {(field) => <TextField field={field} label="Confirm password" type="password" autoComplete="new-password" />}
-      </form.Field>
-    </FormShell>
+      </Field>
+      <Form.Errors />
+      <Form.Submit pendingLabel="Creating account…">Create account</Form.Submit>
+    </Form>
   )
 }

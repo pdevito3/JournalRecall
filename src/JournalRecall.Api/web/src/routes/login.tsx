@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from '@tanstack/react-form'
-import { FormShell, TextField, applyServerErrors, usernameSchema } from '@/shared/forms'
+import { Form, TextField, createForm, usernameSchema } from '@/shared/forms'
 import { useAuthConfig, useLogin } from '@/features/auth'
 
 export const Route = createFileRoute('/login')({
@@ -13,6 +13,8 @@ const loginSchema = z.object({
   username: usernameSchema,
   password: z.string().min(1, 'Enter your password.'),
 })
+
+const { Field, applyServerErrors } = createForm<typeof loginSchema>()
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -34,11 +36,9 @@ function LoginPage() {
   })
 
   return (
-    <FormShell
+    <Form
       form={form}
       title="Sign in"
-      submitLabel="Sign in"
-      pendingLabel="Signing in…"
       footer={
         // The "create an account" link appears only when the operator has opened self-registration.
         config?.selfRegistrationEnabled ? (
@@ -51,12 +51,14 @@ function LoginPage() {
         ) : null
       }
     >
-      <form.Field name="username">
+      <Field name="username">
         {(field) => <TextField field={field} label="Username" autoFocus autoComplete="username" />}
-      </form.Field>
-      <form.Field name="password">
+      </Field>
+      <Field name="password">
         {(field) => <TextField field={field} label="Password" type="password" autoComplete="current-password" />}
-      </form.Field>
-    </FormShell>
+      </Field>
+      <Form.Errors />
+      <Form.Submit pendingLabel="Signing in…">Sign in</Form.Submit>
+    </Form>
   )
 }

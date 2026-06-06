@@ -21,8 +21,22 @@ import {
   Popover,
   SelectValue,
 } from 'react-aria-components'
-import type { AnyFieldApi } from '@tanstack/react-form'
 import { cn } from '@/shared/utils/cn'
+
+/**
+ * The single-value field surface the bound inputs consume — the slice of a react-form field they touch,
+ * keyed only to *one* field's value type (not the whole schema). The `createForm` `Field` render-prop
+ * hands a `TypedFieldApi<Values, Name>`, which structurally satisfies `ValueField<Values[Name]>`, so the
+ * typed field flows in with no `AnyFieldApi` erasure and no `as string` cast. Each input fixes `Value` to
+ * the primitive it bridges (string for text/select, boolean for checkbox), so a wrong-typed field is a
+ * compile error at the call site.
+ */
+interface ValueField<Value> {
+  name: PropertyKey
+  state: { value: Value; meta: { errors: readonly unknown[] } }
+  handleChange: (value: Value) => void
+  handleBlur: () => void
+}
 
 const inputClass =
   'h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent aria-[invalid=true]:border-red-400'
@@ -42,7 +56,7 @@ function messagesOf(errors: readonly unknown[]): string[] {
 }
 
 interface TextFieldProps {
-  field: AnyFieldApi
+  field: ValueField<string>
   label: string
   type?: 'text' | 'password' | 'email'
   placeholder?: string
@@ -55,8 +69,8 @@ export function TextField({ field, label, type = 'text', placeholder, autoFocus,
   return (
     <AriaTextField
       className="flex flex-col gap-1"
-      name={field.name}
-      value={(field.state.value as string | undefined) ?? ''}
+      name={String(field.name)}
+      value={field.state.value ?? ''}
       onChange={(value) => field.handleChange(value)}
       onBlur={field.handleBlur}
       type={type}
@@ -72,22 +86,40 @@ export function TextField({ field, label, type = 'text', placeholder, autoFocus,
 
 export type SelectOption = string | { id: string; label: string }
 
-interface SelectFieldProps {
-  field: AnyFieldApi
+/**
+ * Select bridges react-aria's `Key` back as a plain `string`, but a field may carry a narrower string
+ * union (the admin Role enum). `handleChange` is declared method-style so it accepts a field whose value
+ * is a string *subtype* — the rendered options are exactly the field's valid values, so the `string` we
+ * hand back is always one of them. No `AnyFieldApi` and no `as string` cast.
+ */
+interface SelectValueField<Value extends string> {
+  name: PropertyKey
+  state: { value: Value; meta: { errors: readonly unknown[] } }
+  handleChange(value: Value): void
+  handleBlur: () => void
+}
+
+interface SelectFieldProps<Value extends string> {
+  field: SelectValueField<Value>
   label: string
   options: readonly SelectOption[]
   placeholder?: string
 }
 
-export function SelectField({ field, label, options, placeholder = 'Select…' }: SelectFieldProps) {
+export function SelectField<Value extends string>({
+  field,
+  label,
+  options,
+  placeholder = 'Select…',
+}: SelectFieldProps<Value>) {
   const messages = messagesOf(field.state.meta.errors)
   const items = options.map((option) => (typeof option === 'string' ? { id: option, label: option } : option))
   return (
     <AriaSelect
       className="flex flex-col gap-1"
-      name={field.name}
-      selectedKey={(field.state.value as string | undefined) ?? null}
-      onSelectionChange={(key) => field.handleChange(key == null ? '' : String(key))}
+      name={String(field.name)}
+      selectedKey={field.state.value ?? null}
+      onSelectionChange={(key) => field.handleChange((key == null ? '' : String(key)) as Value)}
       onBlur={field.handleBlur}
       isInvalid={messages.length > 0}
       placeholder={placeholder}
@@ -123,7 +155,7 @@ export function SelectField({ field, label, options, placeholder = 'Select…' }
 }
 
 interface CheckboxFieldProps {
-  field: AnyFieldApi
+  field: ValueField<boolean>
   label: ReactNode
 }
 

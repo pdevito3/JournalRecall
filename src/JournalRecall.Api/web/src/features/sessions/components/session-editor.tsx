@@ -20,7 +20,7 @@ import {
   type Session,
   type Suggestion,
 } from '@/features/sessions/api'
-import { FormShell, TextField, SelectField, applyServerErrors } from '@/shared/forms'
+import { Form, TextField, SelectField, createForm } from '@/shared/forms'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils/cn'
 
@@ -164,6 +164,8 @@ export const metadataSchema = z
 
 type MetadataFormValues = z.infer<typeof metadataSchema>
 
+const { Field, applyServerErrors } = createForm<typeof metadataSchema>()
+
 // Change-token for the metadata editor: the Session DTO carries no revision field, so derive one from
 // the metadata values themselves. When the server changes them (accepted Suggestion, Cleanup re-run),
 // this key changes and the editor remounts, re-seeding its defaults from the fresh server values.
@@ -204,32 +206,33 @@ function MetadataEditor({ session }: { session: Session }) {
         <PanelLabel>Metadata</PanelLabel>
         <SaveStatus pending={save.isPending} success={save.isSuccess} error={save.isError} />
       </div>
-      <FormShell
+      <Form
         form={form}
-        submitLabel="Save metadata"
         className="space-y-3 rounded-lg border border-border bg-surface-2 p-4"
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <form.Field name="topics">
+          <Field name="topics">
             {(field) => <TextField field={field} label="Topics (comma-separated)" placeholder="work, parenthood" />}
-          </form.Field>
-          <form.Field name="people">
+          </Field>
+          <Field name="people">
             {(field) => <TextField field={field} label="People (comma-separated)" placeholder="Sam, Alex" />}
-          </form.Field>
+          </Field>
         </div>
-        <form.Field name="moodKey">
+        <Field name="moodKey">
           {(field) => <SelectField field={field} label="Mood" options={moodOptions} />}
-        </form.Field>
+        </Field>
         <form.Subscribe selector={(s) => s.values.moodKey}>
           {(moodKey) =>
             moodKey === CUSTOM_MOOD ? (
-              <form.Field name="customMood">
+              <Field name="customMood">
                 {(field) => <TextField field={field} label="Custom mood" placeholder="bittersweet" />}
-              </form.Field>
+              </Field>
             ) : null
           }
         </form.Subscribe>
-      </FormShell>
+        <Form.Errors />
+        <Form.Submit>Save metadata</Form.Submit>
+      </Form>
     </div>
   )
 }

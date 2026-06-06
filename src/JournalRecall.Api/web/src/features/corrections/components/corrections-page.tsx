@@ -7,7 +7,7 @@ import {
   useUpdateCorrection,
 } from '@/features/corrections/useCorrections'
 import { type Correction } from '@/features/corrections/api'
-import { CheckboxField, FormShell, TextField, applyServerErrors } from '@/shared/forms'
+import { CheckboxField, Form, TextField, createForm } from '@/shared/forms'
 import { Button } from '@/shared/ui/button'
 
 const correctionFormSchema = z.object({
@@ -16,6 +16,8 @@ const correctionFormSchema = z.object({
   hardReplace: z.boolean(),
 })
 type CorrectionFormValues = z.infer<typeof correctionFormSchema>
+
+const { Field, applyServerErrors } = createForm<typeof correctionFormSchema>()
 
 export function CorrectionsPage() {
   const { data: corrections } = useCorrections()
@@ -48,28 +50,28 @@ export function CorrectionsPage() {
         </p>
       </div>
 
-      <FormShell
+      <Form
         form={form}
-        submitLabel="Add correction"
-        pendingLabel="Adding…"
         className="space-y-3 rounded-lg border border-border bg-surface-2 p-4"
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <form.Field name="canonicalTerm">
+          <Field name="canonicalTerm">
             {(field) => <TextField field={field} label="Canonical term" placeholder="Profisee" autoFocus />}
-          </form.Field>
-          <form.Field name="mishearings">
+          </Field>
+          <Field name="mishearings">
             {(field) => (
               <TextField field={field} label="Mishearings (comma-separated)" placeholder="prophecy, professionally" />
             )}
-          </form.Field>
+          </Field>
         </div>
-        <form.Field name="hardReplace">
+        <Field name="hardReplace">
           {(field) => (
             <CheckboxField field={field} label="Hard-replace (substitute every occurrence deterministically)" />
           )}
-        </form.Field>
-      </FormShell>
+        </Field>
+        <Form.Errors />
+        <Form.Submit pendingLabel="Adding…">Add correction</Form.Submit>
+      </Form>
 
       {corrections.length > 0 ? (
         <ul className="space-y-2">

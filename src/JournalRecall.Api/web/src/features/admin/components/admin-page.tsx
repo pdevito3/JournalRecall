@@ -15,9 +15,9 @@ import {
 import { PROVIDERS, ROLES, type AdminUser, type AiProvider } from '../api'
 import { Button } from '@/shared/ui/button'
 import {
-  applyServerErrors,
+  createForm,
   usernameSchema,
-  FormShell,
+  Form,
   passwordSchema,
   SelectField,
   TextField,
@@ -161,6 +161,8 @@ const createUserSchema = z.object({
   role: z.enum(['Member', 'Admin']),
 })
 
+const createUserForm = createForm<typeof createUserSchema>()
+
 function CreateUserForm() {
   const create = useCreateUser()
   const form = useForm({
@@ -171,22 +173,20 @@ function CreateUserForm() {
         await create.mutateAsync({ username: value.username.trim(), password: value.password, role: value.role })
         form.reset()
       } catch (e) {
-        applyServerErrors(form, e)
+        createUserForm.applyServerErrors(form, e)
       }
     },
   })
 
   return (
-    <FormShell
+    <Form
       form={form}
-      submitLabel="Create user"
-      pendingLabel="Creating…"
       className="space-y-4 rounded-lg border border-dashed border-border bg-surface-2 p-3"
     >
-      <form.Field name="username">
+      <createUserForm.Field name="username">
         {(field) => <TextField field={field} label="Username" autoComplete="username" placeholder="new.user" />}
-      </form.Field>
-      <form.Field name="password">
+      </createUserForm.Field>
+      <createUserForm.Field name="password">
         {(field) => (
           <TextField
             field={field}
@@ -195,9 +195,13 @@ function CreateUserForm() {
             placeholder="they must change it on first sign-in"
           />
         )}
-      </form.Field>
-      <form.Field name="role">{(field) => <SelectField field={field} label="Role" options={ROLES} />}</form.Field>
-    </FormShell>
+      </createUserForm.Field>
+      <createUserForm.Field name="role">
+        {(field) => <SelectField field={field} label="Role" options={ROLES} />}
+      </createUserForm.Field>
+      <Form.Errors />
+      <Form.Submit pendingLabel="Creating…">Create user</Form.Submit>
+    </Form>
   )
 }
 
@@ -207,6 +211,8 @@ const aiProviderSchema = z.object({
   model: z.string().trim().min(1, 'Model is required.'),
   apiKey: z.string(),
 })
+
+const aiProviderForm = createForm<typeof aiProviderSchema>()
 
 function AiProviderForm() {
   const { data: provider } = useAiProvider()
@@ -251,27 +257,27 @@ function AiProviderFormInner({ provider }: { provider: AiProvider }) {
           model: value.model.trim(),
         })
       } catch (e) {
-        applyServerErrors(form, e)
+        aiProviderForm.applyServerErrors(form, e)
       }
     },
   })
 
   return (
-    <FormShell
+    <Form
       form={form}
-      submitLabel="Save provider"
-      pendingLabel="Saving…"
       className="grid max-w-xl gap-3"
       footer={update.isSuccess ? 'Saved' : undefined}
     >
-      <form.Field name="provider">{(field) => <SelectField field={field} label="Provider" options={PROVIDERS} />}</form.Field>
-      <form.Field name="endpoint">
+      <aiProviderForm.Field name="provider">
+        {(field) => <SelectField field={field} label="Provider" options={PROVIDERS} />}
+      </aiProviderForm.Field>
+      <aiProviderForm.Field name="endpoint">
         {(field) => <TextField field={field} label="Endpoint" placeholder="http://localhost:11434/v1" />}
-      </form.Field>
-      <form.Field name="model">
+      </aiProviderForm.Field>
+      <aiProviderForm.Field name="model">
         {(field) => <TextField field={field} label="Model" placeholder="llama3.1" />}
-      </form.Field>
-      <form.Field name="apiKey">
+      </aiProviderForm.Field>
+      <aiProviderForm.Field name="apiKey">
         {(field) => (
           <TextField
             field={field}
@@ -280,7 +286,9 @@ function AiProviderFormInner({ provider }: { provider: AiProvider }) {
             placeholder={provider.hasApiKey ? '•••••••• (set)' : 'optional for local providers'}
           />
         )}
-      </form.Field>
-    </FormShell>
+      </aiProviderForm.Field>
+      <Form.Errors />
+      <Form.Submit pendingLabel="Saving…">Save provider</Form.Submit>
+    </Form>
   )
 }

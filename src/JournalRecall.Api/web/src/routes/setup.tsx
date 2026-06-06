@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from '@tanstack/react-form'
-import { FormShell, TextField, applyServerErrors, usernameSchema, passwordSchema, passwordsMatch } from '@/shared/forms'
+import { Form, TextField, createForm, usernameSchema, passwordSchema, passwordsMatch } from '@/shared/forms'
 import { useLogin, useSetup } from '@/features/auth'
 
 export const Route = createFileRoute('/setup')({
@@ -17,6 +17,8 @@ const setupSchema = z
     confirmPassword: z.string(),
   })
   .superRefine(passwordsMatch())
+
+const { Field, applyServerErrors } = createForm<typeof setupSchema>()
 
 function SetupPage() {
   const navigate = useNavigate()
@@ -40,22 +42,22 @@ function SetupPage() {
   })
 
   return (
-    <FormShell
+    <Form
       form={form}
       title="Set up JournalRecall"
-      submitLabel="Create admin account"
-      pendingLabel="Creating…"
       footer="This creates the first administrator account for a brand-new instance."
     >
-      <form.Field name="username">
+      <Field name="username">
         {(field) => <TextField field={field} label="Username" autoFocus autoComplete="username" />}
-      </form.Field>
-      <form.Field name="password">
+      </Field>
+      <Field name="password">
         {(field) => <TextField field={field} label="Password" type="password" autoComplete="new-password" />}
-      </form.Field>
-      <form.Field name="confirmPassword">
+      </Field>
+      <Field name="confirmPassword">
         {(field) => <TextField field={field} label="Confirm password" type="password" autoComplete="new-password" />}
-      </form.Field>
-    </FormShell>
+      </Field>
+      <Form.Errors />
+      <Form.Submit pendingLabel="Creating…">Create admin account</Form.Submit>
+    </Form>
   )
 }

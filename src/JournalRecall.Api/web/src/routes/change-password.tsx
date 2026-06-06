@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from '@tanstack/react-form'
-import { FormShell, TextField, applyServerErrors, passwordSchema, passwordsMatch } from '@/shared/forms'
+import { Form, TextField, createForm, passwordSchema, passwordsMatch } from '@/shared/forms'
 import { useChangePassword, useMe } from '@/features/auth'
 
 export const Route = createFileRoute('/change-password')({
@@ -17,6 +17,8 @@ const changePasswordSchema = z
     confirmPassword: z.string(),
   })
   .superRefine(passwordsMatch('newPassword', 'confirmPassword'))
+
+const { Field, applyServerErrors } = createForm<typeof changePasswordSchema>()
 
 function ChangePasswordPage() {
   const navigate = useNavigate()
@@ -39,13 +41,13 @@ function ChangePasswordPage() {
   })
 
   return (
-    <FormShell form={form} title="Set a new password" submitLabel="Set password" pendingLabel="Saving…">
+    <Form form={form} title="Set a new password">
       {forced ? (
         <p className="text-sm text-muted">
           Your account was given a temporary password. Choose a new one to continue.
         </p>
       ) : null}
-      <form.Field name="currentPassword">
+      <Field name="currentPassword">
         {(field) => (
           <TextField
             field={field}
@@ -55,15 +57,17 @@ function ChangePasswordPage() {
             autoComplete="current-password"
           />
         )}
-      </form.Field>
-      <form.Field name="newPassword">
+      </Field>
+      <Field name="newPassword">
         {(field) => <TextField field={field} label="New password" type="password" autoComplete="new-password" />}
-      </form.Field>
-      <form.Field name="confirmPassword">
+      </Field>
+      <Field name="confirmPassword">
         {(field) => (
           <TextField field={field} label="Confirm new password" type="password" autoComplete="new-password" />
         )}
-      </form.Field>
-    </FormShell>
+      </Field>
+      <Form.Errors />
+      <Form.Submit pendingLabel="Saving…">Set password</Form.Submit>
+    </Form>
   )
 }
