@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, getRouteApi } from '@tanstack/react-router'
 import { useSettings, useUpdateSettings } from '@/features/settings/useSettings'
-import { useSessionList } from '@/features/sessions/useSessions'
+import { buildSessionFilter, useSessionList, type TimelineSearch } from '@/features/sessions/useSessions'
 import { KNOWN_MOODS, type SessionListItem } from '@/features/sessions/api'
+
+const route = getRouteApi('/')
 
 const COMMON_ZONES = [
   'UTC',
@@ -18,18 +20,14 @@ const COMMON_ZONES = [
 
 export function Timeline() {
   const [dayJump, setDayJump] = useState('') // YYYY-MM-DD, or '' for all
-  const [topic, setTopic] = useState('')
-  const [person, setPerson] = useState('')
-  const [mood, setMood] = useState('')
+  // Topic/Person/Mood live in the URL (FE-009) so a filtered view is shareable and survives refresh.
+  const { topic, person, mood } = route.useSearch()
+  const navigate = route.useNavigate()
+  const setFilters = (next: Partial<TimelineSearch>) =>
+    navigate({ search: (prev) => ({ ...prev, ...next }) })
 
   // Build a QueryKit filter string from the metadata controls (server-side filtering).
-  const filter = useMemo(() => {
-    const parts: string[] = []
-    if (topic.trim()) parts.push(`topics == "${topic.trim()}"`)
-    if (person.trim()) parts.push(`people == "${person.trim()}"`)
-    if (mood) parts.push(`mood == "${mood}"`)
-    return parts.length > 0 ? parts.join(' && ') : undefined
-  }, [topic, person, mood])
+  const filter = useMemo(() => buildSessionFilter({ topic, person, mood }), [topic, person, mood])
 
   const { data: sessions } = useSessionList(filter)
   const hasFilter = Boolean(filter)
@@ -58,19 +56,19 @@ export function Timeline() {
       <div className="flex flex-wrap items-center gap-2">
         <input
           value={topic}
-          onChange={(e) => setTopic(e.target.value)}
+          onChange={(e) => setFilters({ topic: e.target.value })}
           placeholder="Filter by topic"
           className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
         <input
           value={person}
-          onChange={(e) => setPerson(e.target.value)}
+          onChange={(e) => setFilters({ person: e.target.value })}
           placeholder="Filter by person"
           className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
         <select
           value={mood}
-          onChange={(e) => setMood(e.target.value)}
+          onChange={(e) => setFilters({ mood: e.target.value as TimelineSearch['mood'] })}
           className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <option value="">Any mood</option>
@@ -84,11 +82,7 @@ export function Timeline() {
           <button
             type="button"
             className="text-sm text-accent hover:underline"
-            onClick={() => {
-              setTopic('')
-              setPerson('')
-              setMood('')
-            }}
+            onClick={() => setFilters({ topic: '', person: '', mood: '' })}
           >
             clear filters
           </button>

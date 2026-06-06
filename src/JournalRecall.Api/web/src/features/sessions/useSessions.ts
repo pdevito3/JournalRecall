@@ -1,6 +1,30 @@
 import { useCallback, useState } from 'react'
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { z } from 'zod'
+import { KNOWN_MOODS } from './api'
 import * as sessionsApi from './api'
+
+/**
+ * Timeline filters as URL search state (FE-009): a filtered view is shareable, bookmarkable, and
+ * refresh/back-button safe. `.catch('')` makes malformed params normalize to defaults instead of
+ * throwing, so a bad URL never crashes the route.
+ */
+export const timelineSearchSchema = z.object({
+  topic: z.string().catch('').default(''),
+  person: z.string().catch('').default(''),
+  mood: z.enum(KNOWN_MOODS).or(z.literal('')).catch('').default(''),
+})
+
+export type TimelineSearch = z.infer<typeof timelineSearchSchema>
+
+/** Build a QueryKit filter string from the timeline filters (undefined when nothing is set). */
+export function buildSessionFilter({ topic, person, mood }: TimelineSearch): string | undefined {
+  const parts: string[] = []
+  if (topic.trim()) parts.push(`topics == "${topic.trim()}"`)
+  if (person.trim()) parts.push(`people == "${person.trim()}"`)
+  if (mood) parts.push(`mood == "${mood}"`)
+  return parts.length > 0 ? parts.join(' && ') : undefined
+}
 
 export function sessionListQueryOptions(filter?: string) {
   return queryOptions({
