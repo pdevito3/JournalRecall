@@ -25,7 +25,14 @@ export function useRegister() {
 }
 
 export function useSetup() {
-  return useMutation({ mutationFn: authApi.setup })
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: authApi.setup,
+    // Setup creates the root Admin, flipping needsSetup → false. Invalidate the cached auth-config
+    // (shared with the route guard) so the post-setup navigation re-reads needsSetup:false and the
+    // guard doesn't bounce the just-created operator back to /setup (issue 0025).
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auth', 'config'] }),
+  })
 }
 
 /** Public instance config (needs-setup / self-registration), shared with the route guard's cache. */
