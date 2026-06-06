@@ -6,6 +6,7 @@ using JournalRecall.Api.Domain.Summaries.Dtos;
 using JournalRecall.Api.Domain.Summaries.Features;
 using JournalRecall.Api.Domain.Summaries.Services;
 using JournalRecall.SharedTestHelpers.Fakes.Sessions;
+using static JournalRecall.SharedTestHelpers.Fakes.Sessions.ContentDoc;
 
 namespace JournalRecall.IntegrationTests.FeatureTests.Summaries;
 
@@ -89,7 +90,7 @@ public class summary_rollup_tests : TestBase
             (await Get(scope, period, date)).Status.ShouldBe(SummaryStatus.Ready);
 
         // Editing the Session invalidates every period that covers its day.
-        await scope.SendAsync(new SaveDraft.Command(id, "Original entry, now revised."));
+        await scope.SendAsync(new SaveDraft.Command(id, Doc("Original entry, now revised.")));
 
         foreach (var (period, date) in Chain())
             (await Get(scope, period, date)).Status.ShouldBe(SummaryStatus.Stale);
@@ -105,7 +106,7 @@ public class summary_rollup_tests : TestBase
         await Generate(scope, SummaryPeriod.Month, new DateOnly(2026, 6, 1), "MONTH-V1");
 
         // Edit the Session, then regenerate the Day with new content.
-        await scope.SendAsync(new SaveDraft.Command(id, "Day one words, revised."));
+        await scope.SendAsync(new SaveDraft.Command(id, Doc("Day one words, revised.")));
         (await Get(scope, SummaryPeriod.Month, new DateOnly(2026, 6, 1))).Status.ShouldBe(SummaryStatus.Stale);
         await Generate(scope, SummaryPeriod.Day, new DateOnly(2026, 6, 10), "DAY-V2");
 

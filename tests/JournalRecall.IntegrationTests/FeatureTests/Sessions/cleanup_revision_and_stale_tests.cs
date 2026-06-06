@@ -2,6 +2,7 @@ using JournalRecall.Api.Domain.Sessions;
 using JournalRecall.Api.Domain.Sessions.Features;
 using JournalRecall.Api.Domain.Sessions.Services;
 using JournalRecall.SharedTestHelpers.Fakes.Sessions;
+using static JournalRecall.SharedTestHelpers.Fakes.Sessions.ContentDoc;
 
 namespace JournalRecall.IntegrationTests.FeatureTests.Sessions;
 
@@ -23,7 +24,7 @@ public class cleanup_revision_and_stale_tests : TestBase
 
         var cleaned = await scope.SendAsync(new GetCleanedRevisions.Query(session.Id));
         cleaned!.Count.ShouldBe(1);
-        (await scope.SendAsync(new GetCleanedRevision.Query(session.Id, 1)))!.Content.ShouldBe("Polished: helo wrld");
+        PlainText((await scope.SendAsync(new GetCleanedRevision.Query(session.Id, 1)))!.Content).ShouldBe("Polished: helo wrld");
 
         // Raw is byte-for-byte unchanged — still its single original Revision.
         (await scope.SendAsync(new GetRawRevisions.Query(session.Id)))!.Count.ShouldBe(1);

@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JournalRecall.Api.Migrations
 {
     [DbContext(typeof(JournalRecallDbContext))]
-    [Migration("20260605181637_AddRefreshTokens")]
-    partial class AddRefreshTokens
+    [Migration("20260606192000_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -54,6 +54,32 @@ namespace JournalRecall.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ai_provider_settings", (string)null);
+                });
+
+            modelBuilder.Entity("JournalRecall.Api.Domain.Admin.AuthSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("SelfRegistrationEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("auth_settings", (string)null);
                 });
 
             modelBuilder.Entity("JournalRecall.Api.Domain.Corrections.Correction", b =>
@@ -170,6 +196,9 @@ namespace JournalRecall.Api.Migrations
                     b.Property<long?>("LockoutEnd")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -225,6 +254,10 @@ namespace JournalRecall.Api.Migrations
                     b.Property<bool>("CleanedHasHandEdits")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("CleanedPlainText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("CleanupStatus")
                         .HasColumnType("INTEGER");
 
@@ -250,6 +283,10 @@ namespace JournalRecall.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RawDraft")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RawPlainText")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

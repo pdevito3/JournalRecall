@@ -13,7 +13,6 @@ await runFlow('journal-session', async (page) => {
 
   // Reload from the server: the route loader awaits the Session, so the draft must come back.
   await gotoApp(page, `/sessions/${id}`)
-  const draft = page.getByPlaceholder('Write freely…')
-  await expectValue(draft, marker, { message: `reloaded draft contains ${marker}` })
+  await expectText(rawEditor(page), marker, { message: `reloaded draft contains ${marker}` })
   console.log('draft persisted across reload')
 })

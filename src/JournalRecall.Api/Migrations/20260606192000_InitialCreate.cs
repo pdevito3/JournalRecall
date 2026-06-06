@@ -52,6 +52,7 @@ namespace JournalRecall.Api.Migrations
                     TimeZoneId = table.Column<string>(type: "TEXT", nullable: true),
                     LocationCaptureEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     IsDisabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    MustChangePassword = table.Column<bool>(type: "INTEGER", nullable: false),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -70,6 +71,22 @@ namespace JournalRecall.Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "auth_settings",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    SelfRegistrationEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<long>(type: "INTEGER", nullable: false),
+                    CreatedBy = table.Column<Guid>(type: "TEXT", nullable: true),
+                    UpdatedAt = table.Column<long>(type: "INTEGER", nullable: false),
+                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_auth_settings", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -92,15 +109,36 @@ namespace JournalRecall.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "refresh_tokens",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    TokenHash = table.Column<string>(type: "TEXT", nullable: false),
+                    ChainId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<long>(type: "INTEGER", nullable: false),
+                    ExpiresAt = table.Column<long>(type: "INTEGER", nullable: false),
+                    RevokedAt = table.Column<long>(type: "INTEGER", nullable: true),
+                    ReplacedByTokenId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    DeviceLabel = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_refresh_tokens", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "sessions",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                     RawDraft = table.Column<string>(type: "TEXT", nullable: false),
+                    RawPlainText = table.Column<string>(type: "TEXT", nullable: false),
                     Latitude = table.Column<double>(type: "REAL", nullable: true),
                     Longitude = table.Column<double>(type: "REAL", nullable: true),
                     CleanedDraft = table.Column<string>(type: "TEXT", nullable: false),
+                    CleanedPlainText = table.Column<string>(type: "TEXT", nullable: false),
                     Synopsis = table.Column<string>(type: "TEXT", nullable: false),
                     CleanupStatus = table.Column<int>(type: "INTEGER", nullable: false),
                     LastCleanedRawRevisionNumber = table.Column<int>(type: "INTEGER", nullable: false),
@@ -396,6 +434,22 @@ namespace JournalRecall.Api.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_refresh_tokens_ChainId",
+                table: "refresh_tokens",
+                column: "ChainId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_refresh_tokens_TokenHash",
+                table: "refresh_tokens",
+                column: "TokenHash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_refresh_tokens_UserId",
+                table: "refresh_tokens",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_session_cleaned_revisions_SessionId_RevisionNumber",
                 table: "session_cleaned_revisions",
                 columns: new[] { "SessionId", "RevisionNumber" },
@@ -456,7 +510,13 @@ namespace JournalRecall.Api.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "auth_settings");
+
+            migrationBuilder.DropTable(
                 name: "corrections");
+
+            migrationBuilder.DropTable(
+                name: "refresh_tokens");
 
             migrationBuilder.DropTable(
                 name: "session_cleaned_revisions");

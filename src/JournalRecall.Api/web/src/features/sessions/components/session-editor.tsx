@@ -23,23 +23,26 @@ import {
 import { Form, TextField, SelectField, createForm } from '@/shared/forms'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils/cn'
+import { RichEditor } from './rich-editor'
+
+type EditorTab = 'raw' | 'cleaned'
 
 export function SessionEditor({ sessionId }: { sessionId: string }) {
   const { data: session } = useSession(sessionId)
   const saveDraft = useSaveDraft(sessionId)
 
-  // Fresh per Session (keyed remount), so seed Raw Draft directly from server data — no hydration latch.
-  const [text, setText] = useState(session.rawDraft)
   const [viewingRaw, setViewingRaw] = useState<number | null>(null)
   const [viewingCleaned, setViewingCleaned] = useState<number | null>(null)
+  // Raw and Cleaned share one pane via a toggle; Raw is the default view.
+  const [tab, setTab] = useState<EditorTab>('raw')
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
-  function onChange(value: string) {
-    setText(value)
+  // Debounced autosave of the serialized tiptap JSON (kept at 600ms to match prior behavior).
+  function onChange(json: string) {
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => saveDraft.mutate(value), 600) // debounced autosave
+    timer.current = setTimeout(() => saveDraft.mutate(json), 600)
   }
 
   const hasCleaned = session.cleanedDraft.length > 0
@@ -60,20 +63,22 @@ export function SessionEditor({ sessionId }: { sessionId: string }) {
 
       <CleanupBar session={session} />
 
-      {/* Raw and Cleaned side by side once a Cleaned copy exists; Raw alone until then. */}
-      <div className={cn('grid gap-4', hasCleaned && 'lg:grid-cols-2')}>
-        <div className="space-y-2">
-          {hasCleaned ? <PanelLabel>Raw (yours)</PanelLabel> : null}
-          <textarea
-            value={text}
-            onChange={(event) => onChange(event.target.value)}
+      {/* One view at a time: a Raw/Cleaned toggle replaces the old side-by-side grid. */}
+      <div className="space-y-2">
+        <EditorTabs tab={tab} onTab={setTab} />
+        {tab === 'raw' ? (
+          // Uncontrolled, keyed per Session at the route level → seed Raw directly from server JSON.
+          <RichEditor
+            initialContent={session.rawDraft}
+            onChange={onChange}
             placeholder="Write freely…"
             autoFocus
-            className="min-h-[50vh] w-full resize-none rounded-lg border border-border bg-surface-2 p-4 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
-        </div>
-
-        {hasCleaned ? <CleanedEditorBoundary session={session} /> : null}
+        ) : hasCleaned ? (
+          <CleanedEditorBoundary session={session} />
+        ) : (
+          <CleanedEmptyState />
+        )}
       </div>
 
       {session.synopsis ? (
@@ -95,6 +100,44 @@ export function SessionEditor({ sessionId }: { sessionId: string }) {
 
 function PanelLabel({ children }: { children: ReactNode }) {
   return <h2 className="text-sm font-medium text-muted">{children}</h2>
+}
+
+/** Segmented Raw/Cleaned toggle — one editor is shown at a time. */
+function EditorTabs({ tab, onTab }: { tab: EditorTab; onTab: (tab: EditorTab) => void }) {
+  return (
+    <div role="tablist" aria-label="Editor view" className="inline-flex rounded-lg border border-border bg-surface-2 p-0.5">
+      {(
+        [
+          ['raw', 'Raw (yours)'],
+          ['cleaned', 'Cleaned (AI · editable)'],
+        ] as const
+      ).map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          role="tab"
+          aria-selected={tab === value}
+          onClick={() => onTab(value)}
+          className={cn(
+            'rounded-md px-3 py-1 text-sm font-medium transition-colors',
+            tab === value ? 'bg-surface-3 text-content' : 'text-muted hover:text-content',
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Cleaned tab before any Cleanup has produced a copy. */
+function CleanedEmptyState() {
+  return (
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-surface-2 p-4 text-center">
+      <p className="text-sm font-medium text-content">No cleaned copy yet</p>
+      <p className="text-sm text-muted">Run Cleanup to generate a polished version of your entry.</p>
+    </div>
+  )
 }
 
 /** AI metadata Suggestions from the last Cleanup, each accept/reject-able (issue 0012). */
@@ -260,29 +303,22 @@ function CleanedEditorBoundary({ session }: { session: Session }) {
 /** The AI-derived Cleaned copy, hand-editable. Edits debounce-save and append a Cleaned Revision. */
 function CleanedEditor({ session }: { session: Session }) {
   const saveCleaned = useSaveCleaned(session.id)
-  // Fresh per cleaned-Revision (keyed remount), so seed the Cleaned copy directly from server data.
-  const [text, setText] = useState(session.cleanedDraft)
+  // Uncontrolled, keyed per cleaned-Revision by CleanedEditorBoundary → seed directly from server JSON.
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
-  function onChange(value: string) {
-    setText(value)
+  function onChange(json: string) {
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => saveCleaned.mutate(value), 600) // debounced autosave
+    timer.current = setTimeout(() => saveCleaned.mutate(json), 600) // debounced autosave
   }
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <PanelLabel>Cleaned (AI · editable)</PanelLabel>
+      <div className="flex items-center justify-end">
         <SaveStatus pending={saveCleaned.isPending} success={saveCleaned.isSuccess} error={saveCleaned.isError} />
       </div>
-      <textarea
-        value={text}
-        onChange={(event) => onChange(event.target.value)}
-        className="min-h-[50vh] w-full resize-none rounded-lg border border-border bg-surface-3 p-4 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      />
+      <RichEditor initialContent={session.cleanedDraft} onChange={onChange} className="bg-surface-3" />
     </div>
   )
 }
@@ -417,9 +453,9 @@ function RevisionDrilldown({
             <span className="text-sm text-muted">Viewing version {viewing} (read-only)</span>
             <Button onPress={() => onView(null)}>Back</Button>
           </div>
-          <pre className="max-h-[40vh] overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-surface-3 p-4 text-content">
-            {content}
-          </pre>
+          {/* Read-only render of the snapshotted JSON WITH its formatting. Keyed so switching
+              versions remounts (uncontrolled editor re-seeds from the new content). */}
+          <RichEditor key={viewing} initialContent={content} editable={false} />
         </div>
       ) : null}
     </div>

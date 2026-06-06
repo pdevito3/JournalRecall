@@ -25,7 +25,7 @@ public sealed class SummarySourceReader(JournalRecallDbContext db, ICurrentUserS
         var candidates = await db.Sessions.AsNoTracking()
             .Where(s => s.CreatedAt >= windowStart && s.CreatedAt < windowEnd)
             .OrderBy(s => s.CreatedAt)
-            .Select(s => new { s.CreatedAt, s.RawDraft, s.CleanedDraft })
+            .Select(s => new { s.CreatedAt, s.RawPlainText, s.CleanedPlainText })
             .ToListAsync(cancellationToken);
 
         var timeZoneId = await CurrentUserTimeZone(cancellationToken);
@@ -37,7 +37,8 @@ public sealed class SummarySourceReader(JournalRecallDbContext db, ICurrentUserS
                 return day >= start && day <= end;
             })
             // Read the Cleaned copy when the Session has one, else the Raw text (acceptance criteria).
-            .Select(s => string.IsNullOrWhiteSpace(s.CleanedDraft) ? s.RawDraft : s.CleanedDraft)
+            // Both are the derived plaintext projections (ADR-0009) — the AI never sees the JSON markup.
+            .Select(s => string.IsNullOrWhiteSpace(s.CleanedPlainText) ? s.RawPlainText : s.CleanedPlainText)
             .Where(text => !string.IsNullOrWhiteSpace(text))
             .ToList();
     }

@@ -105,18 +105,37 @@ async function login(page, opts) {
   return { username, password }
 }
 
+// rawEditor — the live Raw editor surface. The Raw/Cleaned toggle shows one editor at a time and Raw is
+// the default, so the single visible tiptap contenteditable (RICH-003) is the Raw one. `.fill()`/
+// `inputValue()` don't work on a contenteditable — type with the keyboard and read `innerText()`.
+function rawEditor(page) {
+  return page.locator('.rich-editor .ProseMirror').first()
+}
+
+// typeInEditor — focus the tiptap surface and type char-by-char so StarterKit's markdown input rules fire
+// (`# ` → heading, `- ` → bullet, `**x**` → bold). Use newlines to split blocks (Enter starts a new one).
+async function typeInEditor(page, text) {
+  const editor = rawEditor(page)
+  await editor.waitFor({ state: 'visible' })
+  await editor.click()
+  const lines = String(text).split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    if (i > 0) await page.keyboard.press('Enter')
+    if (lines[i]) await page.keyboard.type(lines[i], { delay: 8 })
+  }
+}
+
 // startSession — PRECONDITION: signed in, on a page with the "Start a session" button (the journal home).
-// Creates a Session, lands on its editor, optionally writes `text` into the Raw draft and waits for the
+// Creates a Session, lands on its editor, optionally types `text` into the Raw draft and waits for the
 // debounced autosave to report "Saved". Returns the new session id (parsed from the URL).
 async function startSession(page, text) {
   await page.getByRole('button', { name: 'Start a session' }).click()
   await page.waitForURL((url) => /\/sessions\/[^/]+/.test(String(url)))
   const id = String(page.url()).replace(/[?#].*$/, '').split('/sessions/')[1]
 
-  const draft = page.getByPlaceholder('Write freely…') // the Raw editor textarea
-  await draft.waitFor({ state: 'visible' })
+  await rawEditor(page).waitFor({ state: 'visible' })
   if (text) {
-    await draft.fill(text)
+    await typeInEditor(page, text)
     // Debounced autosave (600ms) → the SaveStatus flips to "Saved". Wait on that, not a sleep.
     await page.getByText('Saved', { exact: true }).first().waitFor({ state: 'visible' })
   }
@@ -129,7 +148,7 @@ async function startSession(page, text) {
 async function openFromTimeline(page, marker) {
   await page.getByRole('link', { name: new RegExp(marker) }).first().click()
   await page.waitForURL((url) => /\/sessions\/[^/]+/.test(String(url)))
-  await page.getByPlaceholder('Write freely…').waitFor({ state: 'visible' })
+  await rawEditor(page).waitFor({ state: 'visible' })
 }
 
 // Convenience: the form-level error banner text (Form.Errors renders role="alert"). Scope to a region

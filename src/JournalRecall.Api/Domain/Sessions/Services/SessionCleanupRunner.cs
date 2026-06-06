@@ -5,6 +5,7 @@ using JournalRecall.AI.Runtime;
 using JournalRecall.Api.Databases;
 using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Sessions.Ai;
+using JournalRecall.Api.Domain.Sessions.Content;
 using JournalRecall.Api.Domain.Sessions.Dtos;
 using JournalRecall.Api.Domain.Summaries.Services;
 
@@ -31,7 +32,8 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
         if (session is null)
             yield break;
 
-        var rawText = session.RawDraft;
+        // Feed the AI the derived plaintext, never the ProseMirror JSON markup (ADR-0009).
+        var rawText = session.RawPlainText;
         session.BeginCleanup();
         await db.SaveChangesAsync(cancellationToken);
 
@@ -84,8 +86,11 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
     {
         if (outcome is AgentOutcome.Completed completed && CleanupAgent.TryParse(completed, out var parsed))
         {
-            // Hard-replace Corrections are applied deterministically to the Cleaned copy only.
-            session.CompleteCleanup(CorrectionApplier.ApplyHardReplacements(parsed.Cleaned, corrections), parsed.Synopsis);
+            // Hard-replace Corrections are applied deterministically to the Cleaned copy only. The model
+            // returns plain/markdown text; convert it to canonical ProseMirror JSON so the content columns
+            // stay always-JSON between RICH-003 and the structured contract in RICH-004 (ADR-0009).
+            var cleanedText = CorrectionApplier.ApplyHardReplacements(parsed.Cleaned, corrections);
+            session.CompleteCleanup(MarkdownToProseMirror.ConvertToJson(cleanedText), parsed.Synopsis);
             // The same run proposes metadata Suggestions (issue 0012) — pending until accepted/rejected.
             session.ReplaceAiSuggestions(parsed.Topics, parsed.People, parsed.Mood);
         }

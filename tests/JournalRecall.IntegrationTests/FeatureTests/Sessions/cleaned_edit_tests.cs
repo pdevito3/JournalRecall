@@ -1,6 +1,7 @@
 using JournalRecall.Api.Domain.Sessions.Features;
 using JournalRecall.Api.Domain.Sessions.Services;
 using JournalRecall.SharedTestHelpers.Fakes.Sessions;
+using static JournalRecall.SharedTestHelpers.Fakes.Sessions.ContentDoc;
 
 namespace JournalRecall.IntegrationTests.FeatureTests.Sessions;
 
@@ -25,16 +26,16 @@ public class cleaned_edit_tests : TestBase
         using var scope = new TestingServiceScope();
         var id = await CleanedSession(scope);
 
-        (await scope.SendAsync(new SaveCleaned.Command(id, "my polished version"))).ShouldBeTrue();
+        (await scope.SendAsync(new SaveCleaned.Command(id, Doc("my polished version")))).ShouldBeTrue();
 
         var after = await scope.SendAsync(new GetSession.Query(id));
-        after!.CleanedDraft.ShouldBe("my polished version");
+        PlainText(after!.CleanedDraft).ShouldBe("my polished version");
         after.CleanedHasHandEdits.ShouldBeTrue();
-        after.RawDraft.ShouldBe("raw words"); // Raw untouched
+        PlainText(after.RawDraft).ShouldBe("raw words"); // Raw untouched
 
         var cleaned = await scope.SendAsync(new GetCleanedRevisions.Query(id));
         cleaned!.Count.ShouldBe(2);
-        (await scope.SendAsync(new GetCleanedRevision.Query(id, 2)))!.Content.ShouldBe("my polished version");
+        PlainText((await scope.SendAsync(new GetCleanedRevision.Query(id, 2)))!.Content).ShouldBe("my polished version");
 
         // Raw history is untouched by the Cleaned edit.
         (await scope.SendAsync(new GetRawRevisions.Query(id)))!.Count.ShouldBe(1);
@@ -46,7 +47,7 @@ public class cleaned_edit_tests : TestBase
         using var scope = new TestingServiceScope();
         var id = await CleanedSession(scope);
 
-        await scope.SendAsync(new SaveCleaned.Command(id, "Polished: raw words")); // identical → no new Revision
+        await scope.SendAsync(new SaveCleaned.Command(id, Doc("Polished: raw words"))); // identical → no new Revision
 
         (await scope.SendAsync(new GetCleanedRevisions.Query(id)))!.Count.ShouldBe(1);
         (await scope.SendAsync(new GetSession.Query(id)))!.CleanedHasHandEdits.ShouldBeFalse();
@@ -57,17 +58,17 @@ public class cleaned_edit_tests : TestBase
     {
         using var scope = new TestingServiceScope();
         var id = await CleanedSession(scope);                                 // Cleaned v1
-        await scope.SendAsync(new SaveCleaned.Command(id, "my hand edit"));   // Cleaned v2 (hand-edit)
+        await scope.SendAsync(new SaveCleaned.Command(id, Doc("my hand edit")));   // Cleaned v2 (hand-edit)
         (await scope.SendAsync(new GetSession.Query(id)))!.CleanedHasHandEdits.ShouldBeTrue();
 
         var rerun = await scope.GetService<SessionCleanupRunner>().RunAsync(id); // Cleaned v3
-        rerun!.CleanedDraft.ShouldBe("Polished: raw words");
+        PlainText(rerun!.CleanedDraft).ShouldBe("Polished: raw words");
         rerun.CleanedHasHandEdits.ShouldBeFalse();
 
         // The prior hand-edited Revision is still retrievable from history.
         (await scope.SendAsync(new GetCleanedRevisions.Query(id)))!.Count.ShouldBe(3);
-        (await scope.SendAsync(new GetCleanedRevision.Query(id, 2)))!.Content.ShouldBe("my hand edit");
-        rerun.RawDraft.ShouldBe("raw words"); // Raw unaffected by the re-run
+        PlainText((await scope.SendAsync(new GetCleanedRevision.Query(id, 2)))!.Content).ShouldBe("my hand edit");
+        PlainText(rerun.RawDraft).ShouldBe("raw words"); // Raw unaffected by the re-run
     }
 
     [Fact]

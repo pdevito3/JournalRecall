@@ -1,6 +1,7 @@
 using JournalRecall.Api.Domain.Sessions;
 using JournalRecall.Api.Domain.Sessions.Metadata;
 using JournalRecall.SharedTestHelpers.Fakes.Sessions;
+using static JournalRecall.SharedTestHelpers.Fakes.Sessions.ContentDoc;
 
 namespace JournalRecall.UnitTests.Domain.Sessions;
 
@@ -43,13 +44,13 @@ public class session_metadata_tests
     {
         var s = new FakeSessionBuilder().Cleaned("v1").Build();
 
-        s.EditCleaned("v1").ShouldBeFalse(); // unchanged
+        s.EditCleaned(Doc("v1")).ShouldBeFalse(); // unchanged (same canonical JSON)
         s.CleanedHasHandEdits.ShouldBeFalse();
         s.CleanedRevisions.Count.ShouldBe(1);
 
-        s.EditCleaned("v2").ShouldBeTrue();
+        s.EditCleaned(Doc("v2")).ShouldBeTrue();
         s.CleanedHasHandEdits.ShouldBeTrue();
-        s.CleanedDraft.ShouldBe("v2");
+        PlainText(s.CleanedDraft).ShouldBe("v2");
         s.CleanedRevisions.Count.ShouldBe(2);
     }
 

@@ -37,3 +37,50 @@
     @apply bg-surface text-content antialiased;
   }
 }
+
+/* tiptap rich editor (RICH-003): a minimal prose look for the canonical node/mark set.
+   Scoped to the editor so it never bleeds into the rest of the app. */
+@layer components {
+  .rich-editor .ProseMirror {
+    @apply outline-none;
+  }
+  .rich-editor .ProseMirror :where(p) {
+    @apply my-2 leading-relaxed;
+  }
+  .rich-editor .ProseMirror :where(h1) {
+    @apply mb-2 mt-4 text-2xl font-semibold;
+  }
+  .rich-editor .ProseMirror :where(h2) {
+    @apply mb-2 mt-4 text-xl font-semibold;
+  }
+  .rich-editor .ProseMirror :where(h3) {
+    @apply mb-1.5 mt-3 text-lg font-semibold;
+  }
+  .rich-editor .ProseMirror :where(ul) {
+    @apply my-2 list-disc pl-6;
+  }
+  .rich-editor .ProseMirror :where(ol) {
+    @apply my-2 list-decimal pl-6;
+  }
+  .rich-editor .ProseMirror :where(li) {
+    @apply my-0.5;
+  }
+  .rich-editor .ProseMirror :where(blockquote) {
+    @apply my-2 border-l-2 border-border pl-4 text-muted italic;
+  }
+  .rich-editor .ProseMirror :where(code) {
+    @apply rounded bg-surface-3 px-1 py-0.5 font-mono text-sm;
+  }
+  .rich-editor .ProseMirror :where(pre) {
+    @apply my-2 overflow-auto rounded-lg bg-surface-3 p-3 font-mono text-sm;
+  }
+  .rich-editor .ProseMirror :where(pre) :where(code) {
+    @apply bg-transparent p-0;
+  }
+  /* Placeholder text from the tiptap Placeholder extension (it sets data-placeholder + is-empty
+     on the empty first node). */
+  .rich-editor .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    @apply pointer-events-none float-left h-0 text-muted;
+  }
+}

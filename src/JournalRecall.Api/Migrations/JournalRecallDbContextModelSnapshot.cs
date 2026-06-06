@@ -251,6 +251,10 @@ namespace JournalRecall.Api.Migrations
                     b.Property<bool>("CleanedHasHandEdits")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("CleanedPlainText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("CleanupStatus")
                         .HasColumnType("INTEGER");
 
@@ -276,6 +280,10 @@ namespace JournalRecall.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RawDraft")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RawPlainText")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

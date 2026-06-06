@@ -32,7 +32,7 @@ public static class GetSessionList
                 {
                     s.Id,
                     s.CreatedAt,
-                    s.RawDraft,
+                    s.RawPlainText,
                     Topics = s.Topics.Select(t => t.Name).ToList(),
                     People = s.People.Select(p => p.Name).ToList(),
                     s.MoodKey,
@@ -46,7 +46,7 @@ public static class GetSessionList
                 s.Id,
                 s.CreatedAt,
                 JournalingDay.For(s.CreatedAt, timeZoneId),
-                Preview(s.RawDraft),
+                Preview(s.RawPlainText),
                 s.Topics,
                 s.People,
                 s.MoodKey is null ? null : new MoodDto(s.MoodKey, s.MoodCustomValue))).ToList();

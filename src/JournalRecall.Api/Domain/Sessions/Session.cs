@@ -1,3 +1,4 @@
+using JournalRecall.Api.Domain.Sessions.Content;
 using JournalRecall.Api.Domain.Sessions.DomainEvents;
 using JournalRecall.Api.Domain.Sessions.Metadata;
 
@@ -20,7 +21,19 @@ public sealed class Session : BaseEntity
     private readonly List<MetadataSuggestion> _suggestions = [];
 
     public Guid UserId { get; private set; }
+
+    /// <summary>
+    /// The live, autosaved Raw content as canonical ProseMirror/tiptap JSON (ADR-0009). Human-owned and
+    /// stored exactly as the editor serialized it — never mutated by the server. Empty until first typed.
+    /// </summary>
     public string RawDraft { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// The derived plaintext projection of <see cref="RawDraft"/> (ADR-0009), recomputed on every save.
+    /// This — not the JSON markup — is what the search index and the AI Cleanup input read, so formatting
+    /// never hides content from search and AI quality is unaffected by the rich representation.
+    /// </summary>
+    public string RawPlainText { get; private set; } = string.Empty;
 
     /// <summary>The optional captured latitude/longitude (CONTEXT.md Location); null unless geo opt-in stamped one.</summary>
     public double? Latitude { get; private set; }
@@ -29,8 +42,14 @@ public sealed class Session : BaseEntity
     /// <summary>The captured geo-point as a value object, or null when none was stored.</summary>
     public Location? Location => Sessions.Location.TryCreate(Latitude, Longitude, out var location) ? location : null;
 
-    /// <summary>The AI-derived, polished copy produced by the latest Cleanup (CONTEXT.md). Empty until a run succeeds.</summary>
+    /// <summary>
+    /// The AI-derived, polished copy produced by the latest Cleanup (CONTEXT.md), as canonical
+    /// ProseMirror/tiptap JSON (ADR-0009). Also user hand-editable. Empty until a run succeeds.
+    /// </summary>
     public string CleanedDraft { get; private set; } = string.Empty;
+
+    /// <summary>The derived plaintext projection of <see cref="CleanedDraft"/> (ADR-0009), recomputed on every save.</summary>
+    public string CleanedPlainText { get; private set; } = string.Empty;
 
     /// <summary>The short AI recap of this Session, written by Cleanup (CONTEXT.md). Empty until a run succeeds.</summary>
     public string Synopsis { get; private set; } = string.Empty;
@@ -115,6 +134,7 @@ public sealed class Session : BaseEntity
         var changed = !string.Equals(rawText, LatestRawContent, StringComparison.Ordinal);
 
         RawDraft = rawText;
+        RawPlainText = ProseMirrorToPlainText.Render(rawText);
         if (changed)
             _rawRevisions.Add(new RawRevision(_rawRevisions.Count + 1, rawText));
     }
@@ -139,6 +159,7 @@ public sealed class Session : BaseEntity
     {
         cleanedText ??= string.Empty;
         CleanedDraft = cleanedText;
+        CleanedPlainText = ProseMirrorToPlainText.Render(cleanedText);
         Synopsis = synopsis ?? string.Empty;
         _cleanedRevisions.Add(new CleanedRevision(_cleanedRevisions.Count + 1, cleanedText));
         LastCleanedRawRevisionNumber = _cleaningFromRawRevisionNumber;
@@ -162,6 +183,7 @@ public sealed class Session : BaseEntity
             return false;
 
         CleanedDraft = cleanedText;
+        CleanedPlainText = ProseMirrorToPlainText.Render(cleanedText);
         _cleanedRevisions.Add(new CleanedRevision(_cleanedRevisions.Count + 1, cleanedText));
         CleanedHasHandEdits = true;
         return true;

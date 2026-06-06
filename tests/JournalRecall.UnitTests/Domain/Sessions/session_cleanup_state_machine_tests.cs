@@ -1,5 +1,6 @@
 using JournalRecall.Api.Domain.Sessions;
 using JournalRecall.SharedTestHelpers.Fakes.Sessions;
+using static JournalRecall.SharedTestHelpers.Fakes.Sessions.ContentDoc;
 
 namespace JournalRecall.UnitTests.Domain.Sessions;
 
@@ -27,10 +28,10 @@ public class session_cleanup_state_machine_tests
         var session = new FakeSessionBuilder().WithRawText("helo wrld").Cleaned("Hello world.").Build();
 
         session.CleanupStatus.ShouldBe(CleanupStatus.Clean);
-        session.CleanedDraft.ShouldBe("Hello world.");
+        PlainText(session.CleanedDraft).ShouldBe("Hello world."); // content is canonical JSON (ADR-0009)
         session.CleanedRevisions.Count.ShouldBe(1);
         session.CleanedHasHandEdits.ShouldBeFalse();
-        session.RawDraft.ShouldBe("helo wrld"); // Raw is never touched
+        PlainText(session.RawDraft).ShouldBe("helo wrld"); // Raw is never touched
     }
 
     [Fact]
@@ -47,12 +48,12 @@ public class session_cleanup_state_machine_tests
     {
         // Arrange a Session with a good prior Cleaned copy, then fail a re-run on edited Raw.
         var session = new FakeSessionBuilder().WithRawText("original").Cleaned("good copy").Build();
-        session.SaveDraft("new raw");
+        session.SaveDraft(Doc("new raw"));
         session.BeginCleanup();
         session.FailCleanup();
 
         session.CleanupStatus.ShouldBe(CleanupStatus.Failed);
-        session.CleanedDraft.ShouldBe("good copy");   // prior Cleaned copy intact
+        PlainText(session.CleanedDraft).ShouldBe("good copy");   // prior Cleaned copy intact
         session.CleanedRevisions.Count.ShouldBe(1);    // the failed run appended nothing
     }
 

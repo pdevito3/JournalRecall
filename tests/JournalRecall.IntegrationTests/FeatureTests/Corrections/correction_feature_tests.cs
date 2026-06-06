@@ -3,6 +3,7 @@ using JournalRecall.Api.Domain.Corrections.Features;
 using JournalRecall.Api.Domain.Sessions.Features;
 using JournalRecall.Api.Domain.Sessions.Services;
 using JournalRecall.SharedTestHelpers.Fakes.Sessions;
+using static JournalRecall.SharedTestHelpers.Fakes.Sessions.ContentDoc;
 
 namespace JournalRecall.IntegrationTests.FeatureTests.Corrections;
 
@@ -69,8 +70,8 @@ public class correction_feature_tests : TestBase
         CleanupChat.LastSystemText.ShouldContain("Profisee");
         CleanupChat.LastSystemText.ShouldContain("prophecy");
 
-        result!.CleanedDraft.ShouldBe("We evaluated Profisee for our data.");
-        result.RawDraft.ShouldBe("we evaluated prophecy for our data"); // Raw untouched
+        PlainText(result!.CleanedDraft).ShouldBe("We evaluated Profisee for our data.");
+        PlainText(result.RawDraft).ShouldBe("we evaluated prophecy for our data"); // Raw untouched
     }
 
     [Fact]
@@ -85,9 +86,9 @@ public class correction_feature_tests : TestBase
         // The fake echoes Raw verbatim as the Cleaned copy; the deterministic hard-replace pass then runs.
         var result = await scope.GetService<SessionCleanupRunner>().RunAsync(session.Id);
 
-        result!.CleanedDraft.ShouldBe("Polished: met the Profisee team about Profisee");
+        PlainText(result!.CleanedDraft).ShouldBe("Polished: met the Profisee team about Profisee");
         result.CleanedDraft.ShouldNotContain("prophecy");
-        result.RawDraft.ShouldBe("met the prophecy team about prophecy"); // Raw untouched
+        PlainText(result.RawDraft).ShouldBe("met the prophecy team about prophecy"); // Raw untouched
 
         // Hard-replace entries are handled deterministically, not pushed into the prompt as a hint.
         CleanupChat.LastSystemText.ShouldNotContain("commonly misheard");

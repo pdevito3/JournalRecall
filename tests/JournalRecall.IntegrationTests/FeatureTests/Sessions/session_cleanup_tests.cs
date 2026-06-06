@@ -1,6 +1,7 @@
 using JournalRecall.Api.Domain.Sessions;
 using JournalRecall.Api.Domain.Sessions.Services;
 using JournalRecall.SharedTestHelpers.Fakes.Sessions;
+using static JournalRecall.SharedTestHelpers.Fakes.Sessions.ContentDoc;
 
 namespace JournalRecall.IntegrationTests.FeatureTests.Sessions;
 
@@ -25,9 +26,10 @@ public class session_cleanup_tests : TestBase
 
         dto.ShouldNotBeNull();
         dto!.CleanupStatus.ShouldBe(CleanupStatus.Clean);
-        dto.CleanedDraft.ShouldBe("Polished: helo wrld this is my entry"); // from the scripted client
+        // Content is canonical JSON now; its derived plaintext is what carries the words (ADR-0009).
+        PlainText(dto.CleanedDraft).ShouldBe("Polished: helo wrld this is my entry"); // from the scripted client
         dto.Synopsis.ShouldNotBeEmpty();
-        dto.RawDraft.ShouldBe("helo wrld this is my entry"); // Raw is never touched
+        PlainText(dto.RawDraft).ShouldBe("helo wrld this is my entry"); // Raw is never touched
     }
 
     [Fact]
@@ -45,7 +47,7 @@ public class session_cleanup_tests : TestBase
 
         dto.ShouldNotBeNull();
         dto!.CleanupStatus.ShouldBe(CleanupStatus.Failed);
-        dto.RawDraft.ShouldBe("original words");
+        PlainText(dto.RawDraft).ShouldBe("original words");
         dto.CleanedDraft.ShouldBeEmpty();
     }
 }

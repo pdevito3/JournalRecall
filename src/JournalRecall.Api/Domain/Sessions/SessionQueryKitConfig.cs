@@ -13,6 +13,9 @@ public static class SessionQueryKitConfig
 {
     public static readonly QueryKitConfiguration Instance = new(settings =>
     {
+        // Body word-search reads the derived plaintext projection, never the ProseMirror JSON markup,
+        // so formatting never hides content from search (ADR-0009).
+        settings.Property<Session>(s => s.RawPlainText).HasQueryName("raw");
         settings.Property<Session>(s => s.Topics.Select(t => t.Name)).HasQueryName("topics");
         settings.Property<Session>(s => s.People.Select(p => p.Name)).HasQueryName("people");
         settings.Property<Session>(s => s.MoodKey!).HasQueryName("mood");

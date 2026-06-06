@@ -83,8 +83,10 @@ public class FakeSessionBuilder
     {
         var raw = _rawText ?? Faker.Lorem.Paragraph();
 
+        // Content persists as canonical ProseMirror JSON (ADR-0009), so wrap the plain fixture text the
+        // way the real editor would — the derived plaintext columns then round-trip back to these words.
         var session = Session.Create(_userId, _location);
-        session.SaveDraft(raw);
+        session.SaveDraft(ContentDoc.Doc(raw));
 
         if (_userTopics.Count > 0) session.SetUserTopics(_userTopics);
         if (_userPeople.Count > 0) session.SetUserPeople(_userPeople);
@@ -96,15 +98,15 @@ public class FakeSessionBuilder
             if (_failed)
                 session.FailCleanup();
             else
-                session.CompleteCleanup(_cleanedText ?? $"Polished: {raw}", _synopsis);
+                session.CompleteCleanup(ContentDoc.Doc(_cleanedText ?? $"Polished: {raw}"), _synopsis);
         }
 
         if (_handEditedText is not null)
-            session.EditCleaned(_handEditedText);
+            session.EditCleaned(ContentDoc.Doc(_handEditedText));
 
         // Advance Raw past the cleaned revision so EffectiveCleanupStatus derives Stale.
         if (_stale && !_failed)
-            session.SaveDraft($"{raw}\n\n{Faker.Lorem.Sentence()}");
+            session.SaveDraft(ContentDoc.Doc($"{raw}\n\n{Faker.Lorem.Sentence()}"));
 
         return session;
     }

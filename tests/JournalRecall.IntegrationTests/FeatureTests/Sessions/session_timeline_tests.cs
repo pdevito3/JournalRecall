@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using JournalRecall.Api.Domain.Sessions;
 using JournalRecall.Api.Domain.Sessions.Features;
+using static JournalRecall.SharedTestHelpers.Fakes.Sessions.ContentDoc;
 
 namespace JournalRecall.IntegrationTests.FeatureTests.Sessions;
 
@@ -84,11 +85,11 @@ public class session_timeline_tests : TestBase
         using var scope = new TestingServiceScope();
         var id = await NewSession(scope);
         foreach (var text in new[] { "v1", "v2", "v3" })
-            await scope.SendAsync(new SaveDraft.Command(id, text));
+            await scope.SendAsync(new SaveDraft.Command(id, Doc(text)));
 
         var rows = (await scope.SendAsync(new GetSessionList.Query(null))).Where(i => i.Id == id).ToList();
 
         rows.Count.ShouldBe(1); // historical Revisions never appear as separate rows
-        rows[0].Preview.ShouldBe("v3");
+        rows[0].Preview.ShouldBe("v3"); // the preview is derived plaintext, not the stored JSON markup
     }
 }
