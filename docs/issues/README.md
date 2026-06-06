@@ -89,6 +89,17 @@ are **AFK** (no human review gate). Work them in dependency order.
 | [FE-028](FE-028-dev-browser-helper-module.md) | Committed dev-browser helper module (`login`, `completeSetup`, base-URL) | 12 | — | done |
 | [FE-029](FE-029-dev-runbook-rewrite.md) | Rewrite the dev-runbook e2e guidance | 12 | FE-028 | done |
 | [FE-030](FE-030-e2e-polish-shim-catalog.md) | *(NICE)* `waitFor` shim, reference-flow catalog, failure capture | 12 | FE-028 | done |
+| [RICH-001](RICH-001-prosemirror-to-plaintext-module.md) | `ProseMirrorToPlainText` deep module (JSON→plaintext) | 13 | — | ready |
+| [RICH-002](RICH-002-markdown-to-prosemirror-module.md) | `MarkdownToProseMirror` deep module (markdown→JSON) | 13 | — | ready |
+| [RICH-003](RICH-003-rich-editor-json-content-model.md) | Rich editor + JSON Content model (keystone) + ADR-0009 + fresh migration | 13 | RICH-001 | ready |
+| [RICH-004](RICH-004-cleanup-structured-output-contract.md) | Cleanup structured output contract + AI markdown→JSON Cleaned | 13 | RICH-002, RICH-003 | ready |
+| [RICH-005](RICH-005-person-aggregate-directory-endpoints.md) | `Person` aggregate + directory endpoints (`GET/POST/PATCH /people`) | 13 | RICH-003 | ready |
+| [RICH-006](RICH-006-person-resolver-mention-projection.md) | `PersonResolver` + `MentionProjection` deep modules | 13 | RICH-005 | ready |
+| [RICH-007](RICH-007-mention-editor-ux-projected-badges.md) | `@`-mention editor UX + projected People badges | 13 | RICH-006 | ready |
+| [RICH-008](RICH-008-mention-insertion-module.md) | `MentionInsertion` deep module | 13 | RICH-006 | ready |
+| [RICH-009](RICH-009-ai-people-tag-proposal-flow.md) | AI people-tag proposal flow + `RequirePeopleTagApproval` | 13 | RICH-004, RICH-007, RICH-008 | ready |
+| [RICH-010](RICH-010-multiple-moods.md) | Multiple Moods (`string[]`, multi-select chips, filter-any) | 13 | RICH-003 | ready |
+| [RICH-011](RICH-011-topic-badges.md) | Topic badges + `GET /topics` distinct + index | 13 | RICH-003 | ready |
 
 ## Suggested order
 
@@ -129,3 +140,16 @@ the route extractions **FE-020/021/022** are independent quality work; **FE-023*
 *compound forms* (**FE-024** ADR-0008 → **FE-025** context → **FE-026** `createForm` factory →
 **FE-027** migrate the forms), and *e2e* (**FE-028** helper module → **FE-029** runbook rewrite,
 **FE-030** NICE polish). NICE slices (**FE-005/012/023/030**) are optional.
+
+**Phase 13** (rich Notion-style editor, Person directory + `@`-mentions, multiple Moods, Topic badges,
+realizing PRD-0006 / introducing ADR-0009): the two pure converters **RICH-001**
+(`ProseMirrorToPlainText`) and **RICH-002** (`MarkdownToProseMirror`) start immediately and in
+parallel. The keystone **RICH-003** (rich editor + JSON Content model + ADR-0009 + the
+drop-DB/fresh-initial-migration baseline) needs RICH-001; **everything else hangs off RICH-003** since
+later schema changes add incremental migrations onto that baseline. Then three work-streams:
+*Cleanup* (**RICH-004** structured output + AI markdown→JSON, needs RICH-002/003); *People*
+(**RICH-005** `Person` aggregate + endpoints → **RICH-006** `PersonResolver`/`MentionProjection` →
+**RICH-007** `@`-mention UX, with **RICH-008** `MentionInsertion` branching off RICH-006, all
+converging at **RICH-009** AI people-tag proposal which needs RICH-004 + RICH-007 + RICH-008); and the
+two independent metadata slices **RICH-010** (multiple Moods) and **RICH-011** (Topic badges), each
+needing only the RICH-003 baseline (their AI-suggestion behavior aligns with the RICH-004 contract).
