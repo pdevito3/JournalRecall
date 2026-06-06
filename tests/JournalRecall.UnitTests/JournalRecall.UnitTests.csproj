@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Unit layer (PRD-0003): pure domain and isolated logic — no host, no DB. Runs in parallel. -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Bogus" />
+    <PackageReference Include="Soenneker.Utils.AutoBogus" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\JournalRecall.Api\JournalRecall.Api.csproj" />
+    <ProjectReference Include="..\JournalRecall.SharedTestHelpers\JournalRecall.SharedTestHelpers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+    <Using Include="JournalRecall.SharedTestHelpers.Utilities" />
+  </ItemGroup>
+
+</Project>

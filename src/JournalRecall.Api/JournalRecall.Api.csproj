@@ -38,7 +38,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="JournalRecall.Api.Tests" />
+    <InternalsVisibleTo Include="JournalRecall.UnitTests" />
+    <InternalsVisibleTo Include="JournalRecall.IntegrationTests" />
+    <InternalsVisibleTo Include="JournalRecall.FunctionalTests" />
+    <InternalsVisibleTo Include="JournalRecall.SharedTestHelpers" />
   </ItemGroup>
 
   <!-- The Vite SPA builds into wwwroot/app (ADR-0001); served at /app with SPA fallback. -->

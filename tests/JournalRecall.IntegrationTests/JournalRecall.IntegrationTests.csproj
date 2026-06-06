@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Integration layer (PRD-0003): real DI scope + real SQLite via SendAsync, no HTTP. One shared
+       SQLite file; isolation comes from a fresh User per test. Runs in a single serial collection. -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Bogus" />
+    <PackageReference Include="Soenneker.Utils.AutoBogus" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\JournalRecall.Api\JournalRecall.Api.csproj" />
+    <ProjectReference Include="..\JournalRecall.SharedTestHelpers\JournalRecall.SharedTestHelpers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+    <Using Include="JournalRecall.SharedTestHelpers.Utilities" />
+  </ItemGroup>
+
+</Project>

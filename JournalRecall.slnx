@@ -13,7 +13,10 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/JournalRecall.AI.Tests/JournalRecall.AI.Tests.csproj" />
-    <Project Path="tests/JournalRecall.Api.Tests/JournalRecall.Api.Tests.csproj" />
+    <Project Path="tests/JournalRecall.SharedTestHelpers/JournalRecall.SharedTestHelpers.csproj" />
+    <Project Path="tests/JournalRecall.UnitTests/JournalRecall.UnitTests.csproj" />
+    <Project Path="tests/JournalRecall.IntegrationTests/JournalRecall.IntegrationTests.csproj" />
+    <Project Path="tests/JournalRecall.FunctionalTests/JournalRecall.FunctionalTests.csproj" />
   </Folder>
   <Project Path="JournalRecall.AppHost/JournalRecall.AppHost.csproj" />
 </Solution>

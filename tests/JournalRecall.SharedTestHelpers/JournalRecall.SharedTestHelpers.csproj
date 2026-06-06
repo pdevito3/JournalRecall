@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The reusable builder/faker toolkit and shared fakes (PRD-0003). A library, not a test project:
+       no test SDK or runner here — the three test projects reference it. -->
+  <ItemGroup>
+    <PackageReference Include="Bogus" />
+    <PackageReference Include="Soenneker.Utils.AutoBogus" />
+    <PackageReference Include="NSubstitute" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\JournalRecall.Api\JournalRecall.Api.csproj" />
+  </ItemGroup>
+
+</Project>

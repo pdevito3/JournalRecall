@@ -65,5 +65,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.15.3" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <!-- Test-data factories (PRD-0003): plain Bogus + the maintained, .NET 10-ready AutoBogus fork. -->
+    <PackageVersion Include="Bogus" Version="35.6.5" />
+    <PackageVersion Include="Soenneker.Utils.AutoBogus" Version="4.0.903" />
   </ItemGroup>
 </Project>
