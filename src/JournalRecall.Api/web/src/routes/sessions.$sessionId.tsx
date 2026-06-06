@@ -6,6 +6,9 @@ import { KNOWN_MOODS, type CleanupStatus, type RevisionSummary, type Session } f
 import type { Suggestion } from '@/features/sessions/api'
 import { FormShell, TextField, SelectField, applyServerErrors } from '@/shared/forms'
 import {
+  cleanedRevisionsQueryOptions,
+  revisionsQueryOptions,
+  sessionQueryOptions,
   useCleanedRevision,
   useCleanedRevisions,
   useCleanup,
@@ -21,6 +24,13 @@ import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils/cn'
 
 export const Route = createFileRoute('/sessions/$sessionId')({
+  // Await the primary Session (blocks first paint); let the Revision streams prefetch in the
+  // background so the editor renders without waiting on history. Components keep reading via useQuery.
+  loader: async ({ context: { queryClient }, params: { sessionId } }) => {
+    await queryClient.ensureQueryData(sessionQueryOptions(sessionId))
+    void queryClient.prefetchQuery(revisionsQueryOptions(sessionId))
+    void queryClient.prefetchQuery(cleanedRevisionsQueryOptions(sessionId))
+  },
   component: SessionEditor,
 })
 
