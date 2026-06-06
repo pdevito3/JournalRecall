@@ -67,32 +67,102 @@ npm install -g dev-browser
 dev-browser install        # Playwright Chromium
 ```
 
-Drive it with heredoc scripts. Scripts run in a QuickJS sandbox (no Node APIs), but
-`browser` is a real Playwright handle returning real `Page` objects:
+Scripts run in a QuickJS sandbox: **no Node APIs and no `import`/`require`**, and
+Playwright's **`expect` matchers are not exposed** (`typeof expect === 'undefined'`).
+But `browser` is a real Playwright handle returning real `Page` objects, so the
+auto-retrying **locator** APIs (`getByRole`, `getByLabel`, `locator.waitFor`,
+`page.waitForURL`) are all available — use those instead of `expect`.
+
+### Run flows through the committed helper module (start here)
+
+Login/setup logic lives once in the committed e2e helper module
+(`src/JournalRecall.Api/web/e2e/`, FE-028). Don't re-type it in ad-hoc scripts — write a
+flow under `e2e/flows/` and run it with the runner, which injects the port and, because
+the sandbox has no `import`, concatenates the helpers (and the `waitFor` shim) ahead of
+your flow:
 
 ```bash
-dev-browser --headless --timeout 50 <<'EOF'
-const page = await browser.getPage("t");                 // named pages persist across runs
-await page.goto("http://localhost:<nodePort>/app/login", { waitUntil: "networkidle" });
-await page.locator('input[name="email"]').fill('a@b.com');
-await page.keyboard.press('Tab');                        // validation is onBlur — focus then blur
-console.log(await page.locator('p[role="alert"]').allInnerTexts());   // form banner
-await saveScreenshot(await page.screenshot({ fullPage: true }), "shot.png");
-EOF
+cd src/JournalRecall.Api/web
+
+# Reset to a known FRESH state (stop the app first — EF holds the DB file open):
+e2e/reset-db.sh
+
+# Run a flow against the isolated Vite port (find it with the lsof command above):
+e2e/run.sh e2e/flows/auth-smoke.js <nodePort>
 ```
 
-- Screenshots land in `~/.dev-browser/tmp/`.
+A flow composes the helpers — `completeSetup` (fresh-DB first-run gate), `login`
+(seeded, unique-per-run identity), `gotoApp`, `bannerText`:
+
+```js
+// e2e/flows/my-flow.js  (helpers are already in scope — no import)
+const page = await browser.getPage('my-flow')
+const creds = await completeSetup(page)            // fresh DB → creates root admin, lands on journal
+await login(page, creds)                           // seeded → signs back in
+console.log('OK')
+```
+
+### Locate by role/label + web-first waits (the default)
+
+The UI is accessible react-aria, so role/label locators are free and stable — prefer
+them over CSS selectors. To wait, use the auto-retrying locator/URL waits, **not**
+`sleep`/`waitForLoadState('networkidle')` (a Playwright anti-pattern — wait on the UI,
+not the network):
+
+```js
+await page.goto(baseUrl('/login'))                                 // helper builds the /app URL
+await page.getByLabel('Username', { exact: true }).fill('admin')   // role/label, not input[name=…]
+await page.getByRole('button', { name: 'Sign in' }).click()
+await page.waitForURL((url) => !/\/login\b/.test(String(url)))      // web-first: wait on the URL
+await page.getByRole('button', { name: 'Start a session' }).waitFor({ state: 'visible' })
+const err = await bannerText(page)                                 // the role="alert" form banner
+```
+
+Conventions that matter for this app's forms:
+
+- **Validation is `onBlur` and submit is gated on `canSubmit`.** Filling fields
+  one-by-one blurs each *previous* field, so validation keeps running against a snapshot
+  where later fields are still empty and the button stays `disabled`. Fill every field,
+  then blur the **last** one (`locator.blur()`), *then* click submit. The `completeSetup`
+  /`login` helpers already do this (`commitFields`); replicate it in any new form helper.
+- **`exact` label matching on multi-password forms.** Setup/register/change-password show
+  both `Password` and `Confirm password`, so `getByLabel('Password')` is ambiguous — pass
+  `{ exact: true }`.
+- **Scope locators to a region where roles repeat.** Query within a section/form
+  (`page.getByRole('form')…` or a scoped locator) so controls elsewhere on the page don't
+  collide.
+- **Form banner is `getByRole('alert')`** (rendered by `Form.Errors`); field errors render
+  inline. Use the `bannerText(scope)` helper to read the banner.
+
+### Third-party surfaces: stub or skip
+
+- **Geolocation (Location on "Start a session").** `captureLocation()` asks the browser for
+  one point and resolves `undefined` if unsupported/denied/timeout, so a session still
+  starts without it — you can ignore it. Note the 10s timeout: don't grant geolocation in a
+  flow unless you're testing the located path; the un-granted path resolves fast on denial.
+- **AI provider / summaries.** Summary generation calls the server-configured AI provider
+  (external, slow, needs a key). Don't drive real summary generation in e2e — skip those
+  flows, or seed/stub the provider config server-side first.
+
+### Misc
+
+- Screenshots: `saveScreenshot(await page.screenshot({ fullPage: true }), 'shot.png')` →
+  lands in `~/.dev-browser/tmp/`.
 - `dev-browser stop` kills the daemon + Chromium. `dev-browser --help` has the full API.
 - To skip permission prompts in Claude Code, add `Bash(dev-browser *)` to the settings
   `allow` list.
 
-### Form selectors for this app
+### Last-resort fallback (avoid)
 
-The forms use react-aria + `@tanstack/react-form` (see
-`docs/adr/0007-forms-on-tanstack-react-form-zod.md`):
+Only if a control is genuinely unreachable by role/label: CSS selectors and timed waits
+still work, but they're brittle and **not** the house style.
 
-- Inputs carry `name={field.name}` → `input[name="email"]`.
-- Validation is **onBlur** — fill, then `Tab` (or blur) to trigger it.
-- Field errors render in `span.text-red-400`; the form-level banner is `p[role="alert"]`.
-- react-aria Selects are a trigger button + `div[role="option"]` items — scope queries
-  to the form's `section` so native `<select>`s elsewhere on the page don't collide.
+```js
+await page.locator('input[name="username"]').fill('admin')   // name={field.name}; prefer getByLabel
+await page.locator('.text-red-400').allInnerTexts()          // field errors; prefer getByRole('alert')
+await page.waitForTimeout(500)                                // last resort; prefer locator.waitFor
+```
+
+react-aria Selects are a trigger button + `div[role="option"]` items (no native
+`<select>`) — prefer `getByRole('button')` to open and `getByRole('option', { name })`
+to pick, scoped to the form's region.
