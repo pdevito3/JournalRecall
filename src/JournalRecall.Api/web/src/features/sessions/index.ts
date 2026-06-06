@@ -5,6 +5,7 @@
 export * from './useSessions'
 export { Timeline } from './components/timeline'
 export type { TimelineProps, TimelineSettings } from './components/timeline'
+export { SessionEditor } from './components/session-editor'
 export { KNOWN_MOODS, captureLocation } from './api'
 export type {
   CleanupStatus,
