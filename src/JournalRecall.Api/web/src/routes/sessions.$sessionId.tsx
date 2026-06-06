@@ -90,7 +90,7 @@ function SessionEditor({ sessionId }: { sessionId: string }) {
           />
         </div>
 
-        {hasCleaned ? <CleanedEditor session={session} /> : null}
+        {hasCleaned ? <CleanedEditorBoundary session={session} /> : null}
       </div>
 
       {session.synopsis ? (
@@ -258,37 +258,32 @@ function splitList(value: string): string[] {
     .filter((t) => t.length > 0)
 }
 
+// Change-token for the Cleaned editor: the latest cleaned Revision number. A Cleanup re-run appends a
+// new cleaned Revision (server regeneration), so the number changes → the editor remounts → re-seeds
+// from the fresh server copy. Within a stable number, local unsaved edits persist (no remount on
+// keystrokes/refetch). Concurrent-edit policy: local edits win until a save point; a server
+// regeneration re-seeds. Falls back to the seed text so the first paint (before history loads) is keyed
+// stably rather than flapping when the revisions list arrives.
+function CleanedEditorBoundary({ session }: { session: Session }) {
+  const { data: revisions } = useCleanedRevisions(session.id)
+  const latest = revisions?.at(-1)
+  const token = latest ? `v${latest.revisionNumber}` : session.cleanedDraft
+  return <CleanedEditor key={`${session.id}:${token}`} session={session} />
+}
+
 /** The AI-derived Cleaned copy, hand-editable. Edits debounce-save and append a Cleaned Revision. */
 function CleanedEditor({ session }: { session: Session }) {
   const saveCleaned = useSaveCleaned(session.id)
+  // Fresh per cleaned-Revision (keyed remount), so seed the Cleaned copy directly from server data.
   const [text, setText] = useState(session.cleanedDraft)
-  const serverRef = useRef(session.cleanedDraft)
-  const dirtyRef = useRef(false)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-
-  // Adopt server-originated changes (e.g. a re-run regenerated the copy), but never clobber a local
-  // edit that hasn't been saved yet.
-  useEffect(() => {
-    if (!dirtyRef.current && session.cleanedDraft !== serverRef.current) {
-      serverRef.current = session.cleanedDraft
-      setText(session.cleanedDraft)
-    }
-  }, [session.cleanedDraft])
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
   function onChange(value: string) {
     setText(value)
-    dirtyRef.current = true
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => {
-      saveCleaned.mutate(value, {
-        onSuccess: () => {
-          dirtyRef.current = false
-          serverRef.current = value
-        },
-      })
-    }, 600)
+    timer.current = setTimeout(() => saveCleaned.mutate(value), 600) // debounced autosave
   }
 
   return (
