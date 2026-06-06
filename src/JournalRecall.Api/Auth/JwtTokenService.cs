@@ -34,7 +34,7 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+            new(JwtRegisteredClaimNames.PreferredUsername, user.UserName ?? ""),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
         if (refreshChainId is { } chainId)

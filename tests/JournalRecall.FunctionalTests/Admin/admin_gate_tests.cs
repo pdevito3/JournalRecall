@@ -42,7 +42,7 @@ public class admin_gate_tests(WebTestFixture fixture) : AuthTestBase(fixture)
 
         using var scope = RealAuth.Services.CreateScope();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
-        var user = await users.FindByEmailAsync(creds.Email);
+        var user = await users.FindByNameAsync(creds.Username);
 
         (await users.IsInRoleAsync(user!, Roles.Member)).ShouldBeTrue();
         (await users.IsInRoleAsync(user!, Roles.Admin)).ShouldBeFalse();

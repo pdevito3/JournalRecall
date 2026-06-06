@@ -14,15 +14,15 @@ public sealed class TestingWebApplicationFactory : FunctionalWebApplicationFacto
     public const string DefaultPassword = "Passw0rd!23";
 
     /// <summary>Registers + logs in a fresh User; the returned client carries its cookie and X-CSRF header.</summary>
-    public async Task<HttpClient> CreateAuthenticatedClientAsync(string? email = null, string? password = null)
+    public async Task<HttpClient> CreateAuthenticatedClientAsync(string? username = null, string? password = null)
     {
-        email ??= $"user-{Guid.NewGuid():N}@example.com";
+        username ??= $"user_{Guid.NewGuid():N}"[..18];
         password ??= DefaultPassword;
 
         var client = CreateClient();
-        var register = await client.PostAsJsonAsync(ApiRoutes.Auth.Register, new { email, password });
+        var register = await client.PostAsJsonAsync(ApiRoutes.Auth.Register, new { username, password });
         register.EnsureSuccessStatusCode();
-        var login = await client.PostAsJsonAsync(ApiRoutes.Auth.Login, new { email, password });
+        var login = await client.PostAsJsonAsync(ApiRoutes.Auth.Login, new { username, password });
         login.EnsureSuccessStatusCode();
         return client;
     }

@@ -30,14 +30,15 @@ public static class SetupEndpoints
                 if (await users.Users.AnyAsync())
                     return Results.Conflict(); // already set up — refuse forever
 
-                var user = new User { UserName = body.Email, Email = body.Email };
+                // Username.Create validates format/length (throws → 422); User.Create is the sole path.
+                var user = User.Create(Username.Create(body.Username));
                 var result = await users.CreateAsync(user, body.Password);
                 if (!result.Succeeded)
                     return Results.ValidationProblem(result.Errors.GroupBy(e => e.Code)
                         .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray()));
 
                 await users.AddToRoleAsync(user, Roles.Admin); // the root Admin
-                return Results.Ok(new AuthEndpoints.UserResponse(user.Id, user.Email!, [Roles.Admin]));
+                return Results.Ok(new AuthEndpoints.UserResponse(user.Id, user.UserName!, [Roles.Admin]));
             }
             finally
             {

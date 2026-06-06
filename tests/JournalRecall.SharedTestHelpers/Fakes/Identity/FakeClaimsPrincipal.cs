@@ -12,12 +12,12 @@ namespace JournalRecall.SharedTestHelpers.Fakes.Identity;
 /// </summary>
 public static class FakeClaimsPrincipal
 {
-    /// <summary>A principal for the given User id, optional email, and any role claims.</summary>
-    public static ClaimsPrincipal ForUser(Guid userId, string? email = null, params string[] roles)
+    /// <summary>A principal for the given User id, optional username, and any role claims.</summary>
+    public static ClaimsPrincipal ForUser(Guid userId, string? userName = null, params string[] roles)
     {
         var claims = new List<Claim> { new(JwtRegisteredClaimNames.Sub, userId.ToString()) };
-        if (email is not null)
-            claims.Add(new Claim(JwtRegisteredClaimNames.Email, email));
+        if (userName is not null)
+            claims.Add(new Claim(JwtRegisteredClaimNames.PreferredUsername, userName));
         foreach (var role in roles)
             claims.Add(new Claim(ClaimTypes.Role, role));
 
@@ -25,6 +25,6 @@ public static class FakeClaimsPrincipal
     }
 
     /// <summary>An Admin principal for the given User id (carries the Admin role claim).</summary>
-    public static ClaimsPrincipal ForAdmin(Guid userId, string? email = null) =>
-        ForUser(userId, email, Roles.Admin);
+    public static ClaimsPrincipal ForAdmin(Guid userId, string? userName = null) =>
+        ForUser(userId, userName, Roles.Admin);
 }

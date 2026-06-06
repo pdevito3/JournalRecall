@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from '@tanstack/react-form'
-import { FormShell, TextField, applyServerErrors, emailSchema, passwordSchema, passwordsMatch } from '@/shared/forms'
+import { FormShell, TextField, applyServerErrors, usernameSchema, passwordSchema, passwordsMatch } from '@/shared/forms'
 import { useLogin, useSetup } from '@/features/auth/useAuth'
 
 export const Route = createFileRoute('/setup')({
@@ -9,10 +9,10 @@ export const Route = createFileRoute('/setup')({
 })
 
 // First-run root-Admin bootstrap: kept a separate form from register (independent lifecycle), but it
-// imports the same shared password + email fragments so the rules don't drift apart.
+// imports the same shared password + username fragments so the rules don't drift apart.
 const setupSchema = z
   .object({
-    email: emailSchema,
+    username: usernameSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
   })
@@ -24,10 +24,10 @@ function SetupPage() {
   const login = useLogin()
 
   const form = useForm({
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: { username: '', password: '', confirmPassword: '' },
     validators: { onBlur: setupSchema },
     onSubmit: async ({ value }) => {
-      const credentials = { email: value.email, password: value.password }
+      const credentials = { username: value.username, password: value.password }
       try {
         // Create the root Admin, then sign in immediately so the cookie is set and the app opens.
         await setup.mutateAsync(credentials)
@@ -47,8 +47,8 @@ function SetupPage() {
       pendingLabel="Creating…"
       footer="This creates the first administrator account for a brand-new instance."
     >
-      <form.Field name="email">
-        {(field) => <TextField field={field} label="Email" type="email" autoFocus autoComplete="email" />}
+      <form.Field name="username">
+        {(field) => <TextField field={field} label="Username" autoFocus autoComplete="username" />}
       </form.Field>
       <form.Field name="password">
         {(field) => <TextField field={field} label="Password" type="password" autoComplete="new-password" />}

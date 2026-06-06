@@ -15,9 +15,9 @@ public abstract class AuthTestBase(WebTestFixture fixture) : TestBase(fixture)
 {
     protected const string Password = TestingWebApplicationFactory.DefaultPassword;
 
-    protected sealed record Credentials(string Email, string Password);
+    protected sealed record Credentials(string Username, string Password);
 
-    protected static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", Password);
+    protected static Credentials NewUser() => new($"user_{Guid.NewGuid():N}"[..18], Password);
 
     /// <summary>Reads a Set-Cookie value by cookie name from a response.</summary>
     protected static string CookieValue(HttpResponseMessage response, string name)
@@ -42,7 +42,7 @@ public abstract class AuthTestBase(WebTestFixture fixture) : TestBase(fixture)
         {
             using var scope = RealAuth.Services.CreateScope();
             var users = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
-            await users.AddToRoleAsync((await users.FindByEmailAsync(creds.Email))!, Roles.Admin);
+            await users.AddToRoleAsync((await users.FindByNameAsync(creds.Username))!, Roles.Admin);
         }
         // Log in after any promotion so the minted JWT carries the right role claims.
         await client.PostAsJsonAsync(ApiRoutes.Auth.Login, creds);

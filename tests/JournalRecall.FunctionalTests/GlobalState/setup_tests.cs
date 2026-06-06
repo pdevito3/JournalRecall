@@ -25,7 +25,7 @@ public class setup_tests : GlobalStateTestBase
 
         using var scope = factory.Services.CreateScope();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
-        var user = await users.FindByEmailAsync(creds.Email);
+        var user = await users.FindByNameAsync(creds.Username);
         (await users.IsInRoleAsync(user!, Roles.Admin)).ShouldBeTrue();
         (await users.CheckPasswordAsync(user!, creds.Password)).ShouldBeTrue();
     }
@@ -64,10 +64,10 @@ public class setup_tests : GlobalStateTestBase
         var client = factory.CreateClient();
 
         // 9 chars → rejected for length.
-        (await client.PostAsJsonAsync(ApiRoutes.Setup.Root, new { email = "op@example.com", password = "short1234" }))
+        (await client.PostAsJsonAsync(ApiRoutes.Setup.Root, new { username = "operator", password = "short1234" }))
             .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         // 10 chars, no digit/upper/symbol → accepted (composition is not required).
-        (await client.PostAsJsonAsync(ApiRoutes.Setup.Root, new { email = "op@example.com", password = "abcdefghij" }))
+        (await client.PostAsJsonAsync(ApiRoutes.Setup.Root, new { username = "operator", password = "abcdefghij" }))
             .StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 }

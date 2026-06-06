@@ -26,10 +26,10 @@ public static class AdminEndpoints
 
         group.MapGet("/users", async (UserManager<User> users) =>
         {
-            var all = await users.Users.AsNoTracking().OrderBy(u => u.Email).ToListAsync();
+            var all = await users.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync();
             var dtos = new List<AdminUserDto>(all.Count);
             foreach (var user in all)
-                dtos.Add(new AdminUserDto(user.Id, user.Email!, (await users.GetRolesAsync(user)).ToList(), user.IsDisabled));
+                dtos.Add(new AdminUserDto(user.Id, user.UserName!, (await users.GetRolesAsync(user)).ToList(), user.IsDisabled));
             return Results.Ok(dtos);
         });
 
@@ -37,7 +37,9 @@ public static class AdminEndpoints
         {
             var role = body.Role == Roles.Admin ? Roles.Admin : Roles.Member;
             // Admin-created accounts get a temporary password the User must replace on first sign-in (0024).
-            var user = new User { UserName = body.Email, Email = body.Email, MustChangePassword = true };
+            // Username.Create validates format/length (throws → 422); User.Create is the sole path.
+            var user = User.Create(Username.Create(body.Username));
+            user.MustChangePassword = true;
             var result = await users.CreateAsync(user, body.Password);
             if (!result.Succeeded)
                 return Results.ValidationProblem(result.Errors.GroupBy(e => e.Code)
@@ -45,7 +47,7 @@ public static class AdminEndpoints
 
             await users.AddToRoleAsync(user, role);
             return Results.Created($"/api/admin/users/{user.Id}",
-                new AdminUserDto(user.Id, user.Email!, [role], user.IsDisabled));
+                new AdminUserDto(user.Id, user.UserName!, [role], user.IsDisabled));
         });
 
         // Admin password reset (issue 0024): set a new temporary password the User must replace, and

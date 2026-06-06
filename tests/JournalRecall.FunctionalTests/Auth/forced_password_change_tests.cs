@@ -15,13 +15,13 @@ namespace JournalRecall.FunctionalTests.Auth;
 /// </summary>
 public class forced_password_change_tests(WebTestFixture fixture) : AuthTestBase(fixture)
 {
-    private sealed record AdminUserDto(Guid Id, string Email, List<string> Roles, bool IsDisabled);
-    private sealed record UserDto(Guid Id, string Email, List<string> Roles, bool MustChangePassword);
+    private sealed record AdminUserDto(Guid Id, string Username, List<string> Roles, bool IsDisabled);
+    private sealed record UserDto(Guid Id, string Username, List<string> Roles, bool MustChangePassword);
 
     private async Task<Credentials> AdminCreatesUser(HttpClient admin, string role)
     {
-        var creds = new Credentials($"user-{Guid.NewGuid():N}@example.com", "TempPass123");
-        var created = await admin.PostJsonAsync(ApiRoutes.Admin.Users, new { email = creds.Email, password = creds.Password, role });
+        var creds = new Credentials($"user_{Guid.NewGuid():N}"[..18], "TempPass123");
+        var created = await admin.PostJsonAsync(ApiRoutes.Admin.Users, new { username = creds.Username, password = creds.Password, role });
         created.StatusCode.ShouldBe(HttpStatusCode.Created);
         return creds;
     }
@@ -31,7 +31,7 @@ public class forced_password_change_tests(WebTestFixture fixture) : AuthTestBase
     {
         var admin = await AdminClient();
         var created = await admin.PostJsonAsync(ApiRoutes.Admin.Users,
-            new { email = $"user-{Guid.NewGuid():N}@example.com", password = "TempPass123", role = "Admin" });
+            new { username = $"user_{Guid.NewGuid():N}"[..18], password = "TempPass123", role = "Admin" });
 
         created.StatusCode.ShouldBe(HttpStatusCode.Created);
         var dto = (await created.ReadJsonAsync<AdminUserDto>())!;
@@ -103,13 +103,13 @@ public class forced_password_change_tests(WebTestFixture fixture) : AuthTestBase
 
         // Admin resets to a new temp password.
         var target = (await admin.GetFromJsonAsync<List<AdminUserDto>>(ApiRoutes.Admin.Users, HttpClientExtensions.Web))!
-            .Single(u => u.Email == creds.Email);
+            .Single(u => u.Username == creds.Username);
         (await admin.PostJsonAsync(ApiRoutes.Admin.ResetPassword(target.Id), new { password = "ResetTemp123" }))
             .StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         // Logging in with the new temp password lands back in the forced-change state.
         var again = RealAuth.CreateClient();
-        await again.PostJsonAsync(ApiRoutes.Auth.Login, new Credentials(creds.Email, "ResetTemp123"));
+        await again.PostJsonAsync(ApiRoutes.Auth.Login, new Credentials(creds.Username, "ResetTemp123"));
         (await again.GetFromJsonAsync<UserDto>(ApiRoutes.Me, HttpClientExtensions.Web))!.MustChangePassword.ShouldBeTrue();
         (await again.GetAsync(ApiRoutes.Sessions.Root)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }

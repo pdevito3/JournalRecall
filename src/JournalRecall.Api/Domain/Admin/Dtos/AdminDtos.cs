@@ -1,10 +1,10 @@
 namespace JournalRecall.Api.Domain.Admin.Dtos;
 
 /// <summary>A User as the admin surface sees it — identity + access only, never any journal data (Privacy invariant).</summary>
-public sealed record AdminUserDto(Guid Id, string Email, IReadOnlyList<string> Roles, bool IsDisabled);
+public sealed record AdminUserDto(Guid Id, string Username, IReadOnlyList<string> Roles, bool IsDisabled);
 
 /// <summary>Create a User from the admin surface (invite/create).</summary>
-public sealed record CreateUserRequest(string Email, string Password, string Role);
+public sealed record CreateUserRequest(string Username, string Password, string Role);
 
 /// <summary>Assign a User's single role (Admin or Member).</summary>
 public sealed record SetRoleRequest(string Role);

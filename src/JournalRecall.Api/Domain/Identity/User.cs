@@ -35,4 +35,13 @@ public sealed class User : IdentityUser<Guid>
     /// server confines them to the change-password flow (the password-change sentinel).
     /// </summary>
     public bool MustChangePassword { get; set; }
+
+    /// <summary>
+    /// The sole production construction path (issue 0027): builds a User from a validated
+    /// <see cref="Username"/>, assigning it to the inherited Identity <c>UserName</c>. Setup,
+    /// self-registration, and admin-create all funnel through here so raw input never sets
+    /// <c>UserName</c> directly. The inherited <c>Email</c>/<c>NormalizedEmail</c> columns are left
+    /// null/unused — username is the identity, uniqueness rides Identity's normalized-username index.
+    /// </summary>
+    public static User Create(Username username) => new() { UserName = username.Value };
 }

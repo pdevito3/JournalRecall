@@ -1,4 +1,3 @@
-using Bogus;
 using JournalRecall.Api.Domain.Identity;
 
 namespace JournalRecall.SharedTestHelpers.Fakes.Identity;
@@ -6,14 +5,13 @@ namespace JournalRecall.SharedTestHelpers.Fakes.Identity;
 /// <summary>
 /// Seeds a <see cref="User"/> (the tenant boundary) for direct DbContext insertion — bypassing
 /// UserManager/Identity, which integration tests never authenticate through (PRD-0003). Sets the
-/// normalized lookup fields so Identity's unique indexes are satisfied.
+/// normalized username so Identity's unique index is satisfied. Username is the identity now (issue
+/// 0027); the inherited Email columns are left null/unused.
 /// </summary>
 public class FakeUserBuilder
 {
-    private static readonly Faker Faker = new();
-
     private Guid _id = Guid.CreateVersion7();
-    private string? _email;
+    private string? _userName;
     private string? _timeZoneId;
     private bool _locationCaptureEnabled;
     private bool _isDisabled;
@@ -21,7 +19,7 @@ public class FakeUserBuilder
 
     public FakeUserBuilder WithId(Guid id) { _id = id; return this; }
 
-    public FakeUserBuilder WithEmail(string email) { _email = email; return this; }
+    public FakeUserBuilder WithUserName(string userName) { _userName = userName; return this; }
 
     public FakeUserBuilder WithTimeZone(string timeZoneId) { _timeZoneId = timeZoneId; return this; }
 
@@ -33,14 +31,12 @@ public class FakeUserBuilder
 
     public User Build()
     {
-        var email = _email ?? Faker.Internet.Email();
+        var userName = _userName ?? $"user_{Guid.NewGuid():N}"[..18];
         return new User
         {
             Id = _id,
-            Email = email,
-            UserName = email,
-            NormalizedEmail = email.ToUpperInvariant(),
-            NormalizedUserName = email.ToUpperInvariant(),
+            UserName = userName,
+            NormalizedUserName = userName.ToUpperInvariant(),
             SecurityStamp = Guid.NewGuid().ToString("N"),
             TimeZoneId = _timeZoneId,
             LocationCaptureEnabled = _locationCaptureEnabled,

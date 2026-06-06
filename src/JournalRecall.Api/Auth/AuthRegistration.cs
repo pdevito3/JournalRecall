@@ -38,7 +38,9 @@ public static class AuthRegistration
 
         services.AddIdentityCore<User>(options =>
             {
-                options.User.RequireUniqueEmail = true;
+                // Username is the identity (issue 0027); email is unused. Uniqueness rides Identity's
+                // normalized-username index, so no unique-email requirement.
+                options.User.RequireUniqueEmail = false;
                 // NIST-aligned password policy (PRD-0001): favor length over composition. Identity
                 // defaults the four composition rules to true, so turn them off explicitly.
                 options.Password.RequiredLength = 10;

@@ -7,13 +7,13 @@ using JournalRecall.Api.Services;
 namespace JournalRecall.UnitTests.Services;
 
 /// <summary>
-/// Pure test: <see cref="ICurrentUserService"/> projects id, email, and roles straight off the validated
-/// principal. No host or DB — a <see cref="HttpContextAccessor"/> is constructed directly.
+/// Pure test: <see cref="ICurrentUserService"/> projects id, username, and roles straight off the
+/// validated principal. No host or DB — a <see cref="HttpContextAccessor"/> is constructed directly.
 /// </summary>
 public class current_user_service_tests
 {
     [Fact]
-    public void projects_id_email_and_roles_from_the_principal()
+    public void projects_id_username_and_roles_from_the_principal()
     {
         var id = Guid.NewGuid();
         var context = new DefaultHttpContext
@@ -21,7 +21,7 @@ public class current_user_service_tests
             User = new ClaimsPrincipal(new ClaimsIdentity(
             [
                 new Claim(JwtRegisteredClaimNames.Sub, id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, "admin@example.com"),
+                new Claim(JwtRegisteredClaimNames.PreferredUsername, "admin"),
                 new Claim(ClaimTypes.Role, Roles.Admin),
             ], authenticationType: "test")),
         };
@@ -29,7 +29,7 @@ public class current_user_service_tests
         var service = new CurrentUserService(new HttpContextAccessor { HttpContext = context });
 
         service.UserId.ShouldBe(id);
-        service.Email.ShouldBe("admin@example.com");
+        service.UserName.ShouldBe("admin");
         service.Roles.ShouldContain(Roles.Admin);
         service.IsAdmin.ShouldBeTrue();
     }

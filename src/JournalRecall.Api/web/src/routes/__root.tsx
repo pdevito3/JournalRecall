@@ -94,7 +94,7 @@ function AuthControls() {
 
   return (
     <>
-      <span className="text-sm text-muted">{user.email}</span>
+      <span className="text-sm text-muted">{user.username}</span>
       <Button onPress={() => logout.mutate(undefined, { onSuccess: () => navigate({ to: '/login' }) })}>
         Sign out
       </Button>

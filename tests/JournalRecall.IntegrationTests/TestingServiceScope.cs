@@ -25,7 +25,7 @@ public sealed class TestingServiceScope : IDisposable
     private readonly IServiceScope _scope;
     private readonly IHttpContextAccessor _accessor;
     private readonly IHeimGuardClient _heimGuard;
-    private readonly string _email;
+    private readonly string _userName;
 
     /// <summary>The id of this scope's User — the tenant every query and write is scoped to.</summary>
     public Guid CurrentUserId { get; }
@@ -38,14 +38,14 @@ public sealed class TestingServiceScope : IDisposable
         _heimGuard = _scope.ServiceProvider.GetRequiredService<IHeimGuardClient>();
 
         CurrentUserId = Guid.CreateVersion7();
-        _email = $"user-{CurrentUserId:N}@example.com";
-        SetUser(FakeClaimsPrincipal.ForUser(CurrentUserId, _email));
+        _userName = $"user_{CurrentUserId:N}"[..18];
+        SetUser(FakeClaimsPrincipal.ForUser(CurrentUserId, _userName));
         SetUserIsPermitted();
 
         // Seed the fresh User row. Resolving the scoped DbContext here binds its tenant id to this User
         // (the principal is already set), so every later query in this scope is isolated to it.
         var db = _scope.ServiceProvider.GetRequiredService<JournalRecallDbContext>();
-        db.Users.Add(new FakeUserBuilder().WithId(CurrentUserId).WithEmail(_email).Build());
+        db.Users.Add(new FakeUserBuilder().WithId(CurrentUserId).WithUserName(_userName).Build());
         db.SaveChanges();
     }
 
@@ -59,7 +59,7 @@ public sealed class TestingServiceScope : IDisposable
     /// <summary>Re-issues this scope's User as an Admin (same id, plus the Admin role claim).</summary>
     public TestingServiceScope AsAdmin()
     {
-        SetUser(FakeClaimsPrincipal.ForAdmin(CurrentUserId, _email));
+        SetUser(FakeClaimsPrincipal.ForAdmin(CurrentUserId, _userName));
         return this;
     }
 

@@ -12,7 +12,7 @@ namespace JournalRecall.FunctionalTests.Auth;
 public class refresh_token_tests(WebTestFixture fixture) : AuthTestBase(fixture)
 {
     private sealed record TokenResponse(string AccessToken, string RefreshToken, DateTimeOffset RefreshTokenExpiresAt);
-    private sealed record AdminUserDto(Guid Id, string Email, List<string> Roles, bool IsDisabled);
+    private sealed record AdminUserDto(Guid Id, string Username, List<string> Roles, bool IsDisabled);
 
     [Fact]
     public async Task refresh_with_the_cookie_reestablishes_access_and_rotates_the_refresh_token()
@@ -60,7 +60,7 @@ public class refresh_token_tests(WebTestFixture fixture) : AuthTestBase(fixture)
 
         var admin = await AdminClient();
         var target = (await admin.GetFromJsonAsync<List<AdminUserDto>>(ApiRoutes.Admin.Users, HttpClientExtensions.Web))!
-            .Single(u => u.Email == creds.Email);
+            .Single(u => u.Username == creds.Username);
         (await admin.PostAsync(ApiRoutes.Admin.Disable(target.Id), null)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         (await RefreshWithBody(refresh)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);

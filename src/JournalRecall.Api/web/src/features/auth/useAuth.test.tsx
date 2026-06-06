@@ -27,7 +27,7 @@ describe('useSetup', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries')
 
     const { result } = renderHook(() => useSetup(), { wrapper: wrap(queryClient) })
-    await result.current.mutateAsync({ email: 'a', password: 'b' } as never)
+    await result.current.mutateAsync({ username: 'alice', password: 'b' } as never)
 
     await waitFor(() =>
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ['auth', 'config'] }),

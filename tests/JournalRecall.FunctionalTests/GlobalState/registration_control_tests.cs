@@ -43,7 +43,7 @@ public class registration_control_tests : GlobalStateTestBase
 
         using var scope = factory.Services.CreateScope();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
-        (await users.IsInRoleAsync((await users.FindByEmailAsync(creds.Email))!, Roles.Member)).ShouldBeTrue();
+        (await users.IsInRoleAsync((await users.FindByNameAsync(creds.Username))!, Roles.Member)).ShouldBeTrue();
     }
 
     [Fact]

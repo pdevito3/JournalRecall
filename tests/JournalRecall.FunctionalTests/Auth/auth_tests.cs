@@ -12,7 +12,7 @@ namespace JournalRecall.FunctionalTests.Auth;
 /// </summary>
 public class auth_tests(WebTestFixture fixture) : AuthTestBase(fixture)
 {
-    private sealed record UserDto(Guid Id, string Email);
+    private sealed record UserDto(Guid Id, string Username);
 
     [Fact]
     public async Task register_then_login_sets_an_httponly_auth_cookie()
@@ -39,7 +39,7 @@ public class auth_tests(WebTestFixture fixture) : AuthTestBase(fixture)
         var client = await RealAuth.CreateAuthenticatedClientAsync();
         var me = await client.GetAsync(ApiRoutes.Me);
         me.StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await me.ReadJsonAsync<UserDto>())!.Email.ShouldNotBeNullOrEmpty();
+        (await me.ReadJsonAsync<UserDto>())!.Username.ShouldNotBeNullOrEmpty();
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class auth_tests(WebTestFixture fixture) : AuthTestBase(fixture)
 
         var me = await bearerClient.GetAsync(ApiRoutes.Me);
         me.StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await me.ReadJsonAsync<UserDto>())!.Email.ShouldBe(creds.Email);
+        (await me.ReadJsonAsync<UserDto>())!.Username.ShouldBe(creds.Username);
     }
 
     [Fact]

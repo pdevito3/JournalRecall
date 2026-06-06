@@ -2,4 +2,11 @@
 export { CheckboxField, SelectField, TextField, type SelectOption } from './fields'
 export { FormShell } from './form-shell'
 export { applyServerErrors } from './apply-server-errors'
-export { emailSchema, passwordSchema, passwordsMatch, PASSWORD_MIN_LENGTH } from './schema'
+export {
+  usernameSchema,
+  passwordSchema,
+  passwordsMatch,
+  PASSWORD_MIN_LENGTH,
+  USERNAME_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+} from './schema'

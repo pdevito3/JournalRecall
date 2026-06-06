@@ -1,18 +1,18 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from '@tanstack/react-form'
-import { FormShell, TextField, applyServerErrors, emailSchema, passwordSchema, passwordsMatch } from '@/shared/forms'
+import { FormShell, TextField, applyServerErrors, usernameSchema, passwordSchema, passwordsMatch } from '@/shared/forms'
 import { useLogin, useRegister } from '@/features/auth/useAuth'
 
 export const Route = createFileRoute('/register')({
   component: RegisterPage,
 })
 
-// Self-registration: own schema, but it imports the shared password + email fragments so the policy
+// Self-registration: own schema, but it imports the shared password + username fragments so the policy
 // and match rule stay in lockstep with setup and change-password.
 const registerSchema = z
   .object({
-    email: emailSchema,
+    username: usernameSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
   })
@@ -24,10 +24,10 @@ function RegisterPage() {
   const login = useLogin()
 
   const form = useForm({
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: { username: '', password: '', confirmPassword: '' },
     validators: { onBlur: registerSchema },
     onSubmit: async ({ value }) => {
-      const credentials = { email: value.email, password: value.password }
+      const credentials = { username: value.username, password: value.password }
       try {
         await register.mutateAsync(credentials)
         // Registration doesn't sign you in — log in immediately so the cookie is set.
@@ -54,8 +54,8 @@ function RegisterPage() {
         </>
       }
     >
-      <form.Field name="email">
-        {(field) => <TextField field={field} label="Email" type="email" autoFocus autoComplete="email" />}
+      <form.Field name="username">
+        {(field) => <TextField field={field} label="Username" autoFocus autoComplete="username" />}
       </form.Field>
       <form.Field name="password">
         {(field) => <TextField field={field} label="Password" type="password" autoComplete="new-password" />}

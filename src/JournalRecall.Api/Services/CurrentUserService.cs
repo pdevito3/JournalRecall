@@ -11,7 +11,7 @@ namespace JournalRecall.Api.Services;
 public interface ICurrentUserService
 {
     Guid? UserId { get; }
-    string? Email { get; }
+    string? UserName { get; }
     IReadOnlySet<string> Roles { get; }
     bool IsAdmin { get; }
 }
@@ -23,7 +23,7 @@ internal sealed class CurrentUserService(IHttpContextAccessor httpContextAccesso
     public Guid? UserId =>
         Guid.TryParse(Principal?.FindFirstValue(JwtRegisteredClaimNames.Sub), out var id) ? id : null;
 
-    public string? Email => Principal?.FindFirstValue(JwtRegisteredClaimNames.Email);
+    public string? UserName => Principal?.FindFirstValue(JwtRegisteredClaimNames.PreferredUsername);
 
     public IReadOnlySet<string> Roles =>
         Principal?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToHashSet() ?? new HashSet<string>();

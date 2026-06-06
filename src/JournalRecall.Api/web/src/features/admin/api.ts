@@ -3,7 +3,7 @@ import { problemError } from '@/shared/api/problem'
 
 export interface AdminUser {
   id: string
-  email: string
+  username: string
   roles: string[]
   isDisabled: boolean
 }
@@ -35,7 +35,7 @@ export async function getUsers(): Promise<AdminUser[]> {
   return res.json()
 }
 
-export async function createUser(input: { email: string; password: string; role: string }): Promise<void> {
+export async function createUser(input: { username: string; password: string; role: string }): Promise<void> {
   const res = await apiFetch('/api/admin/users', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

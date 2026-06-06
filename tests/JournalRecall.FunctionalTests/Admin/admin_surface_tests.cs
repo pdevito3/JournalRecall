@@ -16,7 +16,7 @@ namespace JournalRecall.FunctionalTests.Admin;
 /// </summary>
 public class admin_surface_tests(WebTestFixture fixture) : AuthTestBase(fixture)
 {
-    private sealed record AdminUserDto(Guid Id, string Email, List<string> Roles, bool IsDisabled);
+    private sealed record AdminUserDto(Guid Id, string Username, List<string> Roles, bool IsDisabled);
     private sealed record AiProviderDto(string Provider, string? Endpoint, string Model, bool HasApiKey);
 
     private Task<List<AdminUserDto>> ListUsers(HttpClient admin) =>
@@ -29,7 +29,7 @@ public class admin_surface_tests(WebTestFixture fixture) : AuthTestBase(fixture)
         var someId = Guid.NewGuid();
 
         (await member.GetAsync(ApiRoutes.Admin.Users)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await member.PostJsonAsync(ApiRoutes.Admin.Users, new { email = "x@y.z", password = Password, role = "Member" }))
+        (await member.PostJsonAsync(ApiRoutes.Admin.Users, new { username = "someuser", password = Password, role = "Member" }))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await member.PutJsonAsync(ApiRoutes.Admin.Role(someId), new { role = "Admin" }))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
@@ -45,7 +45,7 @@ public class admin_surface_tests(WebTestFixture fixture) : AuthTestBase(fixture)
         var creds = NewUser();
 
         var created = await admin.PostJsonAsync(ApiRoutes.Admin.Users,
-            new { email = creds.Email, password = creds.Password, role = "Member" });
+            new { username = creds.Username, password = creds.Password, role = "Member" });
         created.StatusCode.ShouldBe(HttpStatusCode.Created);
         var dto = (await created.ReadJsonAsync<AdminUserDto>())!;
         dto.Roles.ShouldBe(["Member"]);
@@ -66,7 +66,7 @@ public class admin_surface_tests(WebTestFixture fixture) : AuthTestBase(fixture)
         await RegisterAndLogin(creds); // the soon-to-be-disabled member
         var admin = await AdminClient();
 
-        var target = (await ListUsers(admin)).Single(u => u.Email == creds.Email);
+        var target = (await ListUsers(admin)).Single(u => u.Username == creds.Username);
         (await admin.PostAsync(ApiRoutes.Admin.Disable(target.Id), null)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         var attempt = await RealAuth.CreateClient().PostAsJsonAsync(ApiRoutes.Auth.Login, creds);
@@ -116,7 +116,7 @@ public class admin_surface_tests(WebTestFixture fixture) : AuthTestBase(fixture)
 
         // The user listing carries identity only — never journal text.
         var body = await (await admin.GetAsync(ApiRoutes.Admin.Users)).Content.ReadAsStringAsync();
-        body.ShouldContain(memberCreds.Email);
+        body.ShouldContain(memberCreds.Username);
         body.ShouldNotContain("SECRET-DIARY-CONTENT");
 
         // There is deliberately no journal-reading admin endpoint.

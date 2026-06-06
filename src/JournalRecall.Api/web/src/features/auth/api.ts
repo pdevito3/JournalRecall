@@ -3,14 +3,14 @@ import { problemError } from '@/shared/api/problem'
 
 export interface AuthUser {
   id: string
-  email: string
+  username: string
   roles: string[]
   /** True while the user holds a temporary password and must set their own (issue 0024). */
   mustChangePassword: boolean
 }
 
 export interface Credentials {
-  email: string
+  username: string
   password: string
 }
 
@@ -64,7 +64,7 @@ export async function login(body: Credentials): Promise<AuthUser> {
     credentials: 'include',
     body: JSON.stringify(body),
   })
-  if (res.status === 401) throw new Error('Invalid email or password')
+  if (res.status === 401) throw new Error('Invalid username or password')
   if (!res.ok) throw await problemError(res, 'Login failed')
   return res.json()
 }

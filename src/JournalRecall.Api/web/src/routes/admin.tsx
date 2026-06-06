@@ -18,7 +18,7 @@ import { PROVIDERS, ROLES, type AdminUser, type AiProvider } from '@/features/ad
 import { Button } from '@/shared/ui/button'
 import {
   applyServerErrors,
-  emailSchema,
+  usernameSchema,
   FormShell,
   passwordSchema,
   SelectField,
@@ -94,7 +94,7 @@ function Users() {
         <ul className="divide-y divide-border rounded-lg border border-border">
           {users.map((u) => (
             <li key={u.id} className="flex flex-wrap items-center gap-3 p-3">
-              <span className="text-content">{u.email}</span>
+              <span className="text-content">{u.username}</span>
               {u.isDisabled ? (
                 <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-400">disabled</span>
               ) : null}
@@ -168,7 +168,7 @@ function ResetPasswordControl({ userId }: { userId: string }) {
 }
 
 const createUserSchema = z.object({
-  email: emailSchema,
+  username: usernameSchema,
   password: passwordSchema,
   role: z.enum(['Member', 'Admin']),
 })
@@ -176,11 +176,11 @@ const createUserSchema = z.object({
 function CreateUserForm() {
   const create = useCreateUser()
   const form = useForm({
-    defaultValues: { email: '', password: '', role: 'Member' as 'Member' | 'Admin' },
+    defaultValues: { username: '', password: '', role: 'Member' as 'Member' | 'Admin' },
     validators: { onBlur: createUserSchema },
     onSubmit: async ({ value }) => {
       try {
-        await create.mutateAsync({ email: value.email.trim(), password: value.password, role: value.role })
+        await create.mutateAsync({ username: value.username.trim(), password: value.password, role: value.role })
         form.reset()
       } catch (e) {
         applyServerErrors(form, e)
@@ -195,8 +195,8 @@ function CreateUserForm() {
       pendingLabel="Creating…"
       className="space-y-4 rounded-lg border border-dashed border-border bg-surface-2 p-3"
     >
-      <form.Field name="email">
-        {(field) => <TextField field={field} label="Email" type="email" placeholder="new.user@example.com" />}
+      <form.Field name="username">
+        {(field) => <TextField field={field} label="Username" autoComplete="username" placeholder="new.user" />}
       </form.Field>
       <form.Field name="password">
         {(field) => (

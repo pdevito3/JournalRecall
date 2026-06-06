@@ -9,8 +9,8 @@ namespace JournalRecall.Api.Auth;
 
 public static class AuthEndpoints
 {
-    public sealed record Credentials(string Email, string Password);
-    public sealed record UserResponse(Guid Id, string Email, IReadOnlyList<string> Roles, bool MustChangePassword = false);
+    public sealed record Credentials(string Username, string Password);
+    public sealed record UserResponse(Guid Id, string Username, IReadOnlyList<string> Roles, bool MustChangePassword = false);
     /// <summary>Change-own-password (issue 0024): clears the forced-change flag and revokes other sessions.</summary>
     public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
     /// <summary>Public config that drives all anonymous routing (server gate + client guard, issue 0022).</summary>
@@ -38,20 +38,21 @@ public static class AuthEndpoints
             if (!await authSettings.SelfRegistrationEnabledAsync())
                 return Results.Problem("Self-registration is disabled.", statusCode: StatusCodes.Status403Forbidden);
 
-            var user = new User { UserName = body.Email, Email = body.Email };
+            // Username.Create validates format/length (throws → 422); User.Create is the sole path.
+            var user = User.Create(Username.Create(body.Username));
             var result = await users.CreateAsync(user, body.Password);
             if (!result.Succeeded)
                 return Results.ValidationProblem(result.Errors.GroupBy(e => e.Code)
                     .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray()));
 
             await users.AddToRoleAsync(user, Roles.Member); // Member is the default role
-            return Results.Ok(new UserResponse(user.Id, user.Email!, [Roles.Member]));
+            return Results.Ok(new UserResponse(user.Id, user.UserName!, [Roles.Member]));
         });
 
         group.MapPost("/auth/login", async (Credentials body, UserManager<User> users, JwtTokenService tokens,
             RefreshTokenService refreshTokens, IOptions<RefreshTokenOptions> refreshOptions, HttpRequest request, HttpResponse response) =>
         {
-            var user = await users.FindByEmailAsync(body.Email);
+            var user = await users.FindByNameAsync(body.Username);
             if (user is null || !await users.CheckPasswordAsync(user, body.Password))
                 return Results.Unauthorized();
 
@@ -73,7 +74,7 @@ public static class AuthEndpoints
             AuthCookie.SetAccess(response, token, cookieExpiry);
             AuthCookie.SetRefresh(response, issued.Token, cookieExpiry);
 
-            return Results.Ok(new UserResponse(user.Id, user.Email!, roles.ToList(), user.MustChangePassword));
+            return Results.Ok(new UserResponse(user.Id, user.UserName!, roles.ToList(), user.MustChangePassword));
         });
 
         // Rotates the refresh token and mints a fresh access JWT. Web reads/writes cookies; mobile passes
@@ -134,10 +135,10 @@ public static class AuthEndpoints
         group.MapGet("/me", (ClaimsPrincipal principal) =>
         {
             var id = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
-            var email = principal.FindFirstValue(JwtRegisteredClaimNames.Email);
+            var username = principal.FindFirstValue(JwtRegisteredClaimNames.PreferredUsername);
             var roles = principal.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
             var mustChange = principal.FindFirstValue(JwtTokenService.MustChangePasswordClaim) == "true";
-            return Results.Ok(new UserResponse(Guid.Parse(id!), email ?? "", roles, mustChange));
+            return Results.Ok(new UserResponse(Guid.Parse(id!), username ?? "", roles, mustChange));
         }).RequireAuthorization();
 
         // Change-own-password (issue 0024): clears the forced-change flag and revokes the User's other

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { emailSchema, PASSWORD_MIN_LENGTH, passwordSchema, passwordsMatch } from './schema'
+import {
+  PASSWORD_MIN_LENGTH,
+  passwordSchema,
+  passwordsMatch,
+  usernameSchema,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+} from './schema'
 
 describe('passwordSchema', () => {
   it('rejects a password shorter than the policy length', () => {
@@ -13,13 +20,25 @@ describe('passwordSchema', () => {
   })
 })
 
-describe('emailSchema', () => {
-  it.each(['a@b.co', 'name.surname@example.com'])('accepts %s', (value) => {
-    expect(emailSchema.safeParse(value).success).toBe(true)
+describe('usernameSchema', () => {
+  it.each(['abc', 'name.surname', 'a_b-c.9', 'A'.repeat(USERNAME_MAX_LENGTH)])('accepts %s', (value) => {
+    expect(usernameSchema.safeParse(value).success).toBe(true)
   })
 
-  it.each(['', 'not-an-email', 'foo@', '@bar.com'])('rejects %s', (value) => {
-    expect(emailSchema.safeParse(value).success).toBe(false)
+  it.each([
+    '',
+    'ab', // shorter than min
+    'A'.repeat(USERNAME_MAX_LENGTH + 1),
+    'has space',
+    'name@example.com', // @ is no longer allowed
+    'bad!char',
+  ])('rejects %s', (value) => {
+    expect(usernameSchema.safeParse(value).success).toBe(false)
+  })
+
+  it('enforces the documented length boundaries', () => {
+    expect(usernameSchema.safeParse('a'.repeat(USERNAME_MIN_LENGTH)).success).toBe(true)
+    expect(usernameSchema.safeParse('a'.repeat(USERNAME_MIN_LENGTH - 1)).success).toBe(false)
   })
 })
 

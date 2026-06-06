@@ -13,10 +13,10 @@ public abstract class GlobalStateTestBase
 {
     protected const string Password = "Passw0rd!23";
 
-    protected sealed record Credentials(string Email, string Password);
+    protected sealed record Credentials(string Username, string Password);
     protected sealed record AuthConfig(bool NeedsSetup, bool SelfRegistrationEnabled);
 
-    protected static Credentials NewUser() => new($"user-{Guid.NewGuid():N}@example.com", Password);
+    protected static Credentials NewUser() => new($"user_{Guid.NewGuid():N}"[..18], Password);
 
     /// <summary>A client that does not follow redirects (so the gate's 302 is observable). Addressed over
     /// https so the Secure auth cookie is sent (custom client options otherwise reset the base address).</summary>
