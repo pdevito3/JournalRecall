@@ -68,4 +68,26 @@ public class prosemirror_content_tests : TestBase
         root!["type"]!.GetValue<string>().ShouldBe("doc");
         PlainText(dto.CleanedDraft).ShouldBe("Polished: helo wrld");
     }
+
+    [Fact]
+    public async Task cleanup_markdown_contract_renders_cleaned_with_real_formatting()
+    {
+        using var scope = new TestingServiceScope();
+        var session = new FakeSessionBuilder().WithUserId(scope.CurrentUserId).WithRawText("trip notes").Build();
+        await scope.InsertAsync(session);
+        // By contract (RICH-004) the model returns Markdown prose; the server converts it to ProseMirror JSON.
+        CleanupChat.CleanedOverride = "# Trip to Rome\n\nSaw the **Colosseum**.";
+
+        var dto = await scope.GetService<SessionCleanupRunner>().RunAsync(session.Id);
+
+        var root = JsonNode.Parse(dto!.CleanedDraft)!;
+        var blocks = root["content"]!.AsArray();
+        // The heading marker became a heading node, not literal "#" text.
+        blocks[0]!["type"]!.GetValue<string>().ShouldBe("heading");
+        // "Colosseum" carries a bold mark rather than literal asterisks.
+        var marked = blocks[1]!["content"]!.AsArray()
+            .First(n => n!["text"]!.GetValue<string>() == "Colosseum");
+        marked!["marks"]!.AsArray().Select(m => m!["type"]!.GetValue<string>()).ShouldContain("bold");
+        PlainText(dto.CleanedDraft).ShouldBe("Trip to Rome\nSaw the Colosseum.");
+    }
 }

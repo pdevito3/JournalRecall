@@ -86,13 +86,13 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
     {
         if (outcome is AgentOutcome.Completed completed && CleanupAgent.TryParse(completed, out var parsed))
         {
-            // Hard-replace Corrections are applied deterministically to the Cleaned copy only. The model
-            // returns plain/markdown text; convert it to canonical ProseMirror JSON so the content columns
-            // stay always-JSON between RICH-003 and the structured contract in RICH-004 (ADR-0009).
-            var cleanedText = CorrectionApplier.ApplyHardReplacements(parsed.Cleaned, corrections);
-            session.CompleteCleanup(MarkdownToProseMirror.ConvertToJson(cleanedText), parsed.Synopsis);
+            // Hard-replace Corrections are applied deterministically to the Cleaned copy only. By contract
+            // (RICH-004) the model returns Markdown prose; the server converts it to canonical ProseMirror
+            // JSON so the Cleaned editor renders with formatting (ADR-0009).
+            var cleanedMarkdown = CorrectionApplier.ApplyHardReplacements(parsed.CleanedMarkdown, corrections);
+            session.CompleteCleanup(MarkdownToProseMirror.ConvertToJson(cleanedMarkdown), parsed.Synopsis);
             // The same run proposes metadata Suggestions (issue 0012) — pending until accepted/rejected.
-            session.ReplaceAiSuggestions(parsed.Topics, parsed.People, parsed.Mood);
+            session.ReplaceAiSuggestions(parsed.TopicSuggestions, parsed.PeopleProposal, parsed.MoodSuggestions.FirstOrDefault());
         }
         else
         {

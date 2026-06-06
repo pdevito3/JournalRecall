@@ -38,11 +38,11 @@ public sealed class ScriptableChatClient : IChatClient
         var cleaned = CleanedOverride ?? $"Polished: {raw}";
         var json = JsonSerializer.Serialize(new
         {
-            cleaned,
+            cleanedMarkdown = cleaned,
             synopsis = Synopsis,
-            topics = SuggestTopics,
-            people = SuggestPeople,
-            mood = SuggestMood,
+            topicSuggestions = SuggestTopics,
+            peopleProposal = SuggestPeople,
+            moodSuggestions = SuggestMood is null ? Array.Empty<string>() : new[] { SuggestMood },
         });
 
         return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, json))

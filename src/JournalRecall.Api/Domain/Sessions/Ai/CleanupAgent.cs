@@ -24,19 +24,20 @@ public static class CleanupAgent
         You are a journaling cleanup assistant. You are given the Raw text a user wrote or dictated in
         a single journaling session. Produce:
 
-        1. "cleaned": a lightly polished copy of the Raw text. Fix typos, punctuation, capitalization,
-           spacing, and obvious dictation/transcription errors. Do NOT change the meaning, the voice,
-           the tense, or the content. Do not add, remove, summarize, or reorder ideas. Preserve the
-           user's wording wherever it is already correct. If the Raw text is empty, return an empty
-           string.
+        1. "cleanedMarkdown": a lightly polished copy of the Raw text, as Markdown. Fix typos, punctuation,
+           capitalization, spacing, and obvious dictation/transcription errors. Do NOT change the meaning,
+           the voice, the tense, or the content. Do not add, remove, summarize, or reorder ideas. Preserve
+           the user's wording wherever it is already correct. Use Markdown only to reflect structure the
+           text already implies (paragraphs, lists). If the Raw text is empty, return an empty string.
         2. "synopsis": a one-to-three sentence recap of this single session, in the third person.
-        3. "topics": 0-5 short life-area tags you infer (e.g. "work", "parenthood", "travel").
-        4. "people": names of people referenced in the text (0-5).
-        5. "mood": the writer's apparent mood as one of [{{KnownMoods}}], or null if unclear.
+        3. "topicSuggestions": 0-5 short life-area tags you infer (e.g. "work", "parenthood", "travel").
+        4. "peopleProposal": names of people referenced in the text (0-5).
+        5. "moodSuggestions": 0-3 of the writer's apparent moods, each one of [{{KnownMoods}}]; [] if unclear.
 
-        These are *suggestions* the user may accept or reject; be conservative and only include what the
-        text supports. Respond with ONLY a single JSON object and nothing else, in exactly this shape:
-        {"cleaned": "...", "synopsis": "...", "topics": ["..."], "people": ["..."], "mood": "..." }
+        The metadata fields are *suggestions* the user may accept or reject; be conservative and only
+        include what the text supports. Respond with ONLY a single JSON object and nothing else, in
+        exactly this shape:
+        {"cleanedMarkdown": "...", "synopsis": "...", "topicSuggestions": ["..."], "peopleProposal": ["..."], "moodSuggestions": ["..."] }
         """;
 
     /// <summary>
@@ -60,15 +61,20 @@ public static class CleanupAgent
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private sealed record CleanupOutput(
-        string? Cleaned, string? Synopsis, string[]? Topics, string[]? People, string? Mood);
+        string? CleanedMarkdown, string? Synopsis,
+        string[]? TopicSuggestions, string[]? PeopleProposal, string[]? MoodSuggestions);
 
-    /// <summary>The parsed Cleanup output: the Cleaned copy, Synopsis, and proposed metadata Suggestions.</summary>
+    /// <summary>
+    /// The structured Cleanup output (RICH-004): the Cleaned prose as Markdown plus the metadata
+    /// side-channels. <see cref="PeopleProposal"/> is consumed by the people-proposal flow (RICH-009);
+    /// <see cref="TopicSuggestions"/>/<see cref="MoodSuggestions"/> feed the metadata Suggestion chips.
+    /// </summary>
     public sealed record Parsed(
-        string Cleaned,
+        string CleanedMarkdown,
         string Synopsis,
-        IReadOnlyList<string> Topics,
-        IReadOnlyList<string> People,
-        Mood? Mood);
+        IReadOnlyList<string> TopicSuggestions,
+        IReadOnlyList<string> PeopleProposal,
+        IReadOnlyList<Mood> MoodSuggestions);
 
     /// <summary>
     /// Parses the agent's terminal output. Returns false when the run produced no usable JSON — the
@@ -93,20 +99,21 @@ public static class CleanupAgent
         try
         {
             var parsed = JsonSerializer.Deserialize<CleanupOutput>(text[start..(end + 1)], Json);
-            if (parsed?.Cleaned is null)
+            if (parsed?.CleanedMarkdown is null)
                 return false;
 
-            // A bare mood key (no Custom free text from the model); drop it if not a known mood.
-            Mood? mood = null;
-            if (!string.IsNullOrWhiteSpace(parsed.Mood))
-                Mood.TryOf(parsed.Mood, null, out mood);
+            // Bare mood keys (no Custom free text from the model); drop any that aren't known moods.
+            var moods = new List<Mood>();
+            foreach (var key in parsed.MoodSuggestions ?? [])
+                if (!string.IsNullOrWhiteSpace(key) && Mood.TryOf(key, null, out var mood))
+                    moods.Add(mood);
 
             result = new Parsed(
-                parsed.Cleaned,
+                parsed.CleanedMarkdown,
                 parsed.Synopsis ?? string.Empty,
-                parsed.Topics ?? [],
-                parsed.People ?? [],
-                mood);
+                parsed.TopicSuggestions ?? [],
+                parsed.PeopleProposal ?? [],
+                moods);
             return true;
         }
         catch (JsonException)
