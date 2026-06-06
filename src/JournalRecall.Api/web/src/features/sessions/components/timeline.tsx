@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, getRouteApi } from '@tanstack/react-router'
 import { useSettings, useUpdateSettings } from '@/features/settings/useSettings'
 import { buildSessionFilter, useSessionList, type TimelineSearch } from '@/features/sessions/useSessions'
@@ -140,18 +140,27 @@ function MetadataChips({ item }: { item: SessionListItem }) {
 function TimeZonePicker() {
   const { data: settings } = useSettings()
   const updateSettings = useUpdateSettings()
+  // One-shot guard: the browser-default persist must fire at most once, never as a
+  // surprise re-write on re-render/StrictMode remount.
+  const seededDefault = useRef(false)
 
-  // Default from the browser on first run (no stored zone yet).
+  // Derive the effective zone at render: stored value, else the browser zone, else UTC.
+  // This is what the picker shows even before any default is persisted.
+  const browser = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const current = settings?.timeZoneId ?? browser ?? 'UTC'
+
+  // Server-side journaling-day bucketing reads the stored value, so seed the derived
+  // browser default exactly once when none is stored yet. The ref guard keeps this a
+  // single one-shot — it never re-fires on re-render or a StrictMode remount.
   useEffect(() => {
-    if (settings && settings.timeZoneId === null) {
-      const browser = Intl.DateTimeFormat().resolvedOptions().timeZone
-      if (browser) updateSettings.mutate({ ...settings, timeZoneId: browser })
+    if (settings && settings.timeZoneId === null && browser && !seededDefault.current) {
+      seededDefault.current = true
+      updateSettings.mutate({ ...settings, timeZoneId: browser })
     }
-  }, [settings, updateSettings])
+  }, [settings, browser, updateSettings])
 
   if (!settings) return null
 
-  const current = settings.timeZoneId ?? 'UTC'
   const zones = COMMON_ZONES.includes(current) ? COMMON_ZONES : [current, ...COMMON_ZONES]
 
   return (
