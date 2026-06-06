@@ -47,19 +47,28 @@ export function authConfigQueryOptions() {
   })
 }
 
-/** The current session. `data` is the user, or null when signed out. */
-export function useMe() {
-  return useQuery(meQueryOptions())
+type Me = AuthUser | null
+
+/**
+ * The current session. With no argument, `data` is the full user (or null when signed out).
+ * Pass a `select` to subscribe to just one slice of the payload — the component then re-renders
+ * only when that slice changes, and `data` narrows to the slice's type. `select` must be a stable
+ * (module-level) reference so React Query can memoize it.
+ */
+export function useMe(): ReturnType<typeof useQuery<Me, Error, Me>>
+export function useMe<T>(select: (me: Me) => T): ReturnType<typeof useQuery<Me, Error, T>>
+export function useMe<T>(select?: (me: Me) => T) {
+  return useQuery({ ...meQueryOptions(), select })
 }
 
 /** The current user's roles, derived from the `me` query (empty when signed out). */
 export function useAuthRoles(): string[] {
-  return useQuery({ ...meQueryOptions(), select: selectRoles }).data ?? []
+  return useMe(selectRoles).data ?? []
 }
 
 /** Whether the current user is an Admin, derived from the `me` query (the single Admin-role rule). */
 export function useIsAdmin(): boolean {
-  return useQuery({ ...meQueryOptions(), select: selectIsAdmin }).data ?? false
+  return useMe(selectIsAdmin).data ?? false
 }
 
 export function useLogin() {
