@@ -41,6 +41,17 @@ export function sessionQueryOptions(id: string) {
   })
 }
 
+export function topicsQueryOptions() {
+  return queryOptions({
+    queryKey: ['topics'],
+    queryFn: () => sessionsApi.getTopics(),
+  })
+}
+
+export function useTopics() {
+  return useQuery(topicsQueryOptions())
+}
+
 export function revisionsQueryOptions(id: string) {
   return queryOptions({
     queryKey: ['session', id, 'revisions'],
@@ -112,6 +123,7 @@ export function useSaveMetadata(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['session', id] })
       queryClient.invalidateQueries({ queryKey: ['sessions'] }) // timeline chips/filters
+      queryClient.invalidateQueries({ queryKey: ['topics'] }) // a new Topic may now exist for autocomplete
     },
   })
 }
@@ -124,6 +136,7 @@ export function useRespondToSuggestion(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['session', id] })
       queryClient.invalidateQueries({ queryKey: ['sessions'] }) // accepted tags show on the timeline
+      queryClient.invalidateQueries({ queryKey: ['topics'] }) // an accepted Topic may be new
     },
   })
 }

@@ -82,6 +82,13 @@ export async function getSession(id: string): Promise<Session> {
   return res.json()
 }
 
+/** The User's distinct Topic names (powers topic-badge autocomplete). */
+export async function getTopics(): Promise<string[]> {
+  const res = await apiFetch('/api/topics', { credentials: 'include' })
+  if (!res.ok) throw new Error('Could not load topics')
+  return res.json()
+}
+
 export async function getRevisions(id: string): Promise<RevisionSummary[]> {
   const res = await apiFetch(`/api/sessions/${id}/revisions`, { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load history')

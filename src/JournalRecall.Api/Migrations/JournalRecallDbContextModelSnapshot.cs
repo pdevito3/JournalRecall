@@ -612,7 +612,7 @@ namespace JournalRecall.Api.Migrations
 
                             b1.HasKey("Id");
 
-                            b1.HasIndex("SessionId");
+                            b1.HasIndex("SessionId", "Name");
 
                             b1.ToTable("session_topics", (string)null);
 

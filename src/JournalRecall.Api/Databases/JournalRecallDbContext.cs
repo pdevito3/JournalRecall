@@ -109,6 +109,9 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
                 topic.WithOwner().HasForeignKey("SessionId");
                 topic.Property<int>("Id");
                 topic.HasKey("Id");
+                // The GET /topics join + distinct runs off this index (PRD-0006). Denormalizing UserId
+                // onto SessionTopic is deferred unless profiling demands it.
+                topic.HasIndex("SessionId", nameof(SessionTopic.Name));
             });
             session.OwnsMany(s => s.People, person =>
             {

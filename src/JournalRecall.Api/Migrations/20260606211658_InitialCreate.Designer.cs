@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JournalRecall.Api.Migrations
 {
     [DbContext(typeof(JournalRecallDbContext))]
-    [Migration("20260606210059_InitialCreate")]
+    [Migration("20260606211658_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -615,7 +615,7 @@ namespace JournalRecall.Api.Migrations
 
                             b1.HasKey("Id");
 
-                            b1.HasIndex("SessionId");
+                            b1.HasIndex("SessionId", "Name");
 
                             b1.ToTable("session_topics", (string)null);
 

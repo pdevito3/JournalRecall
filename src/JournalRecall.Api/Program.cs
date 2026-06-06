@@ -62,6 +62,9 @@ try
     // Per-User Person directory backing @-mention autocomplete + resolution (PRD-0006).
     app.MapPeople();
 
+    // The User's distinct Topic names backing topic-badge autocomplete (PRD-0006).
+    app.MapTopics();
+
     // On-demand Day & Week Summaries over a period's Sessions (per-user, private).
     app.MapSummaries();
 

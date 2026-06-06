@@ -12,6 +12,7 @@ import {
   useSaveDraft,
   useSaveMetadata,
   useSession,
+  useTopics,
 } from '@/features/sessions/useSessions'
 import {
   KNOWN_MOODS,
@@ -236,14 +237,10 @@ function MetadataEditor({ session }: { session: Session }) {
         form={form}
         className="space-y-3 rounded-lg border border-border bg-surface-2 p-4"
       >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field name="topics">
-            {(field) => <TextField field={field} label="Topics (comma-separated)" placeholder="work, parenthood" />}
-          </Field>
-          <Field name="people">
-            {(field) => <TextField field={field} label="People (comma-separated)" placeholder="Sam, Alex" />}
-          </Field>
-        </div>
+        <Field name="topics">{(field) => <TopicBadges field={field} />}</Field>
+        <Field name="people">
+          {(field) => <TextField field={field} label="People (comma-separated)" placeholder="Sam, Alex" />}
+        </Field>
         <Field name="moods">{(field) => <MoodChips field={field} />}</Field>
         <Form.Errors />
         <Form.Submit>Save metadata</Form.Submit>
@@ -310,6 +307,67 @@ function MoodChips({ field }: { field: { state: { value: string }; handleChange:
           className="rounded-lg border border-border bg-surface-3 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
         <button type="button" className="text-sm text-accent hover:underline" onClick={addCustom}>
+          add
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Topic badge picker (PRD-0006): removable chips + a free-text input with autocomplete over prior Topics. */
+function TopicBadges({ field }: { field: { state: { value: string }; handleChange: (next: string) => void } }) {
+  const [draft, setDraft] = useState('')
+  const { data: known = [] } = useTopics()
+  const selected = splitList(field.state.value)
+  const has = (t: string) => selected.some((s) => s.toLowerCase() === t.toLowerCase())
+  const commit = (next: string[]) => field.handleChange(next.join(', '))
+  const remove = (t: string) => commit(selected.filter((s) => s.toLowerCase() !== t.toLowerCase()))
+  const add = () => {
+    const value = draft.trim()
+    if (value && !has(value)) commit([...selected, value]) // an unknown Topic just coins a new badge
+    setDraft('')
+  }
+  // Autocomplete over Topics used before, minus what's already on this Session.
+  const suggestions = known.filter((t) => !has(t))
+
+  return (
+    <div className="space-y-2">
+      <span className="text-sm text-muted">Topics</span>
+      {selected.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {selected.map((t) => (
+            <span
+              key={t}
+              className="flex items-center gap-1 rounded-full border border-accent bg-accent/15 py-0.5 pl-3 pr-1 text-sm text-content"
+            >
+              #{t}
+              <button type="button" aria-label={`Remove ${t}`} className="rounded-full px-1.5 text-muted hover:text-content" onClick={() => remove(t)}>
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <div className="flex gap-2">
+        <input
+          value={draft}
+          list="topic-suggestions"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              add()
+            }
+          }}
+          placeholder="Add a topic"
+          className="rounded-lg border border-border bg-surface-3 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        />
+        <datalist id="topic-suggestions">
+          {suggestions.map((t) => (
+            <option key={t} value={t} />
+          ))}
+        </datalist>
+        <button type="button" className="text-sm text-accent hover:underline" onClick={add}>
           add
         </button>
       </div>

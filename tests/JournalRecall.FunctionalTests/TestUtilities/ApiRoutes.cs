@@ -45,6 +45,11 @@ public static class ApiRoutes
         public static string Rename(Guid id) => $"{Root}/{id}";
     }
 
+    public static class Topics
+    {
+        public const string Root = Base + "/topics";
+    }
+
     public static class Sessions
     {
         public const string Root = Base + "/sessions";

@@ -497,9 +497,9 @@ namespace JournalRecall.Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_session_topics_SessionId",
+                name: "IX_session_topics_SessionId_Name",
                 table: "session_topics",
-                column: "SessionId");
+                columns: new[] { "SessionId", "Name" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_sessions_UserId",
