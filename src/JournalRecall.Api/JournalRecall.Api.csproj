@@ -18,6 +18,7 @@
     <PackageReference Include="Mapster" />
     <PackageReference Include="QueryKit" />
     <PackageReference Include="Ardalis.SmartEnum" />
+    <PackageReference Include="Markdig" />
   </ItemGroup>
 
   <ItemGroup>
