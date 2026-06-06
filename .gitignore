@@ -14,6 +14,9 @@ publish/
 *.userosscache
 *.sln.docstates
 
+## Aspire CLI
+aspire.config.json
+
 ## Rider / Visual Studio / VS Code
 .idea/
 .vs/
