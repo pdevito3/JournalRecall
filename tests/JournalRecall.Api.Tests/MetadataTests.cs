@@ -141,6 +141,6 @@ public class MetadataTests : IClassFixture<SkeletonWebApplicationFactory>
 
         (await client.PutAsJsonAsync($"/api/sessions/{id}/metadata",
             new { topics = Array.Empty<string>(), people = Array.Empty<string>(), mood = new { key = "Ecstatic", customValue = (string?)null } }))
-            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            .StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
     }
 }

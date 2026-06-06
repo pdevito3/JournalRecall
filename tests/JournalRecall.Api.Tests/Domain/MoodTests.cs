@@ -1,5 +1,6 @@
 using Shouldly;
 using JournalRecall.Api.Domain.Sessions.Metadata;
+using JournalRecall.Api.Exceptions;
 
 namespace JournalRecall.Api.Tests.Domain;
 
@@ -39,7 +40,7 @@ public class MoodTests
     public void A_custom_mood_without_text_is_rejected(string? text)
     {
         Should.Throw<ArgumentException>(() => Mood.Custom(text!));
-        Should.Throw<ArgumentException>(() => Mood.Of("Custom", text));
+        Should.Throw<ValidationException>(() => Mood.Of("Custom", text));
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public class MoodTests
     [Fact]
     public void Parsing_an_unknown_key_throws()
     {
-        Should.Throw<ArgumentException>(() => Mood.Of("euphoric"));
+        Should.Throw<InvalidSmartEnumPropertyName>(() => Mood.Of("euphoric"));
     }
 
     [Fact]

@@ -13,6 +13,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="HeimGuard" />
+    <PackageReference Include="Hellang.Middleware.ProblemDetails" />
     <PackageReference Include="MediatR" />
     <PackageReference Include="Mapster" />
     <PackageReference Include="QueryKit" />

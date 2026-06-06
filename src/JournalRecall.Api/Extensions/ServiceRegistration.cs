@@ -1,3 +1,4 @@
+using Hellang.Middleware.ProblemDetails;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -51,6 +52,14 @@ public static class ServiceRegistration
 
         // Apply migrations at startup so the SQLite file + schema exist on first run.
         services.AddHostedService<MigrationHostedService<JournalRecallDbContext>>();
+
+        // RFC 7807 problem+json for domain and unhandled exceptions (Hellang ProblemDetails).
+        // ConfigureProblemDetails maps domain exceptions to status codes with a polymorphic 500
+        // catch-all. Hellang writes its responses through MVC's ObjectResultExecutor, so it needs the
+        // MVC formatter stack — AddControllers() supplies it (no controllers are mapped). We skip
+        // AddProblemDetailsConventions(); the validation map builds its ProblemDetails directly.
+        services.AddControllers();
+        services.AddProblemDetails(ProblemDetailsConfigurationExtension.ConfigureProblemDetails);
 
         // Identity + first-party JWT (cookie or bearer) authentication (ADR-0002).
         services.AddJournalRecallAuth(builder.Configuration);

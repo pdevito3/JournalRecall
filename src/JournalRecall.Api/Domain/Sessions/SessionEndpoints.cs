@@ -53,12 +53,7 @@ public static class SessionEndpoints
         group.MapPut("/{id:guid}/metadata", async (Guid id, MetadataForWrite body, ISender sender) =>
         {
             var result = await sender.Send(new UpdateMetadata.Command(id, body));
-            return result switch
-            {
-                UpdateMetadata.Result.Ok => Results.NoContent(),
-                UpdateMetadata.Result.NotFound => Results.NotFound(),
-                _ => Results.Problem("Unknown mood.", statusCode: StatusCodes.Status400BadRequest),
-            };
+            return result == UpdateMetadata.Result.Ok ? Results.NoContent() : Results.NotFound();
         });
 
         // Accept/reject an AI metadata Suggestion (issue 0012). Accept promotes it (AiSuggested).

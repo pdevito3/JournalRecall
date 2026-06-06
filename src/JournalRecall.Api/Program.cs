@@ -1,3 +1,4 @@
+using Hellang.Middleware.ProblemDetails;
 using Serilog;
 using JournalRecall.Api.Auth;
 using JournalRecall.Api.Domain.Corrections;
@@ -24,6 +25,11 @@ try
     var app = builder.Build();
 
     app.UseSerilogRequestLogging();
+
+    // Convert exceptions thrown downstream into RFC 7807 problem+json (ServiceRegistration). Sits
+    // inside request logging so Serilog records the mapped status code, and outside auth/endpoints
+    // so it catches everything below.
+    app.UseProblemDetails();
 
     app.UseAuthentication();
     app.UseAuthorization();

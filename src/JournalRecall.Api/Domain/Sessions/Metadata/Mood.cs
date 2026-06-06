@@ -1,4 +1,5 @@
 using Ardalis.SmartEnum;
+using JournalRecall.Api.Exceptions;
 
 namespace JournalRecall.Api.Domain.Sessions.Metadata;
 
@@ -42,17 +43,22 @@ public sealed record Mood
     }
 
     /// <summary>
-    /// Builds a validated Mood from a string key (the boundary form used by DTOs/AI). Throws when the key
-    /// is unknown, or when "Custom" is supplied without free text. A known key ignores any custom text.
+    /// Builds a validated Mood from a string key (the boundary form used by DTOs/AI). Throws
+    /// <see cref="InvalidSmartEnumPropertyName"/> (→ 422) when the key is missing or unknown, and
+    /// <see cref="ValidationException"/> (→ 422) when "Custom" is supplied without free text. A known key
+    /// ignores any custom text.
     /// </summary>
     public static Mood Of(string key, string? customValue = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        if (!MoodType.TryFromName(key.Trim(), ignoreCase: true, out var type))
-            throw new ArgumentException($"Unknown mood '{key}'.", nameof(key));
+        if (string.IsNullOrWhiteSpace(key) || !MoodType.TryFromName(key.Trim(), ignoreCase: true, out var type))
+            throw new InvalidSmartEnumPropertyName(nameof(Mood), key, KnownKeys);
 
         if (type == MoodType.Custom)
-            return Custom(customValue!);
+        {
+            if (string.IsNullOrWhiteSpace(customValue))
+                throw new ValidationException("mood", "A custom mood requires text.");
+            return Custom(customValue);
+        }
 
         return new Mood(type, null);
     }
@@ -69,7 +75,7 @@ public sealed record Mood
             mood = Of(key, customValue);
             return true;
         }
-        catch (ArgumentException)
+        catch (Exception ex) when (ex is ValidationException or InvalidSmartEnumPropertyName)
         {
             return false;
         }
