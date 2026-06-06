@@ -59,36 +59,36 @@ are **AFK** (no human review gate). Work them in dependency order.
 | [FORM-010](FORM-010-convert-create-user-form.md) | Convert create-user (admin) form | 11 | FORM-003, FORM-004, FORM-005 | done |
 | [FORM-011](FORM-011-convert-ai-provider-config-form.md) | Convert AI-provider config form | 11 | FORM-003, FORM-005 | done |
 | [FORM-012](FORM-012-convert-session-metadata-editor.md) | Convert Session Metadata editor | 11 | FORM-003, FORM-005 | done |
-| [FE-001](FE-001-queryoptions-auth-factories.md) | Auth `queryOptions()` factories + collapse root `beforeLoad` duplication | 12 | — | ready |
-| [FE-002](FE-002-queryoptions-feature-factories.md) | `queryOptions()` factories for the remaining feature queries | 12 | FE-001 | ready |
-| [FE-003](FE-003-auth-selectors-isadmin.md) | Auth selectors `useIsAdmin`/`useAuthRoles` + de-duplicate Admin-role rule | 12 | FE-001 | ready |
-| [FE-004](FE-004-me-hook-select-param.md) | Optional `select` parameter on the shared `me` hook | 12 | FE-003 | ready |
-| [FE-005](FE-005-auth-config-session-selectors.md) | *(NICE)* auth-config slice + single-item session selectors | 12 | FE-002, FE-004 | ready |
-| [FE-006](FE-006-admin-gate-beforeload.md) | Move the Admin role gate into the Admin route `beforeLoad` | 12 | FE-001, FE-003 | ready |
-| [FE-007](FE-007-loaders-admin-corrections.md) | `ensureQueryData` loaders on the Admin + Corrections routes | 12 | FE-002 | ready |
-| [FE-008](FE-008-session-detail-loader.md) | Session-detail loader + non-awaited Revision-stream prefetch | 12 | FE-002 | ready |
-| [FE-009](FE-009-timeline-filters-url-search.md) | Timeline Topic/Person/Mood filters as URL search state | 12 | FE-002 | ready |
-| [FE-010](FE-010-summary-period-url-search.md) | Summary period/date as URL search state | 12 | FE-002 | ready |
-| [FE-011](FE-011-router-pending-error-components.md) | Router-level default pending/error components | 12 | FE-007, FE-008 | ready |
-| [FE-012](FE-012-default-preload-stale-time.md) | *(NICE)* `defaultPreloadStaleTime: 0` | 12 | FE-007, FE-008 | ready |
-| [FE-013](FE-013-session-editor-key-remount.md) | Reset the Session editor by `key` on Session identity (stale-text fix) | 12 | — | ready |
-| [FE-014](FE-014-key-metadata-aiprovider-forms.md) | Key the Metadata editor + Admin AI-provider form on entity identity | 12 | — | ready |
-| [FE-015](FE-015-cleaned-editor-change-token.md) | Simplify the Cleaned editor reconciler to `key` + change-token | 12 | FE-013 | ready |
-| [FE-016](FE-016-timezone-default-derive.md) | Derive the timezone default at render, not via a write effect | 12 | — | ready |
-| [FE-017](FE-017-resolve-session-settings-edge.md) | Resolve the Session→settings cross-feature import | 12 | — | ready |
-| [FE-018](FE-018-feature-public-api-barrels.md) | Per-feature public-API barrels | 12 | — | ready |
-| [FE-019](FE-019-eslint-import-boundaries.md) | ESLint flat config + import-boundary rule (error) + `lint` script & CI | 12 | FE-017, FE-018 | ready |
-| [FE-020](FE-020-extract-session-detail-route.md) | Extract the Session-detail route into a feature component | 12 | FE-013 | ready |
-| [FE-021](FE-021-extract-admin-route.md) | Extract the Admin route into feature component(s) | 12 | — | ready |
-| [FE-022](FE-022-extract-summaries-corrections-routes.md) | Extract the Summaries + Corrections routes into feature components | 12 | — | ready |
-| [FE-023](FE-023-shared-criteria-naming-lint-guardrail.md) | *(NICE)* promote-to-shared criterion, naming, derive-don't-sync guardrail | 12 | FE-018, FE-019 | ready |
-| [FE-024](FE-024-adr-0008-compound-forms.md) | ADR-0008: compound form components (supersedes ADR-0007) | 12 | — | ready |
-| [FE-025](FE-025-form-compound-context.md) | Form compound context + throwing `useFormContext()` + `Form.Submit`/`Form.Errors` | 12 | FE-024 | ready |
-| [FE-026](FE-026-createform-factory-typed.md) | `createForm<Schema>()` factory + typed `applyServerErrors` | 12 | FE-025 | ready |
-| [FE-027](FE-027-migrate-forms-compound-api.md) | Migrate existing forms to the compound API | 12 | FE-026 | ready |
-| [FE-028](FE-028-dev-browser-helper-module.md) | Committed dev-browser helper module (`login`, `completeSetup`, base-URL) | 12 | — | ready |
-| [FE-029](FE-029-dev-runbook-rewrite.md) | Rewrite the dev-runbook e2e guidance | 12 | FE-028 | ready |
-| [FE-030](FE-030-e2e-polish-shim-catalog.md) | *(NICE)* `waitFor` shim, reference-flow catalog, failure capture | 12 | FE-028 | ready |
+| [FE-001](FE-001-queryoptions-auth-factories.md) | Auth `queryOptions()` factories + collapse root `beforeLoad` duplication | 12 | — | done |
+| [FE-002](FE-002-queryoptions-feature-factories.md) | `queryOptions()` factories for the remaining feature queries | 12 | FE-001 | done |
+| [FE-003](FE-003-auth-selectors-isadmin.md) | Auth selectors `useIsAdmin`/`useAuthRoles` + de-duplicate Admin-role rule | 12 | FE-001 | done |
+| [FE-004](FE-004-me-hook-select-param.md) | Optional `select` parameter on the shared `me` hook | 12 | FE-003 | done |
+| [FE-005](FE-005-auth-config-session-selectors.md) | *(NICE)* auth-config slice + single-item session selectors | 12 | FE-002, FE-004 | not needed |
+| [FE-006](FE-006-admin-gate-beforeload.md) | Move the Admin role gate into the Admin route `beforeLoad` | 12 | FE-001, FE-003 | done |
+| [FE-007](FE-007-loaders-admin-corrections.md) | `ensureQueryData` loaders on the Admin + Corrections routes | 12 | FE-002 | done |
+| [FE-008](FE-008-session-detail-loader.md) | Session-detail loader + non-awaited Revision-stream prefetch | 12 | FE-002 | done |
+| [FE-009](FE-009-timeline-filters-url-search.md) | Timeline Topic/Person/Mood filters as URL search state | 12 | FE-002 | done |
+| [FE-010](FE-010-summary-period-url-search.md) | Summary period/date as URL search state | 12 | FE-002 | done |
+| [FE-011](FE-011-router-pending-error-components.md) | Router-level default pending/error components | 12 | FE-007, FE-008 | done |
+| [FE-012](FE-012-default-preload-stale-time.md) | *(NICE)* `defaultPreloadStaleTime: 0` | 12 | FE-007, FE-008 | done |
+| [FE-013](FE-013-session-editor-key-remount.md) | Reset the Session editor by `key` on Session identity (stale-text fix) | 12 | — | done |
+| [FE-014](FE-014-key-metadata-aiprovider-forms.md) | Key the Metadata editor + Admin AI-provider form on entity identity | 12 | — | done |
+| [FE-015](FE-015-cleaned-editor-change-token.md) | Simplify the Cleaned editor reconciler to `key` + change-token | 12 | FE-013 | done |
+| [FE-016](FE-016-timezone-default-derive.md) | Derive the timezone default at render, not via a write effect | 12 | — | done |
+| [FE-017](FE-017-resolve-session-settings-edge.md) | Resolve the Session→settings cross-feature import | 12 | — | done |
+| [FE-018](FE-018-feature-public-api-barrels.md) | Per-feature public-API barrels | 12 | — | done |
+| [FE-019](FE-019-eslint-import-boundaries.md) | ESLint flat config + import-boundary rule (error) + `lint` script & CI | 12 | FE-017, FE-018 | done |
+| [FE-020](FE-020-extract-session-detail-route.md) | Extract the Session-detail route into a feature component | 12 | FE-013 | done |
+| [FE-021](FE-021-extract-admin-route.md) | Extract the Admin route into feature component(s) | 12 | — | done |
+| [FE-022](FE-022-extract-summaries-corrections-routes.md) | Extract the Summaries + Corrections routes into feature components | 12 | — | done |
+| [FE-023](FE-023-shared-criteria-naming-lint-guardrail.md) | *(NICE)* promote-to-shared criterion, naming, derive-don't-sync guardrail | 12 | FE-018, FE-019 | done |
+| [FE-024](FE-024-adr-0008-compound-forms.md) | ADR-0008: compound form components (supersedes ADR-0007) | 12 | — | done |
+| [FE-025](FE-025-form-compound-context.md) | Form compound context + throwing `useFormContext()` + `Form.Submit`/`Form.Errors` | 12 | FE-024 | done |
+| [FE-026](FE-026-createform-factory-typed.md) | `createForm<Schema>()` factory + typed `applyServerErrors` | 12 | FE-025 | done |
+| [FE-027](FE-027-migrate-forms-compound-api.md) | Migrate existing forms to the compound API | 12 | FE-026 | done |
+| [FE-028](FE-028-dev-browser-helper-module.md) | Committed dev-browser helper module (`login`, `completeSetup`, base-URL) | 12 | — | done |
+| [FE-029](FE-029-dev-runbook-rewrite.md) | Rewrite the dev-runbook e2e guidance | 12 | FE-028 | done |
+| [FE-030](FE-030-e2e-polish-shim-catalog.md) | *(NICE)* `waitFor` shim, reference-flow catalog, failure capture | 12 | FE-028 | done |
 
 ## Suggested order
 
