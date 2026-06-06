@@ -58,7 +58,7 @@ public class session_metadata_tests
     public void setting_user_topics_replaces_prior_user_topics_but_keeps_ai_ones_and_dedupes()
     {
         var s = New();
-        s.ReplaceAiSuggestions(["work"], [], null);
+        s.ReplaceAiSuggestions(["work"], null);
         s.AcceptSuggestion(SuggestionKind.Topic, "work"); // an AiSuggested topic
 
         s.SetUserTopics(["Home", " home ", "Travel"]); // trims + de-dupes case-insensitively
@@ -87,18 +87,31 @@ public class session_metadata_tests
     }
 
     [Fact]
+    public void setting_user_people_replaces_references_by_id_and_dedupes()
+    {
+        var s = New();
+        var sam = Guid.CreateVersion7();
+        var alex = Guid.CreateVersion7();
+
+        s.SetUserPeople([sam, alex, sam]); // duplicate id collapses
+        s.People.Select(p => p.PersonId).ShouldBe([sam, alex], ignoreOrder: true);
+
+        s.SetUserPeople([alex]); // replace-all: People carry no provenance now
+        s.People.Select(p => p.PersonId).ShouldBe([alex]);
+    }
+
+    [Fact]
     public void ai_suggestions_never_duplicate_existing_metadata()
     {
         var s = New();
         s.SetUserTopics(["work"]);
-        s.SetUserPeople(["Sam"]);
         s.SetMood(Mood.Of("Joyful"));
 
-        // Re-suggesting "work"/"Sam" and a mood is suppressed; only the genuinely new items remain.
-        s.ReplaceAiSuggestions(["work", "travel"], ["Sam", "Alex"], Mood.Of("Content"));
+        // Re-suggesting "work" and a mood is suppressed; only the genuinely new topic remains. People no
+        // longer flow through the shared suggestion machinery (people-proposal flow, RICH-009).
+        s.ReplaceAiSuggestions(["work", "travel"], Mood.Of("Content"));
 
         s.Suggestions.ShouldContain(g => g.Kind == SuggestionKind.Topic && g.Value == "travel");
-        s.Suggestions.ShouldContain(g => g.Kind == SuggestionKind.Person && g.Value == "Alex");
         s.Suggestions.ShouldNotContain(g => g.Value == "work");
         s.Suggestions.ShouldNotContain(g => g.Kind == SuggestionKind.Mood); // a mood is already set
     }
@@ -107,7 +120,7 @@ public class session_metadata_tests
     public void accepting_a_suggestion_promotes_it_and_removes_it_from_the_pending_list()
     {
         var s = New();
-        s.ReplaceAiSuggestions(["travel"], [], null);
+        s.ReplaceAiSuggestions(["travel"], null);
 
         s.AcceptSuggestion(SuggestionKind.Topic, "travel").ShouldBeTrue();
 
@@ -119,7 +132,7 @@ public class session_metadata_tests
     public void rejecting_a_suggestion_drops_it_without_promoting()
     {
         var s = New();
-        s.ReplaceAiSuggestions(["travel"], [], null);
+        s.ReplaceAiSuggestions(["travel"], null);
 
         s.RejectSuggestion(SuggestionKind.Topic, "travel").ShouldBeTrue();
 
@@ -139,7 +152,7 @@ public class session_metadata_tests
     public void accepting_a_custom_mood_suggestion_sets_the_mood_with_its_text()
     {
         var s = New();
-        s.ReplaceAiSuggestions([], [], Mood.Custom("wistful"));
+        s.ReplaceAiSuggestions([], Mood.Custom("wistful"));
 
         s.AcceptSuggestion(SuggestionKind.Mood, "Custom").ShouldBeTrue();
 

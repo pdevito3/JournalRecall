@@ -81,7 +81,7 @@ public sealed class Session : BaseEntity
     /// <summary>The Topic tags on this Session (user-set and any accepted AI Suggestions).</summary>
     public IReadOnlyList<SessionTopic> Topics => _topics;
 
-    /// <summary>The People referenced on this Session (user-set and any accepted AI Suggestions).</summary>
+    /// <summary>The directory People referenced on this Session, by <see cref="SessionPerson.PersonId"/>.</summary>
     public IReadOnlyList<SessionPerson> People => _people;
 
     /// <summary>AI-proposed metadata awaiting accept/reject (CONTEXT.md). Distinct from accepted metadata.</summary>
@@ -201,13 +201,16 @@ public sealed class Session : BaseEntity
                 _topics.Add(new SessionTopic(name, MetadataProvenance.UserSet));
     }
 
-    /// <summary>Replaces the user's People tags (provenance <see cref="MetadataProvenance.UserSet"/>), leaving AI ones intact.</summary>
-    public void SetUserPeople(IEnumerable<string> names)
+    /// <summary>
+    /// Replaces the Session's People references with the given directory <paramref name="personIds"/>
+    /// (deduped). People carry no provenance (PRD-0006); the caller resolves labels to directory
+    /// <see cref="People.Person"/> ids first.
+    /// </summary>
+    public void SetUserPeople(IEnumerable<Guid> personIds)
     {
-        _people.RemoveAll(p => p.Provenance == MetadataProvenance.UserSet);
-        foreach (var name in Normalize(names))
-            if (!_people.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-                _people.Add(new SessionPerson(name, MetadataProvenance.UserSet));
+        _people.Clear();
+        foreach (var personId in (personIds ?? []).Distinct())
+            _people.Add(new SessionPerson(personId));
     }
 
     /// <summary>Sets or clears the Session's mood.</summary>
@@ -223,22 +226,18 @@ public sealed class Session : BaseEntity
         .Distinct(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Replaces the pending AI Suggestions with a fresh set from a Cleanup run. Suggestions that would
-    /// duplicate metadata the Session already carries are dropped (AI never duplicates or overwrites
-    /// existing metadata, CONTEXT.md): an existing Topic/Person name, or any mood already set.
+    /// Replaces the pending AI Topic/Mood Suggestions with a fresh set from a Cleanup run. Suggestions
+    /// that would duplicate metadata the Session already carries are dropped (AI never duplicates or
+    /// overwrites existing metadata, CONTEXT.md): an existing Topic name, or any mood already set. People
+    /// no longer flow through this shared machinery — they go through the people-proposal flow (RICH-009).
     /// </summary>
-    public void ReplaceAiSuggestions(
-        IEnumerable<string> topics, IEnumerable<string> people, Mood? mood)
+    public void ReplaceAiSuggestions(IEnumerable<string> topics, Mood? mood)
     {
         _suggestions.Clear();
 
         foreach (var name in Normalize(topics))
             if (!_topics.Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
                 AddSuggestion(SuggestionKind.Topic, name);
-
-        foreach (var name in Normalize(people))
-            if (!_people.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-                AddSuggestion(SuggestionKind.Person, name);
 
         // Only suggest a mood when none is set — never overwrite an existing (user or accepted) mood.
         if (mood is not null && MoodKey is null)
@@ -267,10 +266,6 @@ public sealed class Session : BaseEntity
             case SuggestionKind.Topic:
                 if (!_topics.Any(t => t.Name.Equals(suggestion.Value, StringComparison.OrdinalIgnoreCase)))
                     _topics.Add(new SessionTopic(suggestion.Value, MetadataProvenance.AiSuggested));
-                break;
-            case SuggestionKind.Person:
-                if (!_people.Any(p => p.Name.Equals(suggestion.Value, StringComparison.OrdinalIgnoreCase)))
-                    _people.Add(new SessionPerson(suggestion.Value, MetadataProvenance.AiSuggested));
                 break;
             case SuggestionKind.Mood:
                 // Never overwrite an existing mood (UserSet wins; CONTEXT.md).

@@ -18,7 +18,7 @@ public class FakeSessionBuilder
     private string? _rawText;
     private Location? _location;
     private readonly List<string> _userTopics = [];
-    private readonly List<string> _userPeople = [];
+    private readonly List<Guid> _userPeople = [];
     private Mood? _mood;
     private bool _cleaned;
     private string? _cleanedText;
@@ -43,7 +43,8 @@ public class FakeSessionBuilder
 
     public FakeSessionBuilder WithUserTopics(params string[] names) { _userTopics.AddRange(names); return this; }
 
-    public FakeSessionBuilder WithUserPeople(params string[] names) { _userPeople.AddRange(names); return this; }
+    /// <summary>References directory People by id (People are directory references now, PRD-0006).</summary>
+    public FakeSessionBuilder WithUserPeople(params Guid[] personIds) { _userPeople.AddRange(personIds); return this; }
 
     public FakeSessionBuilder WithMood(Mood mood) { _mood = mood; return this; }
 

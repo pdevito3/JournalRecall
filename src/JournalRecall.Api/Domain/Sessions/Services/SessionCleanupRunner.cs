@@ -79,7 +79,22 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
 
         // Same scoped DbContext → the tracked, just-updated instance from the EF identity map.
         var session = await db.Sessions.FirstAsync(s => s.Id == sessionId, cancellationToken);
-        return SessionDto.From(session);
+        var peopleLabels = await ResolvePeopleLabelsAsync(session, cancellationToken);
+        return SessionDto.From(session, peopleLabels);
+    }
+
+    /// <summary>Resolves a Session's People references to their directory labels (per-user), sorted for display.</summary>
+    private async Task<IReadOnlyList<string>> ResolvePeopleLabelsAsync(Session session, CancellationToken cancellationToken)
+    {
+        var personIds = session.People.Select(p => p.PersonId).ToList();
+        if (personIds.Count == 0)
+            return [];
+
+        return await db.People
+            .Where(p => personIds.Contains(p.Id))
+            .OrderBy(p => p.Label)
+            .Select(p => p.Label)
+            .ToListAsync(cancellationToken);
     }
 
     private static void Apply(Session session, AgentOutcome outcome, IReadOnlyList<Correction> corrections)
@@ -91,8 +106,9 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
             // JSON so the Cleaned editor renders with formatting (ADR-0009).
             var cleanedMarkdown = CorrectionApplier.ApplyHardReplacements(parsed.CleanedMarkdown, corrections);
             session.CompleteCleanup(MarkdownToProseMirror.ConvertToJson(cleanedMarkdown), parsed.Synopsis);
-            // The same run proposes metadata Suggestions (issue 0012) — pending until accepted/rejected.
-            session.ReplaceAiSuggestions(parsed.TopicSuggestions, parsed.PeopleProposal, parsed.MoodSuggestions.FirstOrDefault());
+            // The same run proposes Topic/Mood Suggestions (issue 0012) — pending until accepted/rejected.
+            // PeopleProposal is carried by the contract but consumed by the people-proposal flow (RICH-009).
+            session.ReplaceAiSuggestions(parsed.TopicSuggestions, parsed.MoodSuggestions.FirstOrDefault());
         }
         else
         {

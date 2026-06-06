@@ -32,7 +32,7 @@ public class metadata_tests : TestBase
 
         var session = await scope.SendAsync(new GetSession.Query(id));
         session!.Topics.ShouldBe(["work", "parenthood"]);
-        session.People.ShouldBe(["Sam", "Alex"]);
+        session.People.ShouldBe(["Sam", "Alex"], ignoreOrder: true); // labels resolved from the directory
         session.Mood!.Key.ShouldBe("Custom");
         session.Mood.CustomValue.ShouldBe("bittersweet"); // Custom round-trips its free text
 
@@ -45,7 +45,7 @@ public class metadata_tests : TestBase
     }
 
     [Fact]
-    public async Task manually_set_metadata_is_stored_with_provenance_userset()
+    public async Task manually_set_topics_are_userset_and_people_reference_the_directory()
     {
         using var scope = new TestingServiceScope();
         var id = await NewSession(scope);
@@ -56,11 +56,17 @@ public class metadata_tests : TestBase
             .FirstAsync(s => s.Id == id));
 
         session.Topics.ShouldAllBe(t => t.Provenance == MetadataProvenance.UserSet);
-        session.People.ShouldAllBe(p => p.Provenance == MetadataProvenance.UserSet);
+
+        // People are directory references now (no name string, no provenance): the SessionPerson points
+        // at a Person the manual edit find-or-created in the User's directory.
+        var personId = session.People.ShouldHaveSingleItem().PersonId;
+        var person = await scope.ExecuteDbContextAsync(db => db.People
+            .IgnoreQueryFilters().FirstAsync(p => p.Id == personId));
+        person.Label.ShouldBe("Sam");
     }
 
     [Fact]
-    public async Task the_timeline_can_be_filtered_by_topic_person_and_mood()
+    public async Task the_timeline_can_be_filtered_by_topic_and_mood()
     {
         using var scope = new TestingServiceScope();
         var work = await NewSession(scope);
@@ -68,10 +74,13 @@ public class metadata_tests : TestBase
         await SetMetadata(scope, work, ["work"], ["Sam"], new MoodDto("Joyful", null));
         await SetMetadata(scope, travel, ["travel"], ["Alex"], new MoodDto("Tired", null));
 
+        // No `people` name filter: People are directory references now; a PersonId filter is a future slice.
         (await scope.SendAsync(new GetSessionList.Query("topics == \"work\""))).Select(s => s.Id).ShouldBe([work]);
-        (await scope.SendAsync(new GetSessionList.Query("people == \"Alex\""))).Select(s => s.Id).ShouldBe([travel]);
         (await scope.SendAsync(new GetSessionList.Query("mood == \"Joyful\""))).Select(s => s.Id).ShouldBe([work]);
         (await scope.SendAsync(new GetSessionList.Query(null))).Count.ShouldBe(2);
+
+        // The People labels still surface on the timeline rows for display.
+        (await scope.SendAsync(new GetSessionList.Query(null))).Single(s => s.Id == work).People.ShouldBe(["Sam"]);
     }
 
     [Fact]

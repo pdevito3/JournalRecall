@@ -11,17 +11,18 @@ import * as sessionsApi from './api'
  */
 export const timelineSearchSchema = z.object({
   topic: z.string().catch('').default(''),
-  person: z.string().catch('').default(''),
   mood: z.enum(KNOWN_MOODS).or(z.literal('')).catch('').default(''),
 })
 
 export type TimelineSearch = z.infer<typeof timelineSearchSchema>
 
-/** Build a QueryKit filter string from the timeline filters (undefined when nothing is set). */
-export function buildSessionFilter({ topic, person, mood }: TimelineSearch): string | undefined {
+/**
+ * Build a QueryKit filter string from the timeline filters (undefined when nothing is set). There is no
+ * person filter: People are directory references now, so a PersonId-based filter is a future slice (PRD-0006).
+ */
+export function buildSessionFilter({ topic, mood }: TimelineSearch): string | undefined {
   const parts: string[] = []
   if (topic.trim()) parts.push(`topics == "${topic.trim()}"`)
-  if (person.trim()) parts.push(`people == "${person.trim()}"`)
   if (mood) parts.push(`mood == "${mood}"`)
   return parts.length > 0 ? parts.join(' && ') : undefined
 }

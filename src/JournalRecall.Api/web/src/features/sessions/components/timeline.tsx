@@ -35,14 +35,14 @@ const COMMON_ZONES = [
 
 export function Timeline({ settings, onUpdateSettings }: TimelineProps) {
   const [dayJump, setDayJump] = useState('') // YYYY-MM-DD, or '' for all
-  // Topic/Person/Mood live in the URL (FE-009) so a filtered view is shareable and survives refresh.
-  const { topic, person, mood } = route.useSearch()
+  // Topic/Mood live in the URL (FE-009) so a filtered view is shareable and survives refresh.
+  const { topic, mood } = route.useSearch()
   const navigate = route.useNavigate()
   const setFilters = (next: Partial<TimelineSearch>) =>
     navigate({ search: (prev) => ({ ...prev, ...next }) })
 
   // Build a QueryKit filter string from the metadata controls (server-side filtering).
-  const filter = useMemo(() => buildSessionFilter({ topic, person, mood }), [topic, person, mood])
+  const filter = useMemo(() => buildSessionFilter({ topic, mood }), [topic, mood])
 
   const { data: sessions } = useSessionList(filter)
   const hasFilter = Boolean(filter)
@@ -75,12 +75,6 @@ export function Timeline({ settings, onUpdateSettings }: TimelineProps) {
           placeholder="Filter by topic"
           className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
-        <input
-          value={person}
-          onChange={(e) => setFilters({ person: e.target.value })}
-          placeholder="Filter by person"
-          className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        />
         <select
           value={mood}
           onChange={(e) => setFilters({ mood: e.target.value as TimelineSearch['mood'] })}
@@ -97,7 +91,7 @@ export function Timeline({ settings, onUpdateSettings }: TimelineProps) {
           <button
             type="button"
             className="text-sm text-accent hover:underline"
-            onClick={() => setFilters({ topic: '', person: '', mood: '' })}
+            onClick={() => setFilters({ topic: '', mood: '' })}
           >
             clear filters
           </button>

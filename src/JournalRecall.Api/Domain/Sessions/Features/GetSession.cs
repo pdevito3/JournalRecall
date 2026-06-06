@@ -32,7 +32,7 @@ public static class GetSession
                         : s.CleanupStatus,
                     s.CleanedHasHandEdits,
                     Topics = s.Topics.Select(t => t.Name).ToList(),
-                    People = s.People.Select(p => p.Name).ToList(),
+                    PersonIds = s.People.Select(p => p.PersonId).ToList(),
                     s.MoodKey,
                     s.MoodCustomValue,
                     Suggestions = s.Suggestions
@@ -45,9 +45,16 @@ public static class GetSession
             if (row is null)
                 return null;
 
+            // People are directory references; resolve their display labels (per-user via the filter).
+            var people = await db.People
+                .Where(p => row.PersonIds.Contains(p.Id))
+                .OrderBy(p => p.Label)
+                .Select(p => p.Label)
+                .ToListAsync(cancellationToken);
+
             return new SessionDto(
                 row.Id, row.CreatedAt, row.RawDraft, row.CleanedDraft, row.Synopsis, row.Status,
-                row.CleanedHasHandEdits, row.Topics, row.People,
+                row.CleanedHasHandEdits, row.Topics, people,
                 row.MoodKey is null ? null : new MoodDto(row.MoodKey, row.MoodCustomValue),
                 row.Suggestions,
                 Location.TryCreate(row.Latitude, row.Longitude, out var location)

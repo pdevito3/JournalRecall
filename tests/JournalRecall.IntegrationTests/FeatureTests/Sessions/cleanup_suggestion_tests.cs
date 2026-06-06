@@ -8,10 +8,11 @@ using JournalRecall.SharedTestHelpers.Fakes.Sessions;
 namespace JournalRecall.IntegrationTests.FeatureTests.Sessions;
 
 /// <summary>
-/// AI metadata Suggestions (issue 0012) at the integration layer: a Cleanup run proposes Topic/Person/Mood
+/// AI metadata Suggestions (issue 0012) at the integration layer: a Cleanup run proposes Topic/Mood
 /// Suggestions distinct from accepted metadata; accept promotes them (provenance AiSuggested) and reject
-/// discards them; UserSet metadata is never overwritten or duplicated; suggestions are per-User. Driven
-/// through the runner + scripted client and RespondToSuggestion, no HTTP.
+/// discards them; UserSet metadata is never overwritten or duplicated; suggestions are per-User. People no
+/// longer flow through this shared machinery (people-proposal flow, RICH-009). Driven through the runner +
+/// scripted client and RespondToSuggestion, no HTTP.
 /// </summary>
 public class cleanup_suggestion_tests : TestBase
 {
@@ -28,7 +29,7 @@ public class cleanup_suggestion_tests : TestBase
     {
         using var scope = new TestingServiceScope();
         CleanupChat.SuggestTopics = ["work"];
-        CleanupChat.SuggestPeople = ["Sam"];
+        CleanupChat.SuggestPeople = ["Sam"]; // carried in peopleProposal, but not as a shared Suggestion
         CleanupChat.SuggestMood = "Joyful";
         var id = await CleanedSessionWithRaw(scope, "had a great day at work with Sam");
 
@@ -36,9 +37,10 @@ public class cleanup_suggestion_tests : TestBase
         session!.Topics.ShouldBeEmpty();   // nothing accepted yet
         session.People.ShouldBeEmpty();
         session.Mood.ShouldBeNull();
+        // Only Topic + Mood flow through MetadataSuggestion now — never Person.
         session.Suggestions.Select(s => (s.Kind, s.Value)).ShouldBe(
-            [(SuggestionKind.Topic, "work"), (SuggestionKind.Person, "Sam"), (SuggestionKind.Mood, "Joyful")],
-            ignoreOrder: true);
+            [(SuggestionKind.Topic, "work"), (SuggestionKind.Mood, "Joyful")], ignoreOrder: true);
+        session.Suggestions.ShouldNotContain(s => s.Kind == SuggestionKind.Person);
     }
 
     [Fact]
@@ -64,14 +66,14 @@ public class cleanup_suggestion_tests : TestBase
     public async Task rejecting_a_suggestion_removes_it_without_promoting()
     {
         using var scope = new TestingServiceScope();
-        CleanupChat.SuggestPeople = ["Sam"];
-        var id = await CleanedSessionWithRaw(scope, "saw Sam");
+        CleanupChat.SuggestMood = "Calm";
+        var id = await CleanedSessionWithRaw(scope, "a quiet evening");
 
-        (await scope.SendAsync(new RespondToSuggestion.Command(id, SuggestionKind.Person, "Sam", Accept: false)))
+        (await scope.SendAsync(new RespondToSuggestion.Command(id, SuggestionKind.Mood, "Calm", Accept: false)))
             .ShouldBeTrue();
 
         var session = await scope.SendAsync(new GetSession.Query(id));
-        session!.People.ShouldBeEmpty();
+        session!.Mood.ShouldBeNull();
         session.Suggestions.ShouldBeEmpty();
     }
 

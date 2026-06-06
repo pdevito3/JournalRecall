@@ -32,7 +32,8 @@ public static class CreateSession
             db.Sessions.Add(session);
             await db.SaveChangesAsync(cancellationToken);
 
-            return SessionDto.From(session);
+            // A fresh Session references no People yet.
+            return SessionDto.From(session, []);
         }
     }
 }

@@ -38,6 +38,13 @@ public static class ApiRoutes
         public const string Root = Base + "/setup";
     }
 
+    public static class People
+    {
+        public const string Root = Base + "/people";
+        public static string Create() => Root;
+        public static string Rename(Guid id) => $"{Root}/{id}";
+    }
+
     public static class Sessions
     {
         public const string Root = Base + "/sessions";

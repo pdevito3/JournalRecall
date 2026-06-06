@@ -34,7 +34,7 @@ public static class GetSessionList
                     s.CreatedAt,
                     s.RawPlainText,
                     Topics = s.Topics.Select(t => t.Name).ToList(),
-                    People = s.People.Select(p => p.Name).ToList(),
+                    PersonIds = s.People.Select(p => p.PersonId).ToList(),
                     s.MoodKey,
                     s.MoodCustomValue,
                 })
@@ -42,13 +42,19 @@ public static class GetSessionList
 
             var timeZoneId = await CurrentUserTimeZone(cancellationToken);
 
+            // People are directory references; resolve labels in one query (per-user via the filter).
+            var allPersonIds = rows.SelectMany(s => s.PersonIds).Distinct().ToList();
+            var labels = await db.People
+                .Where(p => allPersonIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.Label, cancellationToken);
+
             return rows.Select(s => new SessionListItemDto(
                 s.Id,
                 s.CreatedAt,
                 JournalingDay.For(s.CreatedAt, timeZoneId),
                 Preview(s.RawPlainText),
                 s.Topics,
-                s.People,
+                s.PersonIds.Where(labels.ContainsKey).Select(id => labels[id]).OrderBy(l => l).ToList(),
                 s.MoodKey is null ? null : new MoodDto(s.MoodKey, s.MoodCustomValue))).ToList();
         }
 

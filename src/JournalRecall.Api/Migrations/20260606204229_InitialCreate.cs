@@ -109,6 +109,23 @@ namespace JournalRecall.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "people",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Label = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<long>(type: "INTEGER", nullable: false),
+                    CreatedBy = table.Column<Guid>(type: "TEXT", nullable: true),
+                    UpdatedAt = table.Column<long>(type: "INTEGER", nullable: false),
+                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_people", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "refresh_tokens",
                 columns: table => new
                 {
@@ -333,8 +350,7 @@ namespace JournalRecall.Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
-                    Provenance = table.Column<int>(type: "INTEGER", nullable: false),
+                    PersonId = table.Column<Guid>(type: "TEXT", nullable: false),
                     SessionId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -434,6 +450,11 @@ namespace JournalRecall.Api.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_people_UserId_Label",
+                table: "people",
+                columns: new[] { "UserId", "Label" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_refresh_tokens_ChainId",
                 table: "refresh_tokens",
                 column: "ChainId");
@@ -461,9 +482,15 @@ namespace JournalRecall.Api.Migrations
                 column: "SessionId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_session_people_SessionId",
+                name: "IX_session_people_PersonId",
                 table: "session_people",
-                column: "SessionId");
+                column: "PersonId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_session_people_SessionId_PersonId",
+                table: "session_people",
+                columns: new[] { "SessionId", "PersonId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_session_raw_revisions_SessionId_RevisionNumber",
@@ -514,6 +541,9 @@ namespace JournalRecall.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "corrections");
+
+            migrationBuilder.DropTable(
+                name: "people");
 
             migrationBuilder.DropTable(
                 name: "refresh_tokens");

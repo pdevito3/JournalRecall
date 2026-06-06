@@ -2,22 +2,20 @@ import { describe, expect, expectTypeOf, it } from 'vitest'
 import { buildSessionFilter, timelineSearchSchema, type TimelineSearch } from './useSessions'
 
 describe('timelineSearchSchema', () => {
-  it('parses valid topic/person/mood', () => {
-    expect(timelineSearchSchema.parse({ topic: 'work', person: 'alex', mood: 'Calm' })).toEqual({
+  it('parses valid topic/mood', () => {
+    expect(timelineSearchSchema.parse({ topic: 'work', mood: 'Calm' })).toEqual({
       topic: 'work',
-      person: 'alex',
       mood: 'Calm',
     })
   })
 
   it('falls back to defaults when params are missing', () => {
-    expect(timelineSearchSchema.parse({})).toEqual({ topic: '', person: '', mood: '' })
+    expect(timelineSearchSchema.parse({})).toEqual({ topic: '', mood: '' })
   })
 
   it('falls back to defaults when params are the wrong type', () => {
-    expect(timelineSearchSchema.parse({ topic: 123, person: null, mood: ['nope'] })).toEqual({
+    expect(timelineSearchSchema.parse({ topic: 123, mood: ['nope'] })).toEqual({
       topic: '',
-      person: '',
       mood: '',
     })
   })
@@ -30,7 +28,6 @@ describe('timelineSearchSchema', () => {
   it('infers a type matching the schema shape', () => {
     expectTypeOf<TimelineSearch>().toEqualTypeOf<{
       topic: string
-      person: string
       mood:
         | ''
         | 'Joyful'
@@ -49,16 +46,14 @@ describe('timelineSearchSchema', () => {
 
 describe('buildSessionFilter', () => {
   it('returns undefined when no filters are set', () => {
-    expect(buildSessionFilter({ topic: '', person: '', mood: '' })).toBeUndefined()
+    expect(buildSessionFilter({ topic: '', mood: '' })).toBeUndefined()
   })
 
-  it('ignores whitespace-only topic/person', () => {
-    expect(buildSessionFilter({ topic: '   ', person: ' ', mood: '' })).toBeUndefined()
+  it('ignores a whitespace-only topic', () => {
+    expect(buildSessionFilter({ topic: '   ', mood: '' })).toBeUndefined()
   })
 
   it('combines set filters with &&', () => {
-    expect(buildSessionFilter({ topic: 'work', person: 'alex', mood: 'Calm' })).toBe(
-      'topics == "work" && people == "alex" && mood == "Calm"',
-    )
+    expect(buildSessionFilter({ topic: 'work', mood: 'Calm' })).toBe('topics == "work" && mood == "Calm"')
   })
 })

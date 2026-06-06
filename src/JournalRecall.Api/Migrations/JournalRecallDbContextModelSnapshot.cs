@@ -238,6 +238,38 @@ namespace JournalRecall.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("JournalRecall.Api.Domain.People.Person", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Label");
+
+                    b.ToTable("people", (string)null);
+                });
+
             modelBuilder.Entity("JournalRecall.Api.Domain.Sessions.Session", b =>
                 {
                     b.Property<Guid>("Id")
@@ -548,19 +580,18 @@ namespace JournalRecall.Api.Migrations
                                 .ValueGeneratedOnAdd()
                                 .HasColumnType("INTEGER");
 
-                            b1.Property<string>("Name")
-                                .IsRequired()
+                            b1.Property<Guid>("PersonId")
                                 .HasColumnType("TEXT");
-
-                            b1.Property<int>("Provenance")
-                                .HasColumnType("INTEGER");
 
                             b1.Property<Guid>("SessionId")
                                 .HasColumnType("TEXT");
 
                             b1.HasKey("Id");
 
-                            b1.HasIndex("SessionId");
+                            b1.HasIndex("PersonId");
+
+                            b1.HasIndex("SessionId", "PersonId")
+                                .IsUnique();
 
                             b1.ToTable("session_people", (string)null);
 

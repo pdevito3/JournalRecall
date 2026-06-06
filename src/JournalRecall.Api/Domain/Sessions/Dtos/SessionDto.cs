@@ -19,12 +19,15 @@ public sealed record SessionDto(
     IReadOnlyList<SuggestionDto> Suggestions,
     LocationDto? Location)
 {
-    /// <summary>Projects a loaded Session, surfacing its effective status, metadata, and AI Suggestions.</summary>
-    public static SessionDto From(Session session) => new(
+    /// <summary>
+    /// Projects a loaded Session, surfacing its effective status, metadata, and AI Suggestions. People are
+    /// directory references; the caller resolves their display labels (<paramref name="peopleLabels"/>).
+    /// </summary>
+    public static SessionDto From(Session session, IReadOnlyList<string> peopleLabels) => new(
         session.Id, session.CreatedAt, session.RawDraft, session.CleanedDraft, session.Synopsis,
         session.EffectiveCleanupStatus, session.CleanedHasHandEdits,
         session.Topics.Select(t => t.Name).ToList(),
-        session.People.Select(p => p.Name).ToList(),
+        peopleLabels,
         session.Mood is { } mood ? new MoodDto(mood.Key, mood.CustomValue) : null,
         session.Suggestions.Select(s => new SuggestionDto(s.Kind, s.Value, s.MoodCustomValue)).ToList(),
         session.Location is { } location ? new LocationDto(location.Latitude, location.Longitude) : null);

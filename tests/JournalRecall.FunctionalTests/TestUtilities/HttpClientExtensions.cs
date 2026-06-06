@@ -20,6 +20,9 @@ public static class HttpClientExtensions
     public static Task<HttpResponseMessage> PutJsonAsync(this HttpClient client, string url, object value) =>
         client.PutAsJsonAsync(url, value, Web);
 
+    public static Task<HttpResponseMessage> PatchJsonAsync(this HttpClient client, string url, object value) =>
+        client.PatchAsJsonAsync(url, value, Web);
+
     public static async Task<T?> ReadJsonAsync<T>(this HttpResponseMessage response) =>
         await response.Content.ReadFromJsonAsync<T>(Web);
 

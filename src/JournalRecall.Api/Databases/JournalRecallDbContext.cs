@@ -5,7 +5,9 @@ using JournalRecall.Api.Domain;
 using JournalRecall.Api.Domain.Admin;
 using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Identity;
+using JournalRecall.Api.Domain.People;
 using JournalRecall.Api.Domain.Sessions;
+using JournalRecall.Api.Domain.Sessions.Metadata;
 using JournalRecall.Api.Domain.Summaries;
 using JournalRecall.Api.Services;
 
@@ -38,6 +40,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
     }
 
     public DbSet<Session> Sessions => Set<Session>();
+    public DbSet<Person> People => Set<Person>();
     public DbSet<Correction> Corrections => Set<Correction>();
     public DbSet<Summary> Summaries => Set<Summary>();
     public DbSet<AiProviderSettings> AiProviderSettings => Set<AiProviderSettings>();
@@ -112,6 +115,9 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
                 person.WithOwner().HasForeignKey("SessionId");
                 person.Property<int>("Id");
                 person.HasKey("Id");
+                // One reference per (Session, Person); reverse index for a future Person filter (PRD-0006).
+                person.HasIndex("SessionId", nameof(SessionPerson.PersonId)).IsUnique();
+                person.HasIndex(nameof(SessionPerson.PersonId));
             });
 
             // Pending AI metadata Suggestions (issue 0012): an owned collection on the Session, with a
@@ -163,6 +169,17 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             refreshToken.HasIndex(t => t.ChainId);
             // Deliberately NO tenant query filter: refresh runs after the access token has expired, with
             // no current user established, so a filter would hide the very row being rotated (ADR-0005).
+        });
+
+        modelBuilder.Entity<Person>(person =>
+        {
+            person.ToTable("people");
+            person.HasKey(p => p.Id);
+            person.Ignore(p => p.DomainEvents);
+            // Directory lookup + autocomplete is by (user, label); also the find-or-create dedup key.
+            person.HasIndex(p => new { p.UserId, p.Label });
+            // Privacy invariant: scope every Person query to the current user (ADR-0002, CONTEXT.md).
+            person.HasQueryFilter(TenantFilter, p => p.UserId == _currentUserId);
         });
 
         modelBuilder.Entity<Correction>(correction =>
