@@ -1,0 +1,50 @@
+# FE-019 — CI for the Vite SPA. Runs on changes to the web project and enforces
+# the import-boundary lint rule (plus typecheck + tests as natural companions).
+name: web
+
+on:
+  push:
+    paths:
+      - 'src/JournalRecall.Api/web/**'
+      - '.github/workflows/web.yml'
+  pull_request:
+    paths:
+      - 'src/JournalRecall.Api/web/**'
+      - '.github/workflows/web.yml'
+
+defaults:
+  run:
+    # All steps run inside the web project.
+    working-directory: src/JournalRecall.Api/web
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          # Matches the Dockerfile's node:22 build stage.
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: src/JournalRecall.Api/web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Required step: the FE-019 import-boundary rule (error level).
+      - name: Lint (import boundaries)
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
