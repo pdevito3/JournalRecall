@@ -30,6 +30,9 @@ are **AFK** (no human review gate). Work them in dependency order.
 | [0022](0022-access-gate-public-auth-config.md) | Access gate (server + client) & public auth config | 9 | 0021 | ready |
 | [0023](0023-operator-controlled-registration.md) | Operator-controlled registration | 9 | 0022 | ready |
 | [0024](0024-temp-passwords-forced-change.md) | Temporary passwords & forced password change | 9 | 0019, 0016 | ready |
+| [0025](0025-fix-setup-stale-config-redirect.md) | Fix `/setup` stale-config redirect after root-Admin creation | 9 | — | ready |
+| [0026](0026-valueobject-base-username-value-object.md) | `ValueObject` base class + `Username` value object | 9 | — | ready |
+| [0027](0027-username-replaces-email-identity.md) | Replace email with username as the sole identity | 9 | 0026 | ready |
 | [TEST-0001](TEST-0001-test-suite-scaffold-four-projects-adr.md) | Test-suite scaffold: four projects, packages, conventions, ADR-0006 | 10 | — | ready |
 | [TEST-0002](TEST-0002-sharedtesthelpers-builders-fakers-unit-proof.md) | SharedTestHelpers builders/fakers + unit-layer proof | 10 | TEST-0001 | ready |
 | [TEST-0003](TEST-0003-integration-harness-reference-tests.md) | Integration harness + reference tests | 10 | TEST-0002 | ready |
@@ -64,7 +67,9 @@ no AI. **0007** (library port) can run in parallel after 0001. AI features (0008
 (0013–0014), and the geo/admin/observability/deploy slices follow.
 
 **Phase 9** (auth onboarding & durable sessions, realizing PRD-0001 / ADR-0005): **0019 → 0020 →
-0021 → 0022 → 0023**, with **0024** able to run in parallel after **0019**.
+0021 → 0022 → 0023**, with **0024** able to run in parallel after **0019**. Follow-ups: **0025** (setup
+redirect fix) is independent and can start immediately; the username-identity switch is **0026**
+(`ValueObject` + `Username`) → **0027** (replace email with username end-to-end).
 
 **Phase 10** (three-layer test suite + builders/fakers, realizing PRD-0003 / ADR-0006): scaffold
 first — **TEST-0001 → TEST-0002**, then the two harnesses **TEST-0003** and **TEST-0004** in parallel, with **TEST-0005**
