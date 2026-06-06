@@ -1,10 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, getRouteApi } from '@tanstack/react-router'
-import { useSettings, useUpdateSettings } from '@/features/settings/useSettings'
 import { buildSessionFilter, useSessionList, type TimelineSearch } from '@/features/sessions/useSessions'
 import { KNOWN_MOODS, type SessionListItem } from '@/features/sessions/api'
 
 const route = getRouteApi('/')
+
+/**
+ * Settings access is injected by the route (which owns the settings feature) so the Session
+ * vertical never reaches into the settings vertical directly (FE-017). `settings` is undefined
+ * while loading; the picker/toggle render nothing until it arrives. `onUpdateSettings` persists
+ * a full settings object, matching the settings PUT contract.
+ */
+export interface TimelineSettings {
+  timeZoneId: string | null
+  locationCaptureEnabled: boolean
+}
+
+export interface TimelineProps {
+  settings: TimelineSettings | undefined
+  onUpdateSettings: (settings: TimelineSettings) => void
+}
 
 const COMMON_ZONES = [
   'UTC',
@@ -18,7 +33,7 @@ const COMMON_ZONES = [
   'Australia/Sydney',
 ]
 
-export function Timeline() {
+export function Timeline({ settings, onUpdateSettings }: TimelineProps) {
   const [dayJump, setDayJump] = useState('') // YYYY-MM-DD, or '' for all
   // Topic/Person/Mood live in the URL (FE-009) so a filtered view is shareable and survives refresh.
   const { topic, person, mood } = route.useSearch()
@@ -35,8 +50,8 @@ export function Timeline() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-4">
-        <TimeZonePicker />
-        <LocationToggle />
+        <TimeZonePicker settings={settings} onUpdateSettings={onUpdateSettings} />
+        <LocationToggle settings={settings} onUpdateSettings={onUpdateSettings} />
         <label className="flex items-center gap-2 text-sm text-muted">
           Jump to day
           <input
@@ -137,9 +152,7 @@ function MetadataChips({ item }: { item: SessionListItem }) {
   )
 }
 
-function TimeZonePicker() {
-  const { data: settings } = useSettings()
-  const updateSettings = useUpdateSettings()
+function TimeZonePicker({ settings, onUpdateSettings }: TimelineProps) {
   // One-shot guard: the browser-default persist must fire at most once, never as a
   // surprise re-write on re-render/StrictMode remount.
   const seededDefault = useRef(false)
@@ -155,9 +168,9 @@ function TimeZonePicker() {
   useEffect(() => {
     if (settings && settings.timeZoneId === null && browser && !seededDefault.current) {
       seededDefault.current = true
-      updateSettings.mutate({ ...settings, timeZoneId: browser })
+      onUpdateSettings({ ...settings, timeZoneId: browser })
     }
-  }, [settings, browser, updateSettings])
+  }, [settings, browser, onUpdateSettings])
 
   if (!settings) return null
 
@@ -168,7 +181,7 @@ function TimeZonePicker() {
       Timezone
       <select
         value={current}
-        onChange={(e) => updateSettings.mutate({ ...settings, timeZoneId: e.target.value })}
+        onChange={(e) => onUpdateSettings({ ...settings, timeZoneId: e.target.value })}
         className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         {zones.map((zone) => (
@@ -182,10 +195,7 @@ function TimeZonePicker() {
 }
 
 /** Per-user geo opt-in: when on, starting a session asks the browser for a single point (issue 0015). */
-function LocationToggle() {
-  const { data: settings } = useSettings()
-  const updateSettings = useUpdateSettings()
-
+function LocationToggle({ settings, onUpdateSettings }: TimelineProps) {
   if (!settings) return null
 
   return (
@@ -193,7 +203,7 @@ function LocationToggle() {
       <input
         type="checkbox"
         checked={settings.locationCaptureEnabled}
-        onChange={(e) => updateSettings.mutate({ ...settings, locationCaptureEnabled: e.target.checked })}
+        onChange={(e) => onUpdateSettings({ ...settings, locationCaptureEnabled: e.target.checked })}
         className="rounded border-border accent-accent"
       />
       Capture location on new sessions

@@ -7,7 +7,7 @@ import {
   useCreateSession,
 } from '@/features/sessions/useSessions'
 import { captureLocation } from '@/features/sessions/api'
-import { useSettings } from '@/features/settings/useSettings'
+import { useSettings, useUpdateSettings } from '@/features/settings/useSettings'
 import { Timeline } from '@/features/sessions/components/timeline'
 import { Button } from '@/shared/ui/button'
 
@@ -26,6 +26,7 @@ export const Route = createFileRoute('/')({
 function Home() {
   const { data: user } = useMe()
   const { data: settings } = useSettings()
+  const updateSettings = useUpdateSettings()
   const navigate = useNavigate()
   const createSession = useCreateSession()
 
@@ -65,7 +66,9 @@ function Home() {
         <p className="text-sm text-red-400">{createSession.error.message}</p>
       ) : null}
 
-      {user ? <Timeline /> : null}
+      {user ? (
+        <Timeline settings={settings} onUpdateSettings={(next) => updateSettings.mutate(next)} />
+      ) : null}
     </section>
   )
 }
