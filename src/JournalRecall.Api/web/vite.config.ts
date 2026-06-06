@@ -13,7 +13,10 @@ export default defineConfig({
     // Aspire injects PORT for the orchestrated dev server; fall back to 4247 standalone.
     port: Number(process.env.PORT) || 4247,
     proxy: {
-      '/api': { target: 'http://localhost:5247', changeOrigin: true },
+      // Follow Aspire's injected service-discovery endpoint so the proxy matches whatever
+      // port the API was allocated (e.g. under `aspire run --isolated`); fall back to the
+      // fixed default for standalone runs.
+      '/api': { target: process.env['services__api__http__0'] || 'http://localhost:5247', changeOrigin: true },
     },
   },
   build: {
