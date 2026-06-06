@@ -1,8 +1,20 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as adminApi from './api'
 
+export function adminUsersQueryOptions() {
+  return queryOptions({ queryKey: ['admin', 'users'], queryFn: adminApi.getUsers })
+}
+
+export function registrationSettingsQueryOptions() {
+  return queryOptions({ queryKey: ['admin', 'registration'], queryFn: adminApi.getRegistration })
+}
+
+export function aiProviderQueryOptions() {
+  return queryOptions({ queryKey: ['admin', 'ai-provider'], queryFn: adminApi.getAiProvider })
+}
+
 export function useAdminUsers() {
-  return useQuery({ queryKey: ['admin', 'users'], queryFn: adminApi.getUsers })
+  return useQuery(adminUsersQueryOptions())
 }
 
 function useUsersMutation<TArgs>(fn: (args: TArgs) => Promise<void>) {
@@ -34,7 +46,7 @@ export function useSetUserDisabled() {
 }
 
 export function useRegistrationSettings() {
-  return useQuery({ queryKey: ['admin', 'registration'], queryFn: adminApi.getRegistration })
+  return useQuery(registrationSettingsQueryOptions())
 }
 
 export function useUpdateRegistration() {
@@ -50,7 +62,7 @@ export function useUpdateRegistration() {
 }
 
 export function useAiProvider() {
-  return useQuery({ queryKey: ['admin', 'ai-provider'], queryFn: adminApi.getAiProvider })
+  return useQuery(aiProviderQueryOptions())
 }
 
 export function useUpdateAiProvider() {

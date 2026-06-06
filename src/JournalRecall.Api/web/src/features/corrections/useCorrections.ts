@@ -1,10 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as correctionsApi from './api'
 
 const key = ['corrections']
 
+export function correctionsQueryOptions() {
+  return queryOptions({ queryKey: key, queryFn: correctionsApi.getCorrections })
+}
+
 export function useCorrections() {
-  return useQuery({ queryKey: key, queryFn: correctionsApi.getCorrections })
+  return useQuery(correctionsQueryOptions())
 }
 
 export function useCreateCorrection() {

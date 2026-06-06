@@ -1,12 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { SummaryPeriod } from './api'
 import * as summariesApi from './api'
 
-export function useSummary(period: SummaryPeriod, date: string) {
-  return useQuery({
+export function summaryQueryOptions(period: SummaryPeriod, date: string) {
+  return queryOptions({
     queryKey: ['summary', period, date],
     queryFn: () => summariesApi.getSummary(period, date),
   })
+}
+
+export function useSummary(period: SummaryPeriod, date: string) {
+  return useQuery(summaryQueryOptions(period, date))
 }
 
 export function useGenerateSummary(period: SummaryPeriod, date: string) {

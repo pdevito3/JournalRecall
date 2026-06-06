@@ -1,6 +1,50 @@
 import { useCallback, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as sessionsApi from './api'
+
+export function sessionListQueryOptions(filter?: string) {
+  return queryOptions({
+    queryKey: ['sessions', filter ?? null],
+    queryFn: () => sessionsApi.getSessionList(filter),
+  })
+}
+
+export function sessionQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ['session', id],
+    queryFn: () => sessionsApi.getSession(id),
+  })
+}
+
+export function revisionsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ['session', id, 'revisions'],
+    queryFn: () => sessionsApi.getRevisions(id),
+  })
+}
+
+export function revisionQueryOptions(id: string, revisionNumber: number | null) {
+  return queryOptions({
+    queryKey: ['session', id, 'revisions', revisionNumber],
+    queryFn: () => sessionsApi.getRevision(id, revisionNumber!),
+    enabled: revisionNumber != null,
+  })
+}
+
+export function cleanedRevisionsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ['session', id, 'cleaned-revisions'],
+    queryFn: () => sessionsApi.getCleanedRevisions(id),
+  })
+}
+
+export function cleanedRevisionQueryOptions(id: string, revisionNumber: number | null) {
+  return queryOptions({
+    queryKey: ['session', id, 'cleaned-revisions', revisionNumber],
+    queryFn: () => sessionsApi.getCleanedRevision(id, revisionNumber!),
+    enabled: revisionNumber != null,
+  })
+}
 
 export function useCreateSession() {
   return useMutation({
@@ -9,17 +53,11 @@ export function useCreateSession() {
 }
 
 export function useSessionList(filter?: string) {
-  return useQuery({
-    queryKey: ['sessions', filter ?? null],
-    queryFn: () => sessionsApi.getSessionList(filter),
-  })
+  return useQuery(sessionListQueryOptions(filter))
 }
 
 export function useSession(id: string) {
-  return useQuery({
-    queryKey: ['session', id],
-    queryFn: () => sessionsApi.getSession(id),
-  })
+  return useQuery(sessionQueryOptions(id))
 }
 
 export function useSaveDraft(id: string) {
@@ -32,18 +70,11 @@ export function useSaveDraft(id: string) {
 }
 
 export function useRevisions(id: string) {
-  return useQuery({
-    queryKey: ['session', id, 'revisions'],
-    queryFn: () => sessionsApi.getRevisions(id),
-  })
+  return useQuery(revisionsQueryOptions(id))
 }
 
 export function useRevision(id: string, revisionNumber: number | null) {
-  return useQuery({
-    queryKey: ['session', id, 'revisions', revisionNumber],
-    queryFn: () => sessionsApi.getRevision(id, revisionNumber!),
-    enabled: revisionNumber != null,
-  })
+  return useQuery(revisionQueryOptions(id, revisionNumber))
 }
 
 export function useSaveMetadata(id: string) {
@@ -79,18 +110,11 @@ export function useSaveCleaned(id: string) {
 }
 
 export function useCleanedRevisions(id: string) {
-  return useQuery({
-    queryKey: ['session', id, 'cleaned-revisions'],
-    queryFn: () => sessionsApi.getCleanedRevisions(id),
-  })
+  return useQuery(cleanedRevisionsQueryOptions(id))
 }
 
 export function useCleanedRevision(id: string, revisionNumber: number | null) {
-  return useQuery({
-    queryKey: ['session', id, 'cleaned-revisions', revisionNumber],
-    queryFn: () => sessionsApi.getCleanedRevision(id, revisionNumber!),
-    enabled: revisionNumber != null,
-  })
+  return useQuery(cleanedRevisionQueryOptions(id, revisionNumber))
 }
 
 /**
