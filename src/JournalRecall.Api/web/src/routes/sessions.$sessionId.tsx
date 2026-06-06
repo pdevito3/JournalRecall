@@ -31,27 +31,25 @@ export const Route = createFileRoute('/sessions/$sessionId')({
     void queryClient.prefetchQuery(revisionsQueryOptions(sessionId))
     void queryClient.prefetchQuery(cleanedRevisionsQueryOptions(sessionId))
   },
-  component: SessionEditor,
+  component: SessionEditorRoute,
 })
 
-function SessionEditor() {
+// Remount the editor per Session: the Router reuses this component across param changes, so a `key`
+// on Session identity guarantees a fresh editor (and lets local state seed directly from the server).
+function SessionEditorRoute() {
   const { sessionId } = Route.useParams()
+  return <SessionEditor key={sessionId} sessionId={sessionId} />
+}
+
+function SessionEditor({ sessionId }: { sessionId: string }) {
   const { data: session } = useSession(sessionId)
   const saveDraft = useSaveDraft(sessionId)
 
-  const [text, setText] = useState('')
-  const [hydrated, setHydrated] = useState(false)
+  // Fresh per Session (keyed remount), so seed Raw Draft directly from server data — no hydration latch.
+  const [text, setText] = useState(session.rawDraft)
   const [viewingRaw, setViewingRaw] = useState<number | null>(null)
   const [viewingCleaned, setViewingCleaned] = useState<number | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-
-  // Hydrate once from the server, then local state owns the text (survives reloads).
-  useEffect(() => {
-    if (!hydrated) {
-      setText(session.rawDraft)
-      setHydrated(true)
-    }
-  }, [session, hydrated])
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
