@@ -36,7 +36,7 @@ public class cleanup_suggestion_tests : TestBase
         var session = await scope.SendAsync(new GetSession.Query(id));
         session!.Topics.ShouldBeEmpty();   // nothing accepted yet
         session.People.ShouldBeEmpty();
-        session.Mood.ShouldBeNull();
+        session.Moods.ShouldBeEmpty();
         // Only Topic + Mood flow through MetadataSuggestion now — never Person.
         session.Suggestions.Select(s => (s.Kind, s.Value)).ShouldBe(
             [(SuggestionKind.Topic, "work"), (SuggestionKind.Mood, "Joyful")], ignoreOrder: true);
@@ -73,7 +73,7 @@ public class cleanup_suggestion_tests : TestBase
             .ShouldBeTrue();
 
         var session = await scope.SendAsync(new GetSession.Query(id));
-        session!.Mood.ShouldBeNull();
+        session!.Moods.ShouldBeEmpty();
         session.Suggestions.ShouldBeEmpty();
     }
 
@@ -86,19 +86,19 @@ public class cleanup_suggestion_tests : TestBase
         await scope.InsertAsync(session);
         // The user has already set a Topic and a Mood themselves.
         await scope.SendAsync(new UpdateMetadata.Command(session.Id,
-            new MetadataForWrite(["work"], [], new MoodDto("Sad", null))));
+            new MetadataForWrite(["work"], [], ["Sad"])));
 
-        // AI suggests the same topic + a new one, and a different mood.
+        // AI suggests the same topic + a new one, the same mood + a new one.
         CleanupChat.SuggestTopics = ["work", "travel"];
-        CleanupChat.SuggestMood = "Joyful";
+        CleanupChat.SuggestMoods = ["Sad", "Joyful"];
         await scope.GetService<SessionCleanupRunner>().RunAsync(session.Id);
 
         var view = await scope.SendAsync(new GetSession.Query(session.Id));
         // The already-set "work" is not re-suggested; only the new "travel" is.
         view!.Suggestions.Where(s => s.Kind == SuggestionKind.Topic).Select(s => s.Value).ShouldBe(["travel"]);
-        // The user's mood is untouched and no mood Suggestion is offered.
-        view.Mood!.Key.ShouldBe("Sad");
-        view.Suggestions.ShouldNotContain(s => s.Kind == SuggestionKind.Mood);
+        // The user's mood is untouched; "Sad" is not re-suggested, but a new "Joyful" is (guard dropped).
+        view.Moods.ShouldBe(["Sad"]);
+        view.Suggestions.Where(s => s.Kind == SuggestionKind.Mood).Select(s => s.Value).ShouldBe(["Joyful"]);
         // The user's Topic remains a single entry (no duplicate).
         view.Topics.ShouldBe(["work"]);
     }

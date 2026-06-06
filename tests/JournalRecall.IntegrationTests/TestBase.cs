@@ -23,6 +23,7 @@ public abstract class TestBase
         CleanupChat.SuggestTopics = [];
         CleanupChat.SuggestPeople = [];
         CleanupChat.SuggestMood = null;
+        CleanupChat.SuggestMoods = [];
         SummaryChat.Narrative = "A reflective recap of the period.";
         Clock.Set(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
     }

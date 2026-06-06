@@ -1,81 +1,65 @@
 using JournalRecall.Api.Domain.Sessions.Metadata;
-using JournalRecall.Api.Exceptions;
 
 namespace JournalRecall.UnitTests.Domain.Sessions;
 
 /// <summary>
-/// Unit tests for the <see cref="Mood"/> value object (its SmartEnum backing is a private detail): known
-/// moods carry no text, Custom requires free text, parsing is case-insensitive and total, and the
-/// known-mood keys exclude Custom.
+/// Unit tests for the <see cref="Mood"/> value object (its SmartEnum backing is a private detail):
+/// single-string resolution to known-vs-custom (PRD-0006), the canonical <see cref="Mood.Value"/> a Mood
+/// serializes to (never the "Custom" sentinel), case-insensitive/total parsing, and the known-mood keys.
 /// </summary>
 public class mood_tests
 {
     [Fact]
-    public void a_known_mood_has_its_name_as_the_key_and_no_custom_value()
+    public void resolving_a_known_name_yields_a_known_mood_valued_by_its_name()
     {
-        var mood = Mood.Of("Joyful");
+        var mood = Mood.Resolve("Joyful");
 
-        mood.Key.ShouldBe("Joyful");
         mood.IsCustom.ShouldBeFalse();
         mood.CustomValue.ShouldBeNull();
+        mood.Value.ShouldBe("Joyful");
         mood.Display.ShouldBe("Joyful");
     }
 
     [Fact]
-    public void a_custom_mood_carries_trimmed_free_text_and_displays_it()
+    public void resolving_an_unknown_string_yields_a_custom_mood_valued_by_its_text()
     {
-        var mood = Mood.Custom("  bittersweet  ");
+        var mood = Mood.Resolve("  bittersweet  ");
 
-        mood.Key.ShouldBe("Custom");
         mood.IsCustom.ShouldBeTrue();
         mood.CustomValue.ShouldBe("bittersweet");
-        mood.Display.ShouldBe("bittersweet");
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void a_custom_mood_without_text_is_rejected(string? text)
-    {
-        Should.Throw<ArgumentException>(() => Mood.Custom(text!));
-        Should.Throw<ValidationException>(() => Mood.Of("Custom", text));
-    }
-
-    [Fact]
-    public void a_known_mood_ignores_any_supplied_custom_text()
-    {
-        Mood.Of("Calm", "ignored").CustomValue.ShouldBeNull();
+        mood.Value.ShouldBe("bittersweet"); // never the "Custom" sentinel
     }
 
     [Theory]
     [InlineData("Joyful")]
     [InlineData("joyful")]
     [InlineData("  GRATEFUL ")]
-    public void parsing_a_known_key_is_case_insensitive_and_trims(string key)
+    public void resolving_a_known_name_is_case_insensitive_and_trims(string name)
     {
-        Mood.Of(key).IsCustom.ShouldBeFalse();
+        Mood.Resolve(name).IsCustom.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void resolving_blank_input_is_rejected(string? text)
+    {
+        Should.Throw<ArgumentException>(() => Mood.Resolve(text!));
     }
 
     [Fact]
-    public void parsing_an_unknown_key_throws()
+    public void tryresolve_is_total_over_bad_input()
     {
-        Should.Throw<InvalidSmartEnumPropertyName>(() => Mood.Of("euphoric"));
-    }
+        Mood.TryResolve("Joyful", out var known).ShouldBeTrue();
+        known.Value.ShouldBe("Joyful");
 
-    [Fact]
-    public void tryof_is_total_over_bad_input()
-    {
-        Mood.TryOf("Joyful", null, out var known).ShouldBeTrue();
-        known.Key.ShouldBe("Joyful");
+        Mood.TryResolve("wistful", out var custom).ShouldBeTrue();
+        custom.IsCustom.ShouldBeTrue();
+        custom.Value.ShouldBe("wistful");
 
-        Mood.TryOf("Custom", "wistful", out var custom).ShouldBeTrue();
-        custom.CustomValue.ShouldBe("wistful");
-
-        Mood.TryOf("Custom", null, out _).ShouldBeFalse();   // Custom needs text
-        Mood.TryOf("nonsense", null, out _).ShouldBeFalse(); // unknown key
-        Mood.TryOf(null, null, out _).ShouldBeFalse();       // no key
-        Mood.TryOf("  ", null, out _).ShouldBeFalse();       // blank key
+        Mood.TryResolve(null, out _).ShouldBeFalse();   // no value
+        Mood.TryResolve("  ", out _).ShouldBeFalse();   // blank value
     }
 
     [Fact]
@@ -89,7 +73,7 @@ public class mood_tests
     [Fact]
     public void moods_have_value_equality()
     {
-        Mood.Of("Joyful").ShouldBe(Mood.Of("Joyful"));
+        Mood.Resolve("Joyful").ShouldBe(Mood.Resolve("joyful")); // canonicalized to the same known mood
         Mood.Custom("a").ShouldNotBe(Mood.Custom("b"));
     }
 }

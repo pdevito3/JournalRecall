@@ -4,23 +4,19 @@
 
 export type CleanupStatus = 'NotRun' | 'Running' | 'Clean' | 'Stale' | 'Failed'
 
-export interface Mood {
-  key: string
-  customValue: string | null
-}
-
 export interface Metadata {
   topics: string[]
   people: string[]
-  mood: Mood | null
+  // Moods are plain strings: a known mood name or free-text custom mood (PRD-0006).
+  moods: string[]
 }
 
 export type SuggestionKind = 'Topic' | 'Person' | 'Mood'
 
 export interface Suggestion {
   kind: SuggestionKind
+  // For a Mood, the value is the known mood name or custom text; Topics carry their name.
   value: string
-  moodCustomValue: string | null
 }
 
 /** A captured geo-point (CONTEXT.md Location): coordinates only. */
@@ -39,7 +35,7 @@ export interface Session {
   cleanedHasHandEdits: boolean
   topics: string[]
   people: string[]
-  mood: Mood | null
+  moods: string[]
   suggestions: Suggestion[]
   location: GeoPoint | null
 }
@@ -51,7 +47,7 @@ export interface SessionListItem {
   preview: string
   topics: string[]
   people: string[]
-  mood: Mood | null
+  moods: string[]
 }
 
 export interface RevisionSummary {

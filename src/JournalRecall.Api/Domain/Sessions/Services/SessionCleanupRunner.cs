@@ -108,7 +108,7 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
             session.CompleteCleanup(MarkdownToProseMirror.ConvertToJson(cleanedMarkdown), parsed.Synopsis);
             // The same run proposes Topic/Mood Suggestions (issue 0012) — pending until accepted/rejected.
             // PeopleProposal is carried by the contract but consumed by the people-proposal flow (RICH-009).
-            session.ReplaceAiSuggestions(parsed.TopicSuggestions, parsed.MoodSuggestions.FirstOrDefault());
+            session.ReplaceAiSuggestions(parsed.TopicSuggestions, parsed.MoodSuggestions);
         }
         else
         {

@@ -20,7 +20,7 @@ import {
   type Session,
   type Suggestion,
 } from '@/features/sessions/api'
-import { Form, TextField, SelectField, createForm } from '@/shared/forms'
+import { Form, TextField, createForm } from '@/shared/forms'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils/cn'
 import { RichEditor } from './rich-editor'
@@ -147,7 +147,7 @@ function SuggestionChips({ session }: { session: Session }) {
 
   function label(s: Suggestion): string {
     const prefix = s.kind === 'Topic' ? '#' : s.kind === 'Person' ? '@' : ''
-    return s.kind === 'Mood' ? `mood: ${s.moodCustomValue ?? s.value}` : `${prefix}${s.value}`
+    return s.kind === 'Mood' ? `mood: ${s.value}` : `${prefix}${s.value}`
   }
 
   return (
@@ -183,27 +183,13 @@ function SuggestionChips({ session }: { session: Session }) {
   )
 }
 
-const CUSTOM_MOOD = 'Custom'
-
-const moodOptions = [
-  { id: '', label: '— none —' },
-  ...KNOWN_MOODS.map((m) => ({ id: m, label: m })),
-  { id: CUSTOM_MOOD, label: 'Custom…' },
-]
-
-/** Validation-only: the conditional "custom value required when Mood is Custom" rule. */
-export const metadataSchema = z
-  .object({
-    topics: z.string(),
-    people: z.string(),
-    moodKey: z.string(),
-    customMood: z.string(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.moodKey === CUSTOM_MOOD && value.customMood.trim().length === 0) {
-      ctx.addIssue({ code: 'custom', message: 'Enter a custom mood.', path: ['customMood'] })
-    }
-  })
+export const metadataSchema = z.object({
+  topics: z.string(),
+  people: z.string(),
+  // Moods are held as a comma-joined string in the form (the chip control parses/serializes it); the
+  // server resolves known-vs-custom and dedupes. Comma-joined to match the Topics/People form pattern.
+  moods: z.string(),
+})
 
 type MetadataFormValues = z.infer<typeof metadataSchema>
 
@@ -213,10 +199,10 @@ const { Field, applyServerErrors } = createForm<typeof metadataSchema>()
 // the metadata values themselves. When the server changes them (accepted Suggestion, Cleanup re-run),
 // this key changes and the editor remounts, re-seeding its defaults from the fresh server values.
 function metadataKey(session: Session): string {
-  return JSON.stringify([session.topics, session.people, session.mood])
+  return JSON.stringify([session.topics, session.people, session.moods])
 }
 
-/** Per-Session manual metadata: Topics, People, and a Mood (known or Custom free text). */
+/** Per-Session manual metadata: Topics, People, and one-or-more Moods (known or custom free text). */
 function MetadataEditor({ session }: { session: Session }) {
   const save = useSaveMetadata(session.id)
 
@@ -224,19 +210,16 @@ function MetadataEditor({ session }: { session: Session }) {
     defaultValues: {
       topics: session.topics.join(', '),
       people: session.people.join(', '),
-      moodKey: session.mood?.key ?? '',
-      customMood: session.mood?.customValue ?? '',
+      moods: session.moods.join(', '),
     } satisfies MetadataFormValues,
     validators: { onBlur: metadataSchema },
     onSubmit: async ({ value }) => {
-      const mood =
-        value.moodKey === ''
-          ? null
-          : value.moodKey === CUSTOM_MOOD
-            ? { key: CUSTOM_MOOD, customValue: value.customMood.trim() }
-            : { key: value.moodKey, customValue: null }
       try {
-        await save.mutateAsync({ topics: splitList(value.topics), people: splitList(value.people), mood })
+        await save.mutateAsync({
+          topics: splitList(value.topics),
+          people: splitList(value.people),
+          moods: splitList(value.moods),
+        })
       } catch (error) {
         applyServerErrors(form, error)
       }
@@ -261,21 +244,75 @@ function MetadataEditor({ session }: { session: Session }) {
             {(field) => <TextField field={field} label="People (comma-separated)" placeholder="Sam, Alex" />}
           </Field>
         </div>
-        <Field name="moodKey">
-          {(field) => <SelectField field={field} label="Mood" options={moodOptions} />}
-        </Field>
-        <form.Subscribe selector={(s) => s.values.moodKey}>
-          {(moodKey) =>
-            moodKey === CUSTOM_MOOD ? (
-              <Field name="customMood">
-                {(field) => <TextField field={field} label="Custom mood" placeholder="bittersweet" />}
-              </Field>
-            ) : null
-          }
-        </form.Subscribe>
+        <Field name="moods">{(field) => <MoodChips field={field} />}</Field>
         <Form.Errors />
         <Form.Submit>Save metadata</Form.Submit>
       </Form>
+    </div>
+  )
+}
+
+/** Multi-select Mood chips: toggle known Moods, add free-text custom Moods (PRD-0006). */
+function MoodChips({ field }: { field: { state: { value: string }; handleChange: (next: string) => void } }) {
+  const [draft, setDraft] = useState('')
+  const selected = splitList(field.state.value)
+  const has = (m: string) => selected.some((s) => s.toLowerCase() === m.toLowerCase())
+  const commit = (next: string[]) => field.handleChange(next.join(', '))
+  const toggle = (m: string) =>
+    commit(has(m) ? selected.filter((s) => s.toLowerCase() !== m.toLowerCase()) : [...selected, m])
+  const addCustom = () => {
+    const value = draft.trim()
+    if (value && !has(value)) commit([...selected, value])
+    setDraft('')
+  }
+  const customs = selected.filter((s) => !KNOWN_MOODS.some((k) => k.toLowerCase() === s.toLowerCase()))
+
+  return (
+    <div className="space-y-2">
+      <span className="text-sm text-muted">Moods</span>
+      <div className="flex flex-wrap gap-2">
+        {KNOWN_MOODS.map((m) => (
+          <button
+            key={m}
+            type="button"
+            aria-pressed={has(m)}
+            onClick={() => toggle(m)}
+            className={`rounded-full border px-3 py-0.5 text-sm ${
+              has(m) ? 'border-accent bg-accent/15 text-content' : 'border-border bg-surface-3 text-muted hover:text-content'
+            }`}
+          >
+            {m}
+          </button>
+        ))}
+        {customs.map((m) => (
+          <span
+            key={m}
+            className="flex items-center gap-1 rounded-full border border-accent bg-accent/15 py-0.5 pl-3 pr-1 text-sm text-content"
+          >
+            {m}
+            <button type="button" aria-label={`Remove ${m}`} className="rounded-full px-1.5 text-muted hover:text-content" onClick={() => toggle(m)}>
+              ✕
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              addCustom()
+            }
+          }}
+          placeholder="Add a custom mood"
+          className="rounded-lg border border-border bg-surface-3 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        />
+        <button type="button" className="text-sm text-accent hover:underline" onClick={addCustom}>
+          add
+        </button>
+      </div>
     </div>
   )
 }

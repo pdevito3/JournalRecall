@@ -41,10 +41,11 @@ export function Timeline({ settings, onUpdateSettings }: TimelineProps) {
   const setFilters = (next: Partial<TimelineSearch>) =>
     navigate({ search: (prev) => ({ ...prev, ...next }) })
 
-  // Build a QueryKit filter string from the metadata controls (server-side filtering).
+  // Build a QueryKit filter string from the metadata controls (server-side filtering). Mood is a separate
+  // param (a JSON collection matched any-element, outside QueryKit).
   const filter = useMemo(() => buildSessionFilter({ topic, mood }), [topic, mood])
 
-  const { data: sessions } = useSessionList(filter)
+  const { data: sessions } = useSessionList(filter, mood || undefined)
   const hasFilter = Boolean(filter)
 
   return (
@@ -132,7 +133,7 @@ function MetadataChips({ item }: { item: SessionListItem }) {
   const chips: string[] = [
     ...item.topics.map((t) => `#${t}`),
     ...item.people.map((p) => `@${p}`),
-    ...(item.mood ? [item.mood.key === 'Custom' ? (item.mood.customValue ?? 'Custom') : item.mood.key] : []),
+    ...item.moods,
   ]
   if (chips.length === 0) return null
   return (

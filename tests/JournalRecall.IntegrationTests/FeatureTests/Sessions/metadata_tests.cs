@@ -2,15 +2,14 @@ using Microsoft.EntityFrameworkCore;
 using JournalRecall.Api.Domain.Sessions.Dtos;
 using JournalRecall.Api.Domain.Sessions.Features;
 using JournalRecall.Api.Domain.Sessions.Metadata;
-using JournalRecall.Api.Exceptions;
 
 namespace JournalRecall.IntegrationTests.FeatureTests.Sessions;
 
 /// <summary>
-/// Manual metadata + filtering (issue 0011) at the integration layer: Topics/People/Mood set per-Session
-/// with provenance UserSet, the timeline filtered by each via QueryKit, Custom mood round-tripping its
-/// free text, an unknown mood rejected, and one User's metadata invisible to another — via the MediatR
-/// slice, no HTTP.
+/// Manual metadata + filtering (issue 0011, PRD-0006) at the integration layer: Topics (UserSet) and
+/// People (directory refs) set per-Session, multiple Moods (known + custom), the timeline filtered by
+/// topic/mood via QueryKit (any-mood match), and one User's metadata invisible to another — via the
+/// MediatR slice, no HTTP.
 /// </summary>
 public class metadata_tests : TestBase
 {
@@ -18,30 +17,29 @@ public class metadata_tests : TestBase
         (await scope.SendAsync(new CreateSession.Command(null, null))).Id;
 
     private static Task<UpdateMetadata.Result> SetMetadata(
-        TestingServiceScope scope, Guid id, string[] topics, string[] people, MoodDto? mood) =>
-        scope.SendAsync(new UpdateMetadata.Command(id, new MetadataForWrite(topics, people, mood)));
+        TestingServiceScope scope, Guid id, string[] topics, string[] people, string[] moods) =>
+        scope.SendAsync(new UpdateMetadata.Command(id, new MetadataForWrite(topics, people, moods)));
 
     [Fact]
-    public async Task a_user_can_set_topics_people_and_mood_including_custom_then_clear()
+    public async Task a_user_can_set_topics_people_and_multiple_moods_then_clear()
     {
         using var scope = new TestingServiceScope();
         var id = await NewSession(scope);
 
-        (await SetMetadata(scope, id, ["work", "parenthood"], ["Sam", "Alex"], new MoodDto("Custom", "bittersweet")))
+        (await SetMetadata(scope, id, ["work", "parenthood"], ["Sam", "Alex"], ["Tired", "bittersweet"]))
             .ShouldBe(UpdateMetadata.Result.Ok);
 
         var session = await scope.SendAsync(new GetSession.Query(id));
         session!.Topics.ShouldBe(["work", "parenthood"]);
         session.People.ShouldBe(["Sam", "Alex"], ignoreOrder: true); // labels resolved from the directory
-        session.Mood!.Key.ShouldBe("Custom");
-        session.Mood.CustomValue.ShouldBe("bittersweet"); // Custom round-trips its free text
+        session.Moods.ShouldBe(["Tired", "bittersweet"], ignoreOrder: true); // known + custom round-trip
 
-        // Removing a topic / clearing the mood is just another set.
-        (await SetMetadata(scope, id, ["work"], [], null)).ShouldBe(UpdateMetadata.Result.Ok);
+        // Removing a topic / clearing the moods is just another set.
+        (await SetMetadata(scope, id, ["work"], [], [])).ShouldBe(UpdateMetadata.Result.Ok);
         var updated = await scope.SendAsync(new GetSession.Query(id));
         updated!.Topics.ShouldBe(["work"]);
         updated.People.ShouldBeEmpty();
-        updated.Mood.ShouldBeNull();
+        updated.Moods.ShouldBeEmpty();
     }
 
     [Fact]
@@ -49,7 +47,7 @@ public class metadata_tests : TestBase
     {
         using var scope = new TestingServiceScope();
         var id = await NewSession(scope);
-        await SetMetadata(scope, id, ["work"], ["Sam"], null);
+        await SetMetadata(scope, id, ["work"], ["Sam"], []);
 
         var session = await scope.ExecuteDbContextAsync(db => db.Sessions
             .IgnoreQueryFilters().Include(s => s.Topics).Include(s => s.People)
@@ -66,21 +64,26 @@ public class metadata_tests : TestBase
     }
 
     [Fact]
-    public async Task the_timeline_can_be_filtered_by_topic_and_mood()
+    public async Task the_timeline_filters_by_topic_and_by_any_matching_mood()
     {
         using var scope = new TestingServiceScope();
         var work = await NewSession(scope);
         var travel = await NewSession(scope);
-        await SetMetadata(scope, work, ["work"], ["Sam"], new MoodDto("Joyful", null));
-        await SetMetadata(scope, travel, ["travel"], ["Alex"], new MoodDto("Tired", null));
+        await SetMetadata(scope, work, ["work"], ["Sam"], ["Joyful", "Tired"]); // two moods
+        await SetMetadata(scope, travel, ["travel"], ["Alex"], ["Calm"]);
 
         // No `people` name filter: People are directory references now; a PersonId filter is a future slice.
         (await scope.SendAsync(new GetSessionList.Query("topics == \"work\""))).Select(s => s.Id).ShouldBe([work]);
-        (await scope.SendAsync(new GetSessionList.Query("mood == \"Joyful\""))).Select(s => s.Id).ShouldBe([work]);
+        // Any-mood match (case-insensitive resolution): the work Session matches on either of its moods.
+        (await scope.SendAsync(new GetSessionList.Query(null, "Joyful"))).Select(s => s.Id).ShouldBe([work]);
+        (await scope.SendAsync(new GetSessionList.Query(null, "tired"))).Select(s => s.Id).ShouldBe([work]);
+        (await scope.SendAsync(new GetSessionList.Query(null, "Calm"))).Select(s => s.Id).ShouldBe([travel]);
         (await scope.SendAsync(new GetSessionList.Query(null))).Count.ShouldBe(2);
 
-        // The People labels still surface on the timeline rows for display.
-        (await scope.SendAsync(new GetSessionList.Query(null))).Single(s => s.Id == work).People.ShouldBe(["Sam"]);
+        // Both moods + the People labels surface on the timeline rows for display.
+        var workRow = (await scope.SendAsync(new GetSessionList.Query(null))).Single(s => s.Id == work);
+        workRow.Moods.ShouldBe(["Joyful", "Tired"], ignoreOrder: true);
+        workRow.People.ShouldBe(["Sam"]);
     }
 
     [Fact]
@@ -88,28 +91,28 @@ public class metadata_tests : TestBase
     {
         using var alice = new TestingServiceScope();
         var aliceSession = await NewSession(alice);
-        await SetMetadata(alice, aliceSession, ["secret-project"], [], null);
+        await SetMetadata(alice, aliceSession, ["secret-project"], [], []);
 
         using var bob = new TestingServiceScope();
         var bobSession = await NewSession(bob);
-        await SetMetadata(bob, bobSession, ["secret-project"], [], null);
+        await SetMetadata(bob, bobSession, ["secret-project"], [], []);
 
         // Bob filtering by the shared topic name sees only his own Session.
         (await bob.SendAsync(new GetSessionList.Query("topics == \"secret-project\""))).Select(s => s.Id)
             .ShouldBe([bobSession]);
 
         // Bob cannot set metadata on Alice's Session (it doesn't exist for him).
-        (await SetMetadata(bob, aliceSession, ["x"], [], null)).ShouldBe(UpdateMetadata.Result.NotFound);
+        (await SetMetadata(bob, aliceSession, ["x"], [], [])).ShouldBe(UpdateMetadata.Result.NotFound);
     }
 
     [Fact]
-    public async Task an_unknown_mood_is_rejected()
+    public async Task any_free_text_is_accepted_as_a_custom_mood()
     {
         using var scope = new TestingServiceScope();
         var id = await NewSession(scope);
 
-        // An unknown mood throws out of the slice (→ 422 at the HTTP edge), it is not a Result value.
-        await Should.ThrowAsync<InvalidSmartEnumPropertyName>(() =>
-            SetMetadata(scope, id, [], [], new MoodDto("Ecstatic", null)));
+        // There are no "invalid" moods anymore: a non-known string is simply a custom mood (PRD-0006).
+        (await SetMetadata(scope, id, [], [], ["Ecstatic"])).ShouldBe(UpdateMetadata.Result.Ok);
+        (await scope.SendAsync(new GetSession.Query(id)))!.Moods.ShouldBe(["Ecstatic"]);
     }
 }

@@ -37,7 +37,6 @@ export async function saveMetadata(id: string, metadata: Metadata): Promise<void
     credentials: 'include',
     body: JSON.stringify(metadata),
   })
-  if (res.status === 400) throw new Error('That mood isn’t recognized')
   if (!res.ok) throw new Error('Could not save metadata')
 }
 
@@ -67,9 +66,12 @@ export function captureLocation(): Promise<GeoPoint | undefined> {
   })
 }
 
-export async function getSessionList(filter?: string): Promise<SessionListItem[]> {
-  const url = filter ? `/api/sessions?filter=${encodeURIComponent(filter)}` : '/api/sessions'
-  const res = await apiFetch(url, { credentials: 'include' })
+export async function getSessionList(filter?: string, mood?: string): Promise<SessionListItem[]> {
+  const params = new URLSearchParams()
+  if (filter) params.set('filter', filter)
+  if (mood) params.set('mood', mood)
+  const query = params.toString()
+  const res = await apiFetch(query ? `/api/sessions?${query}` : '/api/sessions', { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load your timeline')
   return res.json()
 }

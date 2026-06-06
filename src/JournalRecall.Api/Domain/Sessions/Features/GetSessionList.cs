@@ -9,8 +9,12 @@ namespace JournalRecall.Api.Domain.Sessions.Features;
 
 public static class GetSessionList
 {
-    /// <summary>Optional QueryKit filter (e.g. a CreatedAt date range) over each Session's current state.</summary>
-    public sealed record Query(string? Filter) : IRequest<IReadOnlyList<SessionListItemDto>>;
+    /// <summary>
+    /// Optional QueryKit <paramref name="Filter"/> (e.g. topics, raw text, a CreatedAt range) plus an
+    /// optional <paramref name="Mood"/> match — a Session matches when any of its Moods equals it. Mood is
+    /// separate because it's a JSON collection QueryKit can't express on SQLite.
+    /// </summary>
+    public sealed record Query(string? Filter, string? Mood = null) : IRequest<IReadOnlyList<SessionListItemDto>>;
 
     public sealed class Handler(JournalRecallDbContext db, ICurrentUserService currentUser)
         : IRequestHandler<Query, IReadOnlyList<SessionListItemDto>>
@@ -21,9 +25,17 @@ public static class GetSessionList
         {
             var query = db.Sessions.AsNoTracking().AsQueryable();
             if (!string.IsNullOrWhiteSpace(request.Filter))
-                // The config maps topics/people/mood query names onto the owned metadata (issue 0011);
-                // built-in names like CreatedAt keep working.
+                // The config maps topics/raw query names onto the metadata (issue 0011); built-in names
+                // like CreatedAt keep working.
                 query = query.ApplyQueryKitFilter(request.Filter, SessionQueryKitConfig.Instance);
+
+            // Mood is a JSON primitive collection: match any element with a translatable EXISTS/contains
+            // (QueryKit can't express this on SQLite). The value is resolved so "joyful" matches "Joyful".
+            if (!string.IsNullOrWhiteSpace(request.Mood))
+            {
+                var mood = Metadata.Mood.Resolve(request.Mood).Value;
+                query = query.Where(s => s.Moods.Contains(mood));
+            }
 
             // Project to the current-state fields only — the owned Revision history never becomes rows.
             var rows = await query
@@ -35,8 +47,8 @@ public static class GetSessionList
                     s.RawPlainText,
                     Topics = s.Topics.Select(t => t.Name).ToList(),
                     PersonIds = s.People.Select(p => p.PersonId).ToList(),
-                    s.MoodKey,
-                    s.MoodCustomValue,
+                    // Read the Moods JSON column as a whole (no element enumeration → no json_each/APPLY on SQLite).
+                    Moods = s.Moods,
                 })
                 .ToListAsync(cancellationToken);
 
@@ -55,7 +67,7 @@ public static class GetSessionList
                 Preview(s.RawPlainText),
                 s.Topics,
                 s.PersonIds.Where(labels.ContainsKey).Select(id => labels[id]).OrderBy(l => l).ToList(),
-                s.MoodKey is null ? null : new MoodDto(s.MoodKey, s.MoodCustomValue))).ToList();
+                s.Moods)).ToList();
         }
 
         private async Task<string?> CurrentUserTimeZone(CancellationToken cancellationToken)

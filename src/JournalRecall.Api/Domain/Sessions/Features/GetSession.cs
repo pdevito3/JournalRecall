@@ -33,10 +33,10 @@ public static class GetSession
                     s.CleanedHasHandEdits,
                     Topics = s.Topics.Select(t => t.Name).ToList(),
                     PersonIds = s.People.Select(p => p.PersonId).ToList(),
-                    s.MoodKey,
-                    s.MoodCustomValue,
+                    // Read the Moods JSON column as a whole (no element enumeration → no json_each/APPLY on SQLite).
+                    Moods = s.Moods,
                     Suggestions = s.Suggestions
-                        .Select(g => new SuggestionDto(g.Kind, g.Value, g.MoodCustomValue)).ToList(),
+                        .Select(g => new SuggestionDto(g.Kind, g.Value)).ToList(),
                     s.Latitude,
                     s.Longitude,
                 })
@@ -54,8 +54,7 @@ public static class GetSession
 
             return new SessionDto(
                 row.Id, row.CreatedAt, row.RawDraft, row.CleanedDraft, row.Synopsis, row.Status,
-                row.CleanedHasHandEdits, row.Topics, people,
-                row.MoodKey is null ? null : new MoodDto(row.MoodKey, row.MoodCustomValue),
+                row.CleanedHasHandEdits, row.Topics, people, row.Moods,
                 row.Suggestions,
                 Location.TryCreate(row.Latitude, row.Longitude, out var location)
                     ? new LocationDto(location.Latitude, location.Longitude)

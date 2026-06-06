@@ -19,7 +19,7 @@ export const Route = createFileRoute('/')({
   // Prime the timeline query for the active filters during navigation (kills the mount→fetch waterfall).
   // The component keeps reading via useQuery, so focus/reconnect refetch, dedup, and GC stay intact.
   loader: ({ context: { queryClient }, deps }) =>
-    queryClient.ensureQueryData(sessionListQueryOptions(buildSessionFilter(deps))),
+    queryClient.ensureQueryData(sessionListQueryOptions(buildSessionFilter(deps), deps.mood || undefined)),
   component: Home,
 })
 

@@ -102,10 +102,10 @@ public static class CleanupAgent
             if (parsed?.CleanedMarkdown is null)
                 return false;
 
-            // Bare mood keys (no Custom free text from the model); drop any that aren't known moods.
+            // Resolve each proposed mood to a known-or-custom Mood; blanks are skipped.
             var moods = new List<Mood>();
             foreach (var key in parsed.MoodSuggestions ?? [])
-                if (!string.IsNullOrWhiteSpace(key) && Mood.TryOf(key, null, out var mood))
+                if (Mood.TryResolve(key, out var mood))
                     moods.Add(mood);
 
             result = new Parsed(

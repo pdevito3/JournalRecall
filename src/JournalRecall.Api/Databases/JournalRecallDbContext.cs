@@ -67,10 +67,11 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             // Raw Revision stream + LastCleanedRawRevisionNumber (CONTEXT.md), never persisted.
             session.Ignore(s => s.EffectiveCleanupStatus);
             session.Ignore(s => s.LatestRawRevisionNumber);
-            // Mood is a value object reconstructed from the scalar MoodKey/MoodCustomValue columns.
-            session.Ignore(s => s.Mood);
             // Location is a value object reconstructed from the scalar Latitude/Longitude columns.
             session.Ignore(s => s.Location);
+            // Moods are a primitive string collection serialized to a single JSON column (EF Core),
+            // read/written through the read-only property's backing field (PRD-0006).
+            session.PrimitiveCollection(s => s.Moods).UsePropertyAccessMode(PropertyAccessMode.Field);
             session.HasIndex(s => s.UserId);
             // Privacy invariant: referencing the instance field makes EF re-evaluate the owner per
             // query, so no User can ever read another User's Sessions (ADR-0002, CONTEXT.md).

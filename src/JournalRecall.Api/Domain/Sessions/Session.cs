@@ -18,6 +18,7 @@ public sealed class Session : BaseEntity
     private readonly List<CleanedRevision> _cleanedRevisions = [];
     private readonly List<SessionTopic> _topics = [];
     private readonly List<SessionPerson> _people = [];
+    private readonly List<string> _moods = [];
     private readonly List<MetadataSuggestion> _suggestions = [];
 
     public Guid UserId { get; private set; }
@@ -87,14 +88,11 @@ public sealed class Session : BaseEntity
     /// <summary>AI-proposed metadata awaiting accept/reject (CONTEXT.md). Distinct from accepted metadata.</summary>
     public IReadOnlyList<MetadataSuggestion> Suggestions => _suggestions;
 
-    /// <summary>The mood key (a <see cref="Mood"/> key — a known mood name or "Custom"); null when no mood is set.</summary>
-    public string? MoodKey { get; private set; }
-
-    /// <summary>The free-text value for a Custom mood; null otherwise.</summary>
-    public string? MoodCustomValue { get; private set; }
-
-    /// <summary>The mood as a value object, or null when unset.</summary>
-    public Mood? Mood => MoodKey is null ? null : Sessions.Metadata.Mood.Of(MoodKey, MoodCustomValue);
+    /// <summary>
+    /// The Session's Moods (PRD-0006): canonical mood strings — known mood names or custom text — deduped
+    /// case-insensitively. No primary, no ordering, no provenance. Persisted as a JSON column.
+    /// </summary>
+    public IReadOnlyList<string> Moods => _moods;
 
     /// <summary>The latest Raw Revision number (== the count, since numbers are sequential). 0 when empty.</summary>
     public int LatestRawRevisionNumber => _rawRevisions.Count;
@@ -213,12 +211,20 @@ public sealed class Session : BaseEntity
             _people.Add(new SessionPerson(personId));
     }
 
-    /// <summary>Sets or clears the Session's mood.</summary>
-    public void SetMood(Mood? mood)
+    /// <summary>
+    /// Replaces the Session's Moods. Each input string is resolved (known-vs-custom) to its canonical form
+    /// and the set is deduped case-insensitively; blanks are dropped, multiple customs are allowed.
+    /// </summary>
+    public void SetMoods(IEnumerable<string> moods)
     {
-        MoodKey = mood?.Key;
-        MoodCustomValue = mood?.CustomValue;
+        _moods.Clear();
+        _moods.AddRange(ResolveMoods(moods));
     }
+
+    private static IEnumerable<string> ResolveMoods(IEnumerable<string> moods) => (moods ?? [])
+        .Where(m => !string.IsNullOrWhiteSpace(m))
+        .Select(m => Mood.Resolve(m).Value)
+        .Distinct(StringComparer.OrdinalIgnoreCase);
 
     private static IEnumerable<string> Normalize(IEnumerable<string> names) => (names ?? [])
         .Select(n => n?.Trim() ?? string.Empty)
@@ -227,11 +233,12 @@ public sealed class Session : BaseEntity
 
     /// <summary>
     /// Replaces the pending AI Topic/Mood Suggestions with a fresh set from a Cleanup run. Suggestions
-    /// that would duplicate metadata the Session already carries are dropped (AI never duplicates or
-    /// overwrites existing metadata, CONTEXT.md): an existing Topic name, or any mood already set. People
-    /// no longer flow through this shared machinery — they go through the people-proposal flow (RICH-009).
+    /// that would duplicate metadata the Session already carries are dropped (AI never duplicates existing
+    /// metadata, CONTEXT.md): an existing Topic name, or a Mood already present. Moods can be suggested even
+    /// when others are already set (PRD-0006). People no longer flow through this shared machinery — they go
+    /// through the people-proposal flow (RICH-009).
     /// </summary>
-    public void ReplaceAiSuggestions(IEnumerable<string> topics, Mood? mood)
+    public void ReplaceAiSuggestions(IEnumerable<string> topics, IEnumerable<Mood> moods)
     {
         _suggestions.Clear();
 
@@ -239,15 +246,16 @@ public sealed class Session : BaseEntity
             if (!_topics.Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
                 AddSuggestion(SuggestionKind.Topic, name);
 
-        // Only suggest a mood when none is set — never overwrite an existing (user or accepted) mood.
-        if (mood is not null && MoodKey is null)
-            AddSuggestion(SuggestionKind.Mood, mood.Key, mood.CustomValue);
+        // Suggest any Mood not already present — the "only if none set" guard is gone (PRD-0006).
+        foreach (var value in (moods ?? []).Select(m => m.Value))
+            if (!_moods.Any(m => m.Equals(value, StringComparison.OrdinalIgnoreCase)))
+                AddSuggestion(SuggestionKind.Mood, value);
     }
 
-    private void AddSuggestion(SuggestionKind kind, string value, string? moodCustomValue = null)
+    private void AddSuggestion(SuggestionKind kind, string value)
     {
         if (!_suggestions.Any(s => s.Matches(kind, value)))
-            _suggestions.Add(new MetadataSuggestion(kind, value, moodCustomValue));
+            _suggestions.Add(new MetadataSuggestion(kind, value));
     }
 
     /// <summary>
@@ -268,9 +276,10 @@ public sealed class Session : BaseEntity
                     _topics.Add(new SessionTopic(suggestion.Value, MetadataProvenance.AiSuggested));
                 break;
             case SuggestionKind.Mood:
-                // Never overwrite an existing mood (UserSet wins; CONTEXT.md).
-                if (MoodKey is null && Mood.TryOf(suggestion.Value, suggestion.MoodCustomValue, out var accepted))
-                    SetMood(accepted);
+                // Add the Mood to the set if not already present (PRD-0006 — Moods are multi-valued).
+                var mood = Mood.Resolve(suggestion.Value).Value;
+                if (!_moods.Any(m => m.Equals(mood, StringComparison.OrdinalIgnoreCase)))
+                    _moods.Add(mood);
                 break;
         }
 

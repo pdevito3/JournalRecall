@@ -17,20 +17,20 @@ export const timelineSearchSchema = z.object({
 export type TimelineSearch = z.infer<typeof timelineSearchSchema>
 
 /**
- * Build a QueryKit filter string from the timeline filters (undefined when nothing is set). There is no
- * person filter: People are directory references now, so a PersonId-based filter is a future slice (PRD-0006).
+ * Build a QueryKit filter string from the timeline filters (undefined when nothing is set). Only Topic
+ * goes through QueryKit; Mood is a separate param (a JSON collection QueryKit can't match), and there is
+ * no person filter — People are directory references now, so a PersonId filter is a future slice (PRD-0006).
  */
-export function buildSessionFilter({ topic, mood }: TimelineSearch): string | undefined {
+export function buildSessionFilter({ topic }: TimelineSearch): string | undefined {
   const parts: string[] = []
   if (topic.trim()) parts.push(`topics == "${topic.trim()}"`)
-  if (mood) parts.push(`mood == "${mood}"`)
   return parts.length > 0 ? parts.join(' && ') : undefined
 }
 
-export function sessionListQueryOptions(filter?: string) {
+export function sessionListQueryOptions(filter?: string, mood?: string) {
   return queryOptions({
-    queryKey: ['sessions', filter ?? null],
-    queryFn: () => sessionsApi.getSessionList(filter),
+    queryKey: ['sessions', filter ?? null, mood ?? null],
+    queryFn: () => sessionsApi.getSessionList(filter, mood),
   })
 }
 
@@ -77,8 +77,8 @@ export function useCreateSession() {
   })
 }
 
-export function useSessionList(filter?: string) {
-  return useQuery(sessionListQueryOptions(filter))
+export function useSessionList(filter?: string, mood?: string) {
+  return useQuery(sessionListQueryOptions(filter, mood))
 }
 
 // Primed (awaited) by the Session-detail route loader — read via Suspense so the router's default

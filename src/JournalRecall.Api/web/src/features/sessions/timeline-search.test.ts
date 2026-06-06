@@ -53,7 +53,7 @@ describe('buildSessionFilter', () => {
     expect(buildSessionFilter({ topic: '   ', mood: '' })).toBeUndefined()
   })
 
-  it('combines set filters with &&', () => {
-    expect(buildSessionFilter({ topic: 'work', mood: 'Calm' })).toBe('topics == "work" && mood == "Calm"')
+  it('builds a topic filter (mood is a separate param, not part of the QueryKit string)', () => {
+    expect(buildSessionFilter({ topic: 'work', mood: 'Calm' })).toBe('topics == "work"')
   })
 })

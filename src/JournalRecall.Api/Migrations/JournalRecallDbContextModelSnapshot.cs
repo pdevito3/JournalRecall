@@ -305,10 +305,8 @@ namespace JournalRecall.Api.Migrations
                     b.Property<double?>("Longitude")
                         .HasColumnType("REAL");
 
-                    b.Property<string>("MoodCustomValue")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MoodKey")
+                    b.PrimitiveCollection<string>("Moods")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RawDraft")
@@ -553,9 +551,6 @@ namespace JournalRecall.Api.Migrations
 
                             b1.Property<int>("Kind")
                                 .HasColumnType("INTEGER");
-
-                            b1.Property<string>("MoodCustomValue")
-                                .HasColumnType("TEXT");
 
                             b1.Property<Guid>("SessionId")
                                 .HasColumnType("TEXT");

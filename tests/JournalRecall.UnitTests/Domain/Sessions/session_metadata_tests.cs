@@ -58,7 +58,7 @@ public class session_metadata_tests
     public void setting_user_topics_replaces_prior_user_topics_but_keeps_ai_ones_and_dedupes()
     {
         var s = New();
-        s.ReplaceAiSuggestions(["work"], null);
+        s.ReplaceAiSuggestions(["work"], []);
         s.AcceptSuggestion(SuggestionKind.Topic, "work"); // an AiSuggested topic
 
         s.SetUserTopics(["Home", " home ", "Travel"]); // trims + de-dupes case-insensitively
@@ -74,16 +74,16 @@ public class session_metadata_tests
     }
 
     [Fact]
-    public void setting_and_clearing_mood()
+    public void setting_moods_resolves_dedupes_and_allows_multiple_customs()
     {
         var s = New();
-        s.SetMood(Mood.Of("Joyful"));
-        s.MoodKey.ShouldBe("Joyful");
-        s.Mood!.Key.ShouldBe("Joyful");
+        // "joyful" resolves to the known "Joyful" (so the custom "joyful" collapses into it); two distinct
+        // customs are kept; blanks dropped.
+        s.SetMoods(["Joyful", "joyful", "bittersweet", "wired", "  "]);
+        s.Moods.ShouldBe(["Joyful", "bittersweet", "wired"], ignoreOrder: true);
 
-        s.SetMood(null);
-        s.MoodKey.ShouldBeNull();
-        s.Mood.ShouldBeNull();
+        s.SetMoods([]); // replace-all clears
+        s.Moods.ShouldBeEmpty();
     }
 
     [Fact]
@@ -101,26 +101,27 @@ public class session_metadata_tests
     }
 
     [Fact]
-    public void ai_suggestions_never_duplicate_existing_metadata()
+    public void ai_suggestions_never_duplicate_existing_metadata_but_may_add_more_moods()
     {
         var s = New();
         s.SetUserTopics(["work"]);
-        s.SetMood(Mood.Of("Joyful"));
+        s.SetMoods(["Joyful"]);
 
-        // Re-suggesting "work" and a mood is suppressed; only the genuinely new topic remains. People no
-        // longer flow through the shared suggestion machinery (people-proposal flow, RICH-009).
-        s.ReplaceAiSuggestions(["work", "travel"], Mood.Of("Content"));
+        // Re-suggesting "work"/"Joyful" is suppressed, but a different mood IS suggested even though one is
+        // already set (the "only if none" guard is gone, PRD-0006). People no longer flow through here.
+        s.ReplaceAiSuggestions(["work", "travel"], [Mood.Resolve("Joyful"), Mood.Resolve("Content")]);
 
         s.Suggestions.ShouldContain(g => g.Kind == SuggestionKind.Topic && g.Value == "travel");
         s.Suggestions.ShouldNotContain(g => g.Value == "work");
-        s.Suggestions.ShouldNotContain(g => g.Kind == SuggestionKind.Mood); // a mood is already set
+        s.Suggestions.ShouldContain(g => g.Kind == SuggestionKind.Mood && g.Value == "Content");
+        s.Suggestions.ShouldNotContain(g => g.Kind == SuggestionKind.Mood && g.Value == "Joyful"); // already set
     }
 
     [Fact]
     public void accepting_a_suggestion_promotes_it_and_removes_it_from_the_pending_list()
     {
         var s = New();
-        s.ReplaceAiSuggestions(["travel"], null);
+        s.ReplaceAiSuggestions(["travel"], []);
 
         s.AcceptSuggestion(SuggestionKind.Topic, "travel").ShouldBeTrue();
 
@@ -132,7 +133,7 @@ public class session_metadata_tests
     public void rejecting_a_suggestion_drops_it_without_promoting()
     {
         var s = New();
-        s.ReplaceAiSuggestions(["travel"], null);
+        s.ReplaceAiSuggestions(["travel"], []);
 
         s.RejectSuggestion(SuggestionKind.Topic, "travel").ShouldBeTrue();
 
@@ -149,14 +150,15 @@ public class session_metadata_tests
     }
 
     [Fact]
-    public void accepting_a_custom_mood_suggestion_sets_the_mood_with_its_text()
+    public void accepting_a_mood_suggestion_adds_it_to_the_set()
     {
         var s = New();
-        s.ReplaceAiSuggestions([], Mood.Custom("wistful"));
+        s.SetMoods(["Tired"]);
+        s.ReplaceAiSuggestions([], [Mood.Resolve("Content")]);
 
-        s.AcceptSuggestion(SuggestionKind.Mood, "Custom").ShouldBeTrue();
+        s.AcceptSuggestion(SuggestionKind.Mood, "Content").ShouldBeTrue();
 
-        s.Mood!.IsCustom.ShouldBeTrue();
-        s.Mood.CustomValue.ShouldBe("wistful");
+        s.Moods.ShouldBe(["Tired", "Content"], ignoreOrder: true); // added, not replaced
+        s.Suggestions.ShouldBeEmpty();
     }
 }

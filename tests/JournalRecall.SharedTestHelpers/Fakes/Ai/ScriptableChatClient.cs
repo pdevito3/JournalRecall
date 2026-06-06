@@ -23,7 +23,10 @@ public sealed class ScriptableChatClient : IChatClient
     /// <summary>Metadata Suggestions the fake emits alongside the Cleaned copy (issue 0012).</summary>
     public string[] SuggestTopics { get; set; } = [];
     public string[] SuggestPeople { get; set; } = [];
+
+    /// <summary>A single suggested mood (convenience); <see cref="SuggestMoods"/> wins when non-empty.</summary>
     public string? SuggestMood { get; set; }
+    public string[] SuggestMoods { get; set; } = [];
 
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
@@ -42,7 +45,9 @@ public sealed class ScriptableChatClient : IChatClient
             synopsis = Synopsis,
             topicSuggestions = SuggestTopics,
             peopleProposal = SuggestPeople,
-            moodSuggestions = SuggestMood is null ? Array.Empty<string>() : new[] { SuggestMood },
+            moodSuggestions = SuggestMoods.Length > 0
+                ? SuggestMoods
+                : SuggestMood is null ? Array.Empty<string>() : new[] { SuggestMood },
         });
 
         return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, json))

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JournalRecall.Api.Migrations
 {
     [DbContext(typeof(JournalRecallDbContext))]
-    [Migration("20260606204229_InitialCreate")]
+    [Migration("20260606210059_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -308,10 +308,8 @@ namespace JournalRecall.Api.Migrations
                     b.Property<double?>("Longitude")
                         .HasColumnType("REAL");
 
-                    b.Property<string>("MoodCustomValue")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MoodKey")
+                    b.PrimitiveCollection<string>("Moods")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RawDraft")
@@ -556,9 +554,6 @@ namespace JournalRecall.Api.Migrations
 
                             b1.Property<int>("Kind")
                                 .HasColumnType("INTEGER");
-
-                            b1.Property<string>("MoodCustomValue")
-                                .HasColumnType("TEXT");
 
                             b1.Property<Guid>("SessionId")
                                 .HasColumnType("TEXT");

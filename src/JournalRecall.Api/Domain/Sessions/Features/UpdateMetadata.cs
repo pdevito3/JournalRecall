@@ -9,8 +9,7 @@ namespace JournalRecall.Api.Domain.Sessions.Features;
 
 public static class UpdateMetadata
 {
-    /// <summary>Result: Ok or NotFound (→ 404). An invalid Mood throws and is mapped to 422 by the
-    /// ProblemDetails pipeline.</summary>
+    /// <summary>Result: Ok or NotFound (→ 404).</summary>
     public enum Result { Ok, NotFound }
 
     public sealed record Command(Guid SessionId, MetadataForWrite Metadata) : IRequest<Result>;
@@ -24,18 +23,15 @@ public static class UpdateMetadata
             if (session is null)
                 return Result.NotFound;
 
-            // An invalid Mood throws (InvalidSmartEnumPropertyName / ValidationException) and propagates
-            // to the ProblemDetails middleware as a 422.
-            var mood = request.Metadata.Mood is { } m ? Mood.Of(m.Key, m.CustomValue) : null;
-
             // People arrive as labels; resolve them to directory Person ids (creating any new ones), so
             // SessionPerson references the durable entity. RICH-007 replaces this text path with @-mentions.
             var personIds = await ResolvePeopleAsync(session.UserId, request.Metadata.People ?? [], cancellationToken);
 
-            // Manual edits are all UserSet; AI-provenance topics (if any) are preserved by the entity.
+            // Manual edits are all UserSet; AI-provenance topics (if any) are preserved by the entity. Moods
+            // are resolved known-vs-custom and deduped by the entity (any free text is a valid custom mood).
             session.SetUserTopics(request.Metadata.Topics ?? []);
             session.SetUserPeople(personIds);
-            session.SetMood(mood);
+            session.SetMoods(request.Metadata.Moods ?? []);
             await db.SaveChangesAsync(cancellationToken);
 
             return Result.Ok;

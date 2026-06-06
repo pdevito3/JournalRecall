@@ -160,8 +160,7 @@ namespace JournalRecall.Api.Migrations
                     CleanupStatus = table.Column<int>(type: "INTEGER", nullable: false),
                     LastCleanedRawRevisionNumber = table.Column<int>(type: "INTEGER", nullable: false),
                     CleanedHasHandEdits = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MoodKey = table.Column<string>(type: "TEXT", nullable: true),
-                    MoodCustomValue = table.Column<string>(type: "TEXT", nullable: true),
+                    Moods = table.Column<string>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<long>(type: "INTEGER", nullable: false),
                     CreatedBy = table.Column<Guid>(type: "TEXT", nullable: true),
                     UpdatedAt = table.Column<long>(type: "INTEGER", nullable: false),
@@ -330,7 +329,6 @@ namespace JournalRecall.Api.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     Kind = table.Column<int>(type: "INTEGER", nullable: false),
                     Value = table.Column<string>(type: "TEXT", nullable: false),
-                    MoodCustomValue = table.Column<string>(type: "TEXT", nullable: true),
                     SessionId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

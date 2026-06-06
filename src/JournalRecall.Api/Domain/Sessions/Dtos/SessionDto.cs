@@ -3,7 +3,7 @@ namespace JournalRecall.Api.Domain.Sessions.Dtos;
 /// <summary>
 /// A Session as the client sees it: the Raw draft plus the AI-derived Cleaned copy, Synopsis, the
 /// effective <see cref="Sessions.CleanupStatus"/> (Stale derived), and the manual metadata (Topics,
-/// People, Mood). <see cref="CleanedDraft"/>/<see cref="Synopsis"/> are empty until a Cleanup succeeds.
+/// People, Moods). <see cref="CleanedDraft"/>/<see cref="Synopsis"/> are empty until a Cleanup succeeds.
 /// </summary>
 public sealed record SessionDto(
     Guid Id,
@@ -15,7 +15,7 @@ public sealed record SessionDto(
     bool CleanedHasHandEdits,
     IReadOnlyList<string> Topics,
     IReadOnlyList<string> People,
-    MoodDto? Mood,
+    IReadOnlyList<string> Moods,
     IReadOnlyList<SuggestionDto> Suggestions,
     LocationDto? Location)
 {
@@ -28,8 +28,8 @@ public sealed record SessionDto(
         session.EffectiveCleanupStatus, session.CleanedHasHandEdits,
         session.Topics.Select(t => t.Name).ToList(),
         peopleLabels,
-        session.Mood is { } mood ? new MoodDto(mood.Key, mood.CustomValue) : null,
-        session.Suggestions.Select(s => new SuggestionDto(s.Kind, s.Value, s.MoodCustomValue)).ToList(),
+        session.Moods.ToList(),
+        session.Suggestions.Select(s => new SuggestionDto(s.Kind, s.Value)).ToList(),
         session.Location is { } location ? new LocationDto(location.Latitude, location.Longitude) : null);
 }
 

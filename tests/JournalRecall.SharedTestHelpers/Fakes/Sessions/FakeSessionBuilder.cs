@@ -19,7 +19,7 @@ public class FakeSessionBuilder
     private Location? _location;
     private readonly List<string> _userTopics = [];
     private readonly List<Guid> _userPeople = [];
-    private Mood? _mood;
+    private readonly List<string> _moods = [];
     private bool _cleaned;
     private string? _cleanedText;
     private string _synopsis = "A short recap of the session.";
@@ -46,7 +46,8 @@ public class FakeSessionBuilder
     /// <summary>References directory People by id (People are directory references now, PRD-0006).</summary>
     public FakeSessionBuilder WithUserPeople(params Guid[] personIds) { _userPeople.AddRange(personIds); return this; }
 
-    public FakeSessionBuilder WithMood(Mood mood) { _mood = mood; return this; }
+    /// <summary>Sets the Session's Moods (known mood names or custom text); resolved + deduped on build.</summary>
+    public FakeSessionBuilder WithMoods(params string[] moods) { _moods.AddRange(moods); return this; }
 
     /// <summary>A Session that has been run through a successful Cleanup (status Clean).</summary>
     public FakeSessionBuilder Cleaned(string? cleanedText = null)
@@ -91,7 +92,7 @@ public class FakeSessionBuilder
 
         if (_userTopics.Count > 0) session.SetUserTopics(_userTopics);
         if (_userPeople.Count > 0) session.SetUserPeople(_userPeople);
-        if (_mood is not null) session.SetMood(_mood);
+        if (_moods.Count > 0) session.SetMoods(_moods);
 
         if (_cleaned)
         {

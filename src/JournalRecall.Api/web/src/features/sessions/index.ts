@@ -10,7 +10,6 @@ export { KNOWN_MOODS, captureLocation } from './api'
 export type {
   CleanupStatus,
   Metadata,
-  Mood,
   RevisionSummary,
   Session,
   SessionListItem,

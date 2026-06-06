@@ -1,13 +1,13 @@
 using Ardalis.SmartEnum;
-using JournalRecall.Api.Exceptions;
 
 namespace JournalRecall.Api.Domain.Sessions.Metadata;
 
 /// <summary>
-/// How the user felt during a Session (CONTEXT.md): one of the app-defined known moods, or a Custom
-/// mood that additionally carries free text. A value object built on a private <see cref="MoodType"/>
-/// SmartEnum — the outside world deals only in <see cref="Mood"/> and its string <see cref="Key"/>.
-/// Persisted on the Session as the scalar key + optional custom text, not as its own table.
+/// How the user felt during a Session (CONTEXT.md, PRD-0006): one of the app-defined known moods, or a
+/// Custom mood that carries the user's own words. A value object built on a private <see cref="MoodType"/>
+/// SmartEnum — the outside world deals in <see cref="Mood"/> and its canonical string <see cref="Value"/>
+/// (a known mood name, or the custom text). A Session can carry several Moods, persisted as a string[]
+/// (JSON column); the literal "Custom" sentinel is never persisted.
 /// </summary>
 public sealed record Mood
 {
@@ -22,14 +22,17 @@ public sealed record Mood
         CustomValue = customValue;
     }
 
-    /// <summary>The persisted/serialized key — a known mood name, or "Custom".</summary>
-    public string Key => _type.Name;
-
     /// <summary>True when this is the free-text Custom mood.</summary>
     public bool IsCustom => _type == MoodType.Custom;
 
-    /// <summary>The user-facing label: the free text for a Custom mood, else the known mood's name.</summary>
-    public string Display => IsCustom ? CustomValue ?? MoodType.Custom.Name : _type.Name;
+    /// <summary>
+    /// The canonical persisted string: the known mood's name, or the custom free text. Never the literal
+    /// "Custom" sentinel — a custom mood serializes as its words.
+    /// </summary>
+    public string Value => IsCustom ? CustomValue! : _type.Name;
+
+    /// <summary>The user-facing label (same as <see cref="Value"/>).</summary>
+    public string Display => Value;
 
     /// <summary>The known mood keys a user can pick (excludes Custom), in display order.</summary>
     public static IReadOnlyList<string> KnownKeys { get; } =
@@ -43,42 +46,27 @@ public sealed record Mood
     }
 
     /// <summary>
-    /// Builds a validated Mood from a string key (the boundary form used by DTOs/AI). Throws
-    /// <see cref="InvalidSmartEnumPropertyName"/> (→ 422) when the key is missing or unknown, and
-    /// <see cref="ValidationException"/> (→ 422) when "Custom" is supplied without free text. A known key
-    /// ignores any custom text.
+    /// Resolves a single string to a Mood (PRD-0006): a value matching a known mood name (case-insensitive)
+    /// becomes that known Mood, anything else becomes a Custom Mood carrying the text. Never throws and
+    /// never yields the "Custom" sentinel. Blank input throws (a Mood must have content).
     /// </summary>
-    public static Mood Of(string key, string? customValue = null)
+    public static Mood Resolve(string value)
     {
-        if (string.IsNullOrWhiteSpace(key) || !MoodType.TryFromName(key.Trim(), ignoreCase: true, out var type))
-            throw new InvalidSmartEnumPropertyName(nameof(Mood), key, KnownKeys);
-
-        if (type == MoodType.Custom)
-        {
-            if (string.IsNullOrWhiteSpace(customValue))
-                throw new ValidationException("mood", "A custom mood requires text.");
-            return Custom(customValue);
-        }
-
-        return new Mood(type, null);
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        var trimmed = value.Trim();
+        return MoodType.TryFromName(trimmed, ignoreCase: true, out var type) && type != MoodType.Custom
+            ? new Mood(type, null)
+            : Custom(trimmed);
     }
 
-    /// <summary>Non-throwing <see cref="Of(string, string?)"/>: false when the key is unknown or Custom lacks text.</summary>
-    public static bool TryOf(string? key, string? customValue, out Mood mood)
+    /// <summary>Non-throwing <see cref="Resolve"/>: false only when the input is blank.</summary>
+    public static bool TryResolve(string? value, out Mood mood)
     {
         mood = null!;
-        if (string.IsNullOrWhiteSpace(key) || !MoodType.TryFromName(key.Trim(), ignoreCase: true, out _))
+        if (string.IsNullOrWhiteSpace(value))
             return false;
-
-        try
-        {
-            mood = Of(key, customValue);
-            return true;
-        }
-        catch (Exception ex) when (ex is ValidationException or InvalidSmartEnumPropertyName)
-        {
-            return false;
-        }
+        mood = Resolve(value);
+        return true;
     }
 
     /// <summary>

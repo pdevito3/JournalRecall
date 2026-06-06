@@ -21,19 +21,15 @@ public sealed class MetadataSuggestion
 {
     public SuggestionKind Kind { get; private set; }
 
-    /// <summary>The proposed value: a Topic/Person name, or a Mood key.</summary>
+    /// <summary>The proposed value: a Topic name, or a Mood (a known mood name or custom text).</summary>
     public string Value { get; private set; } = string.Empty;
-
-    /// <summary>The free-text value for a Custom mood suggestion; null otherwise.</summary>
-    public string? MoodCustomValue { get; private set; }
 
     private MetadataSuggestion() { } // EF
 
-    internal MetadataSuggestion(SuggestionKind kind, string value, string? moodCustomValue = null)
+    internal MetadataSuggestion(SuggestionKind kind, string value)
     {
         Kind = kind;
         Value = value;
-        MoodCustomValue = moodCustomValue;
     }
 
     internal bool Matches(SuggestionKind kind, string value) =>
