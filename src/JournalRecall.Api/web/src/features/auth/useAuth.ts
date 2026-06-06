@@ -1,15 +1,36 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as authApi from './api'
 
 const ME_KEY = ['me'] as const
 
-/** The current session. `data` is the user, or null when signed out. */
-export function useMe() {
-  return useQuery({
+/**
+ * Single source of truth for the current-session query: key, `queryFn`, and `staleTime` defined once.
+ * Consumed by `useMe` and the root route's `beforeLoad` so the access gate and components never
+ * disagree on the cache.
+ */
+export function meQueryOptions() {
+  return queryOptions({
     queryKey: ME_KEY,
     queryFn: authApi.fetchMe,
     staleTime: 60_000,
   })
+}
+
+/**
+ * Single source of truth for the public auth-config query (needs-setup / self-registration).
+ * Shared by `useAuthConfig` and the root route guard's cache.
+ */
+export function authConfigQueryOptions() {
+  return queryOptions({
+    queryKey: ['auth', 'config'],
+    queryFn: authApi.fetchAuthConfig,
+    staleTime: 30_000,
+  })
+}
+
+/** The current session. `data` is the user, or null when signed out. */
+export function useMe() {
+  return useQuery(meQueryOptions())
 }
 
 export function useLogin() {
@@ -37,11 +58,7 @@ export function useSetup() {
 
 /** Public instance config (needs-setup / self-registration), shared with the route guard's cache. */
 export function useAuthConfig() {
-  return useQuery({
-    queryKey: ['auth', 'config'],
-    queryFn: authApi.fetchAuthConfig,
-    staleTime: 30_000,
-  })
+  return useQuery(authConfigQueryOptions())
 }
 
 export function useChangePassword() {

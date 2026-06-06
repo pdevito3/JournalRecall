@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 import { createRootRouteWithContext, Link, Outlet, redirect, useNavigate } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
-import { fetchAuthConfig, fetchMe } from '@/features/auth/api'
-import { useAuthConfig, useLogout, useMe } from '@/features/auth/useAuth'
+import { authConfigQueryOptions, meQueryOptions, useAuthConfig, useLogout, useMe } from '@/features/auth/useAuth'
 import { Button } from '@/shared/ui/button'
 
 export interface RouterContext {
@@ -14,11 +13,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   // doesn't need a round-trip. The server gate still backstops cold loads / deep-links.
   beforeLoad: async ({ context, location }) => {
     const path = location.pathname
-    const config = await context.queryClient.ensureQueryData({
-      queryKey: ['auth', 'config'],
-      queryFn: fetchAuthConfig,
-      staleTime: 30_000,
-    })
+    const config = await context.queryClient.ensureQueryData(authConfigQueryOptions())
 
     // Fresh instance: funnel everyone to setup until the root Admin exists.
     if (config.needsSetup) {
@@ -34,7 +29,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     }
 
     // Protected route: require a session (fetchMe silently refreshes an expired access token).
-    const me = await context.queryClient.ensureQueryData({ queryKey: ['me'], queryFn: fetchMe })
+    const me = await context.queryClient.ensureQueryData(meQueryOptions())
     if (!me) throw redirect({ to: '/login' })
 
     // Forced password change (issue 0024): confine the user to the change-password screen until done.
