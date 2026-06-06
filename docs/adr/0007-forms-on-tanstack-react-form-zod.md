@@ -2,7 +2,15 @@
 
 ## Status
 
-accepted
+superseded by [ADR-0008](0008-compound-form-components.md)
+
+The dependency choice (`@tanstack/react-form` v1 + `zod` v4, no adapter), the zod-schema
+conventions (one validation-only `z.object` per form, comma-split in the submit handler,
+`.refine`/`.superRefine` for cross-field rules), the shared password/email fragments, and the
+`ProblemError` + `applyServerErrors` server-error seam all **carry forward unchanged**. ADR-0008
+supersedes only the *binding/abstraction* decision below — the explicit-`field`-prop level and the
+`Any*`-typed shared layer — replacing it with a compound form context + a typed
+`createForm<Schema>()` factory.
 
 ## Context & decision
 
