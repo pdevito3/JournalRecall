@@ -1,0 +1,4 @@
+# Keeps wwwroot/ present so the API boots even before the Vite SPA is built into wwwroot/app.
+# The static-web-assets manifest lists wwwroot/ as a content root; PhysicalFileProvider throws
+# DirectoryNotFoundException at startup (Development env) if it is absent. The built SPA (wwwroot/app/)
+# is produced by `pnpm build` locally or by the Dockerfile for images, and stays gitignored.
