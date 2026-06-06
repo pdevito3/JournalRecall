@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import type { QueryClient } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
-import { useIsAdmin, useMe } from '@/features/auth/useAuth'
+import { meQueryOptions, selectIsAdmin } from '@/features/auth/useAuth'
 import {
   useAdminUsers,
   useAiProvider,
@@ -25,19 +26,22 @@ import {
   TextField,
 } from '@/shared/forms'
 
+/**
+ * Navigation-time Admin gate: ensure the `me` cache (the root guard already requires a session here)
+ * and bounce non-admins to the journal before the Admin page renders — no flash of the wrong surface.
+ * Routes through the shared {@link selectIsAdmin} rule (FE-003) so this gate and the nav can't drift.
+ */
+export async function ensureAdmin(queryClient: QueryClient): Promise<void> {
+  const me = await queryClient.ensureQueryData(meQueryOptions())
+  if (!selectIsAdmin(me)) throw redirect({ to: '/' })
+}
+
 export const Route = createFileRoute('/admin')({
+  beforeLoad: ({ context }) => ensureAdmin(context.queryClient),
   component: Admin,
 })
 
 function Admin() {
-  const { isLoading } = useMe()
-  const isAdmin = useIsAdmin()
-
-  if (isLoading) return <p className="text-muted">Loading…</p>
-  if (!isAdmin) {
-    return <p className="text-muted">You don’t have access to this page.</p>
-  }
-
   return (
     <section className="space-y-10">
       <div className="space-y-2">
