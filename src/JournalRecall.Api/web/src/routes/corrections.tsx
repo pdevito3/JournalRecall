@@ -1,5 +1,6 @@
-import { type FormEvent, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { useForm } from '@tanstack/react-form'
+import { z } from 'zod'
 import type { Correction } from '@/features/corrections/api'
 import {
   useCorrections,
@@ -7,34 +8,40 @@ import {
   useDeleteCorrection,
   useUpdateCorrection,
 } from '@/features/corrections/useCorrections'
+import { CheckboxField, FormShell, TextField, applyServerErrors } from '@/shared/forms'
 import { Button } from '@/shared/ui/button'
 
 export const Route = createFileRoute('/corrections')({
   component: CorrectionsPage,
 })
 
+const correctionFormSchema = z.object({
+  canonicalTerm: z.string().trim().min(1, 'Enter a canonical term.'),
+  mishearings: z.string(),
+  hardReplace: z.boolean(),
+})
+type CorrectionFormValues = z.infer<typeof correctionFormSchema>
+
 function CorrectionsPage() {
   const { data: corrections, isLoading } = useCorrections()
   const create = useCreateCorrection()
 
-  const [canonical, setCanonical] = useState('')
-  const [mishearings, setMishearings] = useState('')
-  const [hardReplace, setHardReplace] = useState(false)
-
-  function onSubmit(event: FormEvent) {
-    event.preventDefault()
-    if (!canonical.trim()) return
-    create.mutate(
-      { canonicalTerm: canonical.trim(), mishearings: splitTerms(mishearings), hardReplace },
-      {
-        onSuccess: () => {
-          setCanonical('')
-          setMishearings('')
-          setHardReplace(false)
-        },
-      },
-    )
-  }
+  const form = useForm({
+    defaultValues: { canonicalTerm: '', mishearings: '', hardReplace: false } as CorrectionFormValues,
+    validators: { onBlur: correctionFormSchema },
+    onSubmit: async ({ value }) => {
+      try {
+        await create.mutateAsync({
+          canonicalTerm: value.canonicalTerm.trim(),
+          mishearings: splitTerms(value.mishearings),
+          hardReplace: value.hardReplace,
+        })
+        form.reset()
+      } catch (error) {
+        applyServerErrors(form, error)
+      }
+    },
+  })
 
   return (
     <section className="space-y-6">
@@ -46,37 +53,28 @@ function CorrectionsPage() {
         </p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-border bg-surface-2 p-4">
+      <FormShell
+        form={form}
+        submitLabel="Add correction"
+        pendingLabel="Adding…"
+        className="space-y-3 rounded-lg border border-border bg-surface-2 p-4"
+      >
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1">
-            <span className="text-sm text-muted">Canonical term</span>
-            <input
-              value={canonical}
-              onChange={(e) => setCanonical(e.target.value)}
-              placeholder="Profisee"
-              className="w-full rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            />
-          </label>
-          <label className="space-y-1">
-            <span className="text-sm text-muted">Mishearings (comma-separated)</span>
-            <input
-              value={mishearings}
-              onChange={(e) => setMishearings(e.target.value)}
-              placeholder="prophecy, professionally"
-              className="w-full rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            />
-          </label>
+          <form.Field name="canonicalTerm">
+            {(field) => <TextField field={field} label="Canonical term" placeholder="Profisee" autoFocus />}
+          </form.Field>
+          <form.Field name="mishearings">
+            {(field) => (
+              <TextField field={field} label="Mishearings (comma-separated)" placeholder="prophecy, professionally" />
+            )}
+          </form.Field>
         </div>
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm text-content">
-            <input type="checkbox" checked={hardReplace} onChange={(e) => setHardReplace(e.target.checked)} />
-            Hard-replace (substitute every occurrence deterministically)
-          </label>
-          <Button type="submit" variant="primary" isDisabled={create.isPending || !canonical.trim()}>
-            Add correction
-          </Button>
-        </div>
-      </form>
+        <form.Field name="hardReplace">
+          {(field) => (
+            <CheckboxField field={field} label="Hard-replace (substitute every occurrence deterministically)" />
+          )}
+        </form.Field>
+      </FormShell>
 
       {isLoading ? (
         <p className="text-muted">Loading…</p>

@@ -1,4 +1,5 @@
 import { apiFetch } from '@/shared/api/client'
+import { problemError } from '@/shared/api/problem'
 
 export interface AdminUser {
   id: string
@@ -41,12 +42,7 @@ export async function createUser(input: { email: string; password: string; role:
     credentials: 'include',
     body: JSON.stringify(input),
   })
-  if (res.status === 400) {
-    const body = await res.json().catch(() => null)
-    const errors = body?.errors as Record<string, string[]> | undefined
-    throw new Error(errors ? Object.values(errors).flat().join(' ') : 'Could not create user')
-  }
-  await ok(res, 'Could not create user')
+  if (!res.ok) throw await problemError(res, 'Could not create user')
 }
 
 export async function setUserRole(id: string, role: string): Promise<void> {
@@ -67,12 +63,7 @@ export async function resetUserPassword(id: string, password: string): Promise<v
     credentials: 'include',
     body: JSON.stringify({ password }),
   })
-  if (res.status === 400) {
-    const body = await res.json().catch(() => null)
-    const errors = body?.errors as Record<string, string[]> | undefined
-    throw new Error(errors ? Object.values(errors).flat().join(' ') : 'Could not reset password')
-  }
-  await ok(res, 'Could not reset password')
+  if (!res.ok) throw await problemError(res, 'Could not reset password')
 }
 
 export async function setUserDisabled(id: string, disabled: boolean): Promise<void> {

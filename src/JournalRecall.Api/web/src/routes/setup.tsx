@@ -1,30 +1,61 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { AuthForm } from '@/features/auth/components/auth-form'
+import { z } from 'zod'
+import { useForm } from '@tanstack/react-form'
+import { FormShell, TextField, applyServerErrors, emailSchema, passwordSchema, passwordsMatch } from '@/shared/forms'
 import { useLogin, useSetup } from '@/features/auth/useAuth'
 
 export const Route = createFileRoute('/setup')({
   component: SetupPage,
 })
 
+// First-run root-Admin bootstrap: kept a separate form from register (independent lifecycle), but it
+// imports the same shared password + email fragments so the rules don't drift apart.
+const setupSchema = z
+  .object({
+    email: emailSchema,
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .superRefine(passwordsMatch())
+
 function SetupPage() {
   const navigate = useNavigate()
   const setup = useSetup()
   const login = useLogin()
 
+  const form = useForm({
+    defaultValues: { email: '', password: '', confirmPassword: '' },
+    validators: { onBlur: setupSchema },
+    onSubmit: async ({ value }) => {
+      const credentials = { email: value.email, password: value.password }
+      try {
+        // Create the root Admin, then sign in immediately so the cookie is set and the app opens.
+        await setup.mutateAsync(credentials)
+        await login.mutateAsync(credentials)
+        await navigate({ to: '/' })
+      } catch (error) {
+        applyServerErrors(form, error)
+      }
+    },
+  })
+
   return (
-    <AuthForm
+    <FormShell
+      form={form}
       title="Set up JournalRecall"
       submitLabel="Create admin account"
-      confirmPassword
-      pending={setup.isPending || login.isPending}
-      error={setup.error?.message ?? login.error?.message}
-      // Create the root Admin, then sign in immediately so the cookie is set and the app opens.
-      onSubmit={(credentials) =>
-        setup.mutate(credentials, {
-          onSuccess: () => login.mutate(credentials, { onSuccess: () => navigate({ to: '/' }) }),
-        })
-      }
+      pendingLabel="Creating…"
       footer="This creates the first administrator account for a brand-new instance."
-    />
+    >
+      <form.Field name="email">
+        {(field) => <TextField field={field} label="Email" type="email" autoFocus autoComplete="email" />}
+      </form.Field>
+      <form.Field name="password">
+        {(field) => <TextField field={field} label="Password" type="password" autoComplete="new-password" />}
+      </form.Field>
+      <form.Field name="confirmPassword">
+        {(field) => <TextField field={field} label="Confirm password" type="password" autoComplete="new-password" />}
+      </form.Field>
+    </FormShell>
   )
 }

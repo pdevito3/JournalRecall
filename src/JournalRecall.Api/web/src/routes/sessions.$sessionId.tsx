@@ -1,7 +1,10 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { useForm } from '@tanstack/react-form'
+import { z } from 'zod'
 import { KNOWN_MOODS, type CleanupStatus, type RevisionSummary, type Session } from '@/features/sessions/api'
 import type { Suggestion } from '@/features/sessions/api'
+import { FormShell, TextField, SelectField, applyServerErrors } from '@/shared/forms'
 import {
   useCleanedRevision,
   useCleanedRevisions,
@@ -149,89 +152,89 @@ function SuggestionChips({ session }: { session: Session }) {
   )
 }
 
-const NO_MOOD = ''
 const CUSTOM_MOOD = 'Custom'
+
+const moodOptions = [
+  { id: '', label: '— none —' },
+  ...KNOWN_MOODS.map((m) => ({ id: m, label: m })),
+  { id: CUSTOM_MOOD, label: 'Custom…' },
+]
+
+/** Validation-only: the conditional "custom value required when Mood is Custom" rule. */
+export const metadataSchema = z
+  .object({
+    topics: z.string(),
+    people: z.string(),
+    moodKey: z.string(),
+    customMood: z.string(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.moodKey === CUSTOM_MOOD && value.customMood.trim().length === 0) {
+      ctx.addIssue({ code: 'custom', message: 'Enter a custom mood.', path: ['customMood'] })
+    }
+  })
+
+type MetadataFormValues = z.infer<typeof metadataSchema>
 
 /** Per-Session manual metadata: Topics, People, and a Mood (known or Custom free text). */
 function MetadataEditor({ session }: { session: Session }) {
   const save = useSaveMetadata(session.id)
-  const [topics, setTopics] = useState(session.topics.join(', '))
-  const [people, setPeople] = useState(session.people.join(', '))
-  const [moodKey, setMoodKey] = useState(session.mood?.key ?? NO_MOOD)
-  const [customMood, setCustomMood] = useState(session.mood?.customValue ?? '')
 
-  function onSave() {
-    const mood =
-      moodKey === NO_MOOD
-        ? null
-        : moodKey === CUSTOM_MOOD
-          ? { key: CUSTOM_MOOD, customValue: customMood.trim() }
-          : { key: moodKey, customValue: null }
-    save.mutate({ topics: splitList(topics), people: splitList(people), mood })
-  }
+  const form = useForm({
+    defaultValues: {
+      topics: session.topics.join(', '),
+      people: session.people.join(', '),
+      moodKey: session.mood?.key ?? '',
+      customMood: session.mood?.customValue ?? '',
+    } satisfies MetadataFormValues,
+    validators: { onBlur: metadataSchema },
+    onSubmit: async ({ value }) => {
+      const mood =
+        value.moodKey === ''
+          ? null
+          : value.moodKey === CUSTOM_MOOD
+            ? { key: CUSTOM_MOOD, customValue: value.customMood.trim() }
+            : { key: value.moodKey, customValue: null }
+      try {
+        await save.mutateAsync({ topics: splitList(value.topics), people: splitList(value.people), mood })
+      } catch (error) {
+        applyServerErrors(form, error)
+      }
+    },
+  })
 
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-surface-2 p-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <PanelLabel>Metadata</PanelLabel>
         <SaveStatus pending={save.isPending} success={save.isSuccess} error={save.isError} />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1">
-          <span className="text-sm text-muted">Topics (comma-separated)</span>
-          <input
-            value={topics}
-            onChange={(e) => setTopics(e.target.value)}
-            placeholder="work, parenthood"
-            className="w-full rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          />
-        </label>
-        <label className="space-y-1">
-          <span className="text-sm text-muted">People (comma-separated)</span>
-          <input
-            value={people}
-            onChange={(e) => setPeople(e.target.value)}
-            placeholder="Sam, Alex"
-            className="w-full rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          />
-        </label>
-      </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1">
-          <span className="text-sm text-muted">Mood</span>
-          <select
-            value={moodKey}
-            onChange={(e) => setMoodKey(e.target.value)}
-            className="block rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <option value={NO_MOOD}>— none —</option>
-            {KNOWN_MOODS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-            <option value={CUSTOM_MOOD}>Custom…</option>
-          </select>
-        </label>
-        {moodKey === CUSTOM_MOOD ? (
-          <label className="space-y-1">
-            <span className="text-sm text-muted">Custom mood</span>
-            <input
-              value={customMood}
-              onChange={(e) => setCustomMood(e.target.value)}
-              placeholder="bittersweet"
-              className="block rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            />
-          </label>
-        ) : null}
-        <Button
-          variant="primary"
-          onPress={onSave}
-          isDisabled={save.isPending || (moodKey === CUSTOM_MOOD && customMood.trim().length === 0)}
-        >
-          Save metadata
-        </Button>
-      </div>
+      <FormShell
+        form={form}
+        submitLabel="Save metadata"
+        className="space-y-3 rounded-lg border border-border bg-surface-2 p-4"
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <form.Field name="topics">
+            {(field) => <TextField field={field} label="Topics (comma-separated)" placeholder="work, parenthood" />}
+          </form.Field>
+          <form.Field name="people">
+            {(field) => <TextField field={field} label="People (comma-separated)" placeholder="Sam, Alex" />}
+          </form.Field>
+        </div>
+        <form.Field name="moodKey">
+          {(field) => <SelectField field={field} label="Mood" options={moodOptions} />}
+        </form.Field>
+        <form.Subscribe selector={(s) => s.values.moodKey}>
+          {(moodKey) =>
+            moodKey === CUSTOM_MOOD ? (
+              <form.Field name="customMood">
+                {(field) => <TextField field={field} label="Custom mood" placeholder="bittersweet" />}
+              </form.Field>
+            ) : null
+          }
+        </form.Subscribe>
+      </FormShell>
     </div>
   )
 }

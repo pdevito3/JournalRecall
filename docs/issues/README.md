@@ -44,18 +44,18 @@ are **AFK** (no human review gate). Work them in dependency order.
 | [TEST-0012](TEST-0012-migrate-access-setup-admin.md) | Migrate access gate, setup, admin & registration | 10 | TEST-0004 | ready |
 | [TEST-0013](TEST-0013-migrate-health-observability.md) | Migrate Health & Observability | 10 | TEST-0003, TEST-0004 | ready |
 | [TEST-0014](TEST-0014-retire-api-tests.md) | Retire `Api.Tests` | 10 | TEST-0006–TEST-0013 | ready |
-| [FORM-001](FORM-001-deps-forms-pattern-adr.md) | Dependencies + forms-pattern ADR | 11 | — | ready |
-| [FORM-002](FORM-002-problemerror-problemdetails-parser.md) | `ProblemError` + ProblemDetails parser (API-client seam) | 11 | — | ready |
-| [FORM-003](FORM-003-apply-server-errors-helper.md) | `applyServerErrors(form, error)` helper | 11 | FORM-001, FORM-002 | ready |
-| [FORM-004](FORM-004-shared-schema-fragments.md) | Shared schema fragments (password + email) | 11 | FORM-001 | ready |
-| [FORM-005](FORM-005-bound-field-components-formshell.md) | Bound field components + `FormShell` | 11 | FORM-001 | ready |
-| [FORM-006](FORM-006-convert-login-form.md) | Convert login form | 11 | FORM-003, FORM-004, FORM-005 | ready |
-| [FORM-007](FORM-007-convert-register-setup-forms.md) | Convert register + setup forms | 11 | FORM-003, FORM-004, FORM-005 | ready |
-| [FORM-008](FORM-008-convert-change-password-form.md) | Convert change-password form | 11 | FORM-003, FORM-004, FORM-005 | ready |
-| [FORM-009](FORM-009-convert-corrections-create-form.md) | Convert Corrections create form | 11 | FORM-003, FORM-005 | ready |
-| [FORM-010](FORM-010-convert-create-user-form.md) | Convert create-user (admin) form | 11 | FORM-003, FORM-004, FORM-005 | ready |
-| [FORM-011](FORM-011-convert-ai-provider-config-form.md) | Convert AI-provider config form | 11 | FORM-003, FORM-005 | ready |
-| [FORM-012](FORM-012-convert-session-metadata-editor.md) | Convert Session Metadata editor | 11 | FORM-003, FORM-005 | ready |
+| [FORM-001](FORM-001-deps-forms-pattern-adr.md) | Dependencies + forms-pattern ADR | 11 | — | done |
+| [FORM-002](FORM-002-problemerror-problemdetails-parser.md) | `ProblemError` + ProblemDetails parser (API-client seam) | 11 | — | done |
+| [FORM-003](FORM-003-apply-server-errors-helper.md) | `applyServerErrors(form, error)` helper | 11 | FORM-001, FORM-002 | done |
+| [FORM-004](FORM-004-shared-schema-fragments.md) | Shared schema fragments (password + email) | 11 | FORM-001 | done |
+| [FORM-005](FORM-005-bound-field-components-formshell.md) | Bound field components + `FormShell` | 11 | FORM-001 | done |
+| [FORM-006](FORM-006-convert-login-form.md) | Convert login form | 11 | FORM-003, FORM-004, FORM-005 | done |
+| [FORM-007](FORM-007-convert-register-setup-forms.md) | Convert register + setup forms | 11 | FORM-003, FORM-004, FORM-005 | done |
+| [FORM-008](FORM-008-convert-change-password-form.md) | Convert change-password form | 11 | FORM-003, FORM-004, FORM-005 | done |
+| [FORM-009](FORM-009-convert-corrections-create-form.md) | Convert Corrections create form | 11 | FORM-003, FORM-005 | done |
+| [FORM-010](FORM-010-convert-create-user-form.md) | Convert create-user (admin) form | 11 | FORM-003, FORM-004, FORM-005 | done |
+| [FORM-011](FORM-011-convert-ai-provider-config-form.md) | Convert AI-provider config form | 11 | FORM-003, FORM-005 | done |
+| [FORM-012](FORM-012-convert-session-metadata-editor.md) | Convert Session Metadata editor | 11 | FORM-003, FORM-005 | done |
 
 ## Suggested order
 

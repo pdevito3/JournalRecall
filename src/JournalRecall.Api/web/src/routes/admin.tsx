@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { useForm } from '@tanstack/react-form'
+import { z } from 'zod'
 import { useMe } from '@/features/auth/useAuth'
 import {
   useAdminUsers,
@@ -12,8 +14,16 @@ import {
   useUpdateAiProvider,
   useUpdateRegistration,
 } from '@/features/admin/useAdmin'
-import { PROVIDERS, ROLES, type AdminUser } from '@/features/admin/api'
+import { PROVIDERS, ROLES, type AdminUser, type AiProvider } from '@/features/admin/api'
 import { Button } from '@/shared/ui/button'
+import {
+  applyServerErrors,
+  emailSchema,
+  FormShell,
+  passwordSchema,
+  SelectField,
+  TextField,
+} from '@/shared/forms'
 
 export const Route = createFileRoute('/admin')({
   component: Admin,
@@ -157,95 +167,61 @@ function ResetPasswordControl({ userId }: { userId: string }) {
   )
 }
 
+const createUserSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+  role: z.enum(['Member', 'Admin']),
+})
+
 function CreateUserForm() {
   const create = useCreateUser()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [role, setRole] = useState<string>('Member')
-
-  function onCreate() {
-    create.mutate(
-      { email: email.trim(), password, role },
-      {
-        onSuccess: () => {
-          setEmail('')
-          setPassword('')
-          setRole('Member')
-        },
-      },
-    )
-  }
+  const form = useForm({
+    defaultValues: { email: '', password: '', role: 'Member' as 'Member' | 'Admin' },
+    validators: { onBlur: createUserSchema },
+    onSubmit: async ({ value }) => {
+      try {
+        await create.mutateAsync({ email: value.email.trim(), password: value.password, role: value.role })
+        form.reset()
+      } catch (e) {
+        applyServerErrors(form, e)
+      }
+    },
+  })
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed border-border bg-surface-2 p-3">
-      <Field label="Email">
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="new.user@example.com"
-          className="rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        />
-      </Field>
-      <Field label="Temporary password">
-        <input
-          type="text"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="they must change it on first sign-in"
-          className="rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        />
-      </Field>
-      <Field label="Role">
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          {ROLES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Button
-        variant="primary"
-        isDisabled={create.isPending || email.trim().length === 0 || password.length === 0}
-        onPress={onCreate}
-      >
-        {create.isPending ? 'Creating…' : 'Create user'}
-      </Button>
-      {create.isError ? <p className="w-full text-sm text-red-400">{create.error.message}</p> : null}
-    </div>
+    <FormShell
+      form={form}
+      submitLabel="Create user"
+      pendingLabel="Creating…"
+      className="space-y-4 rounded-lg border border-dashed border-border bg-surface-2 p-3"
+    >
+      <form.Field name="email">
+        {(field) => <TextField field={field} label="Email" type="email" placeholder="new.user@example.com" />}
+      </form.Field>
+      <form.Field name="password">
+        {(field) => (
+          <TextField
+            field={field}
+            label="Temporary password"
+            type="text"
+            placeholder="they must change it on first sign-in"
+          />
+        )}
+      </form.Field>
+      <form.Field name="role">{(field) => <SelectField field={field} label="Role" options={ROLES} />}</form.Field>
+    </FormShell>
   )
 }
 
+const aiProviderSchema = z.object({
+  provider: z.string(),
+  endpoint: z.string(),
+  model: z.string().trim().min(1, 'Model is required.'),
+  apiKey: z.string(),
+})
+
 function AiProviderForm() {
   const { data: provider } = useAiProvider()
-  const update = useUpdateAiProvider()
-
-  const [providerKind, setProviderKind] = useState('OpenAI')
-  const [endpoint, setEndpoint] = useState('')
-  const [model, setModel] = useState('')
-  const [apiKey, setApiKey] = useState('')
-
-  // Hydrate the form once the stored config loads. The API key is never returned, so it stays blank.
-  useEffect(() => {
-    if (provider) {
-      setProviderKind(provider.provider)
-      setEndpoint(provider.endpoint ?? '')
-      setModel(provider.model)
-    }
-  }, [provider])
-
-  function onSave() {
-    update.mutate({
-      provider: providerKind,
-      endpoint: endpoint.trim() || null,
-      apiKey: apiKey.trim() || null,
-      model: model.trim(),
-    })
-  }
 
   return (
     <div className="space-y-4">
@@ -256,62 +232,64 @@ function AiProviderForm() {
           effect on the next run.
         </p>
       </div>
-      <div className="grid max-w-xl gap-3">
-        <Field label="Provider">
-          <select
-            value={providerKind}
-            onChange={(e) => setProviderKind(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            {PROVIDERS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Endpoint">
-          <input
-            value={endpoint}
-            onChange={(e) => setEndpoint(e.target.value)}
-            placeholder="http://localhost:11434/v1"
-            className="w-full rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          />
-        </Field>
-        <Field label="Model">
-          <input
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="llama3.1"
-            className="w-full rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          />
-        </Field>
-        <Field label={provider?.hasApiKey ? 'API key (leave blank to keep current)' : 'API key'}>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={provider?.hasApiKey ? '•••••••• (set)' : 'optional for local providers'}
-            className="w-full rounded-lg border border-border bg-surface-3 px-3 py-2 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          />
-        </Field>
-        <div className="flex items-center gap-3">
-          <Button variant="primary" isDisabled={update.isPending || model.trim().length === 0} onPress={onSave}>
-            {update.isPending ? 'Saving…' : 'Save provider'}
-          </Button>
-          {update.isSuccess ? <span className="text-sm text-muted">Saved</span> : null}
-          {update.isError ? <span className="text-sm text-red-400">{update.error.message}</span> : null}
-        </div>
-      </div>
+      {!provider ? (
+        <p className="text-muted">Loading…</p>
+      ) : (
+        <AiProviderFormInner provider={provider} />
+      )}
     </div>
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function AiProviderFormInner({ provider }: { provider: AiProvider }) {
+  const update = useUpdateAiProvider()
+  const form = useForm({
+    defaultValues: {
+      provider: provider.provider,
+      endpoint: provider.endpoint ?? '',
+      model: provider.model,
+      apiKey: '',
+    },
+    validators: { onBlur: aiProviderSchema },
+    onSubmit: async ({ value }) => {
+      try {
+        await update.mutateAsync({
+          provider: value.provider,
+          endpoint: value.endpoint.trim() || null,
+          apiKey: value.apiKey.trim() || null,
+          model: value.model.trim(),
+        })
+      } catch (e) {
+        applyServerErrors(form, e)
+      }
+    },
+  })
+
   return (
-    <label className="space-y-1">
-      <span className="text-sm text-muted">{label}</span>
-      {children}
-    </label>
+    <FormShell
+      form={form}
+      submitLabel="Save provider"
+      pendingLabel="Saving…"
+      className="grid max-w-xl gap-3"
+      footer={update.isSuccess ? 'Saved' : undefined}
+    >
+      <form.Field name="provider">{(field) => <SelectField field={field} label="Provider" options={PROVIDERS} />}</form.Field>
+      <form.Field name="endpoint">
+        {(field) => <TextField field={field} label="Endpoint" placeholder="http://localhost:11434/v1" />}
+      </form.Field>
+      <form.Field name="model">
+        {(field) => <TextField field={field} label="Model" placeholder="llama3.1" />}
+      </form.Field>
+      <form.Field name="apiKey">
+        {(field) => (
+          <TextField
+            field={field}
+            label={provider.hasApiKey ? 'API key (leave blank to keep current)' : 'API key'}
+            type="password"
+            placeholder={provider.hasApiKey ? '•••••••• (set)' : 'optional for local providers'}
+          />
+        )}
+      </form.Field>
+    </FormShell>
   )
 }

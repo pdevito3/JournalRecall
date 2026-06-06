@@ -1,7 +1,7 @@
 # PRD 0004 — Forms on @tanstack/react-form + zod
 
 **Status:** ready-for-agent · **Type:** AFK · **Delivery:** big-bang (shared modules first, then
-convert all forms) · **Realizes:** a proposed forms-pattern ADR
+convert all forms) · **Realizes:** [ADR-0007](../adr/0007-forms-on-tanstack-react-form-zod.md)
 
 > Domain language per [`CONTEXT.md`](../../CONTEXT.md): the forms in scope edit or create
 > **Correction**s (canonical term + mishearings + hard-replace), **Session** **Metadata**

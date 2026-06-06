@@ -1,4 +1,5 @@
 import { apiFetch } from '@/shared/api/client'
+import { problemError } from '@/shared/api/problem'
 
 export interface AuthUser {
   id: string
@@ -43,7 +44,7 @@ export async function setup(body: Credentials): Promise<void> {
     body: JSON.stringify(body),
   })
   if (res.status === 409) throw new Error('This instance has already been set up.')
-  if (!res.ok) throw await problem(res, 'Setup failed')
+  if (!res.ok) throw await problemError(res, 'Setup failed')
 }
 
 export async function register(body: Credentials): Promise<void> {
@@ -53,7 +54,7 @@ export async function register(body: Credentials): Promise<void> {
     credentials: 'include',
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw await problem(res, 'Registration failed')
+  if (!res.ok) throw await problemError(res, 'Registration failed')
 }
 
 export async function login(body: Credentials): Promise<AuthUser> {
@@ -64,7 +65,7 @@ export async function login(body: Credentials): Promise<AuthUser> {
     body: JSON.stringify(body),
   })
   if (res.status === 401) throw new Error('Invalid email or password')
-  if (!res.ok) throw await problem(res, 'Login failed')
+  if (!res.ok) throw await problemError(res, 'Login failed')
   return res.json()
 }
 
@@ -75,22 +76,9 @@ export async function changePassword(body: { currentPassword: string; newPasswor
     headers: jsonHeaders,
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw await problem(res, 'Could not change password')
+  if (!res.ok) throw await problemError(res, 'Could not change password')
 }
 
 export async function logout(): Promise<void> {
   await apiFetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
-}
-
-/** Flatten an ASP.NET ValidationProblemDetails body into a single message. */
-async function problem(res: Response, fallback: string): Promise<Error> {
-  try {
-    const body = await res.json()
-    const errors = body?.errors as Record<string, string[]> | undefined
-    if (errors) return new Error(Object.values(errors).flat().join(' '))
-    if (typeof body?.title === 'string') return new Error(body.title)
-  } catch {
-    // fall through
-  }
-  return new Error(fallback)
 }
