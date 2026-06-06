@@ -17,6 +17,10 @@ export function getRouter() {
     context: { queryClient },
     basepath: '/app', // the SPA is served under /app (ADR-0001)
     defaultPreload: 'intent',
+    // Let React Query own the cache lifetime of preloaded route data (FE-012). Intent preloading warms
+    // loader-backed route data on hover, and each query's own staleTime governs freshness thereafter —
+    // 0 here disables the router's separate preload cache so there's no double-fetch on navigation.
+    defaultPreloadStaleTime: 0,
     // One consistent loading/failure look for every screen (FE-011). Loader-backed routes read their
     // awaited primary queries via useSuspenseQuery, so a load suspends here and a fetch failure is
     // caught by the default error boundary — no per-component isLoading/isError branches.
