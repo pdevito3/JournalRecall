@@ -1,18 +1,28 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMe } from '@/features/auth/useAuth'
-import { useGenerateSummary, useSummary } from '@/features/summaries/useSummaries'
+import {
+  summaryQueryOptions,
+  summarySearchSchema,
+  todayYmd,
+  useGenerateSummary,
+  useSummary,
+} from '@/features/summaries/useSummaries'
 import { PERIODS, type SummaryPeriod } from '@/features/summaries/api'
 import { Button } from '@/shared/ui/button'
 
 export const Route = createFileRoute('/summaries')({
+  // Summary period + anchor date live in the URL (FE-010): validated → shareable/refresh-safe,
+  // malformed → defaults.
+  validateSearch: summarySearchSchema,
+  // Re-run the loader only when the period or picked date changes.
+  loaderDeps: ({ search: { period, date } }) => ({ period, date }),
+  // Prime the summary query for the active period/date during navigation (kills the mount→fetch
+  // waterfall). The component keeps reading via useQuery, so focus/reconnect refetch stays intact.
+  loader: ({ context: { queryClient }, deps: { period, date } }) =>
+    queryClient.ensureQueryData(summaryQueryOptions(period, anchorFor(period, date))),
   component: Summaries,
 })
-
-function todayYmd(): string {
-  const now = new Date()
-  return ymd(now.getFullYear(), now.getMonth() + 1, now.getDate())
-}
 
 function ymd(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
@@ -41,8 +51,8 @@ function anchorFor(period: SummaryPeriod, date: string): string {
 
 function Summaries() {
   const { data: user } = useMe()
-  const [period, setPeriod] = useState<SummaryPeriod>('Day')
-  const [picked, setPicked] = useState(todayYmd)
+  const { period, date: picked } = Route.useSearch()
+  const navigate = Route.useNavigate()
 
   const date = anchorFor(period, picked)
 
@@ -67,7 +77,7 @@ function Summaries() {
             <button
               key={p}
               type="button"
-              onClick={() => setPeriod(p)}
+              onClick={() => navigate({ search: (prev) => ({ ...prev, period: p }) })}
               className={`rounded-md px-3 py-1 text-sm transition-colors ${
                 period === p ? 'bg-surface-3 text-content' : 'text-muted hover:text-content'
               }`}
@@ -81,7 +91,9 @@ function Summaries() {
           <input
             type="date"
             value={picked}
-            onChange={(e) => setPicked(e.target.value || todayYmd())}
+            onChange={(e) =>
+              navigate({ search: (prev) => ({ ...prev, date: e.target.value || todayYmd() }) })
+            }
             className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
         </label>
