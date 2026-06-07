@@ -5,6 +5,8 @@ import {
   useCleanedRevision,
   useCleanedRevisions,
   useCleanup,
+  usePeople,
+  useRespondToPersonProposal,
   useRespondToSuggestion,
   useRevision,
   useRevisions,
@@ -17,6 +19,7 @@ import {
 import {
   KNOWN_MOODS,
   type CleanupStatus,
+  type PersonTagProposal,
   type RevisionSummary,
   type Session,
   type Suggestion,
@@ -94,6 +97,8 @@ export function SessionEditor({ sessionId }: { sessionId: string }) {
 
       <SuggestionChips session={session} />
 
+      <PersonProposals session={session} />
+
       <MetadataEditor key={metadataKey(session)} session={session} />
 
       <RawHistory sessionId={sessionId} viewing={viewingRaw} onView={setViewingRaw} />
@@ -150,8 +155,7 @@ function SuggestionChips({ session }: { session: Session }) {
   if (session.suggestions.length === 0) return null
 
   function label(s: Suggestion): string {
-    const prefix = s.kind === 'Topic' ? '#' : s.kind === 'Person' ? '@' : ''
-    return s.kind === 'Mood' ? `mood: ${s.value}` : `${prefix}${s.value}`
+    return s.kind === 'Mood' ? `mood: ${s.value}` : `#${s.value}`
   }
 
   return (
@@ -184,6 +188,91 @@ function SuggestionChips({ session }: { session: Session }) {
         ))}
       </ul>
     </div>
+  )
+}
+
+/**
+ * AI People-tag proposals from the last Cleanup (PRD-0006, RICH-009): one review card per proposed Person,
+ * showing every sentence the tag would land in. Each is approved as a whole (binding to the matched Person,
+ * reassigned to a different existing Person, or created new) or rejected — the AI never writes to the People
+ * directory or the prose without this approval. Approval inserts mentions deterministically.
+ */
+function PersonProposals({ session }: { session: Session }) {
+  if (session.peopleProposals.length === 0) return null
+
+  return (
+    <div className="space-y-3 rounded-lg border border-dashed border-border bg-surface-2 p-4" data-testid="people-proposals">
+      <PanelLabel>People the AI suggests tagging</PanelLabel>
+      <ul className="space-y-3">
+        {session.peopleProposals.map((p) => (
+          <ProposalCard key={p.label} session={session} proposal={p} />
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function ProposalCard({ session, proposal }: { session: Session; proposal: PersonTagProposal }) {
+  const respond = useRespondToPersonProposal(session.id)
+  const { data: people = [] } = usePeople()
+  // The selected target: 'default' (the proposal's own resolution), 'new' (force-create), or a Person id.
+  const [target, setTarget] = useState<string>('default')
+
+  const approve = () =>
+    respond.mutate({
+      label: proposal.label,
+      approve: true,
+      bindToPersonId: target !== 'default' && target !== 'new' ? target : undefined,
+      createNew: target === 'new',
+    })
+  const reject = () => respond.mutate({ label: proposal.label, approve: false })
+
+  return (
+    <li className="space-y-2 rounded-lg border border-border bg-surface-3 p-3">
+      <div className="flex items-center gap-2">
+        <span className="font-medium text-content">@{proposal.label}</span>
+        {proposal.isNew ? (
+          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">new</span>
+        ) : (
+          <span className="text-xs text-muted">links to @{proposal.matchedLabel}</span>
+        )}
+      </div>
+
+      {proposal.contexts.length > 0 ? (
+        <ul className="space-y-1">
+          {proposal.contexts.map((c, i) => (
+            <li key={i} className="border-l-2 border-border pl-2 text-sm text-muted">
+              “{c}”
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1 text-sm text-muted">
+          Tag as
+          <select
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <option value="default">{proposal.isNew ? `Create “${proposal.label}”` : `@${proposal.matchedLabel}`}</option>
+            <option value="new">Create new “{proposal.label}”</option>
+            {people.map((person) => (
+              <option key={person.id} value={person.id}>
+                @{person.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button variant="primary" onPress={approve} isDisabled={respond.isPending}>
+          Approve
+        </Button>
+        <Button onPress={reject} isDisabled={respond.isPending}>
+          Reject
+        </Button>
+      </div>
+    </li>
   )
 }
 

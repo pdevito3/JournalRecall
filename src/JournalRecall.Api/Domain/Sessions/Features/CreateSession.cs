@@ -32,8 +32,8 @@ public static class CreateSession
             db.Sessions.Add(session);
             await db.SaveChangesAsync(cancellationToken);
 
-            // A fresh Session references no People yet.
-            return SessionDto.From(session, []);
+            // A fresh Session references no People and has no pending proposals yet.
+            return SessionDto.From(session, [], []);
         }
     }
 }

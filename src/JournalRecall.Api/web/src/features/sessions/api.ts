@@ -31,6 +31,24 @@ export async function respondToSuggestion(
   if (!res.ok) throw new Error(`Could not ${action} suggestion`)
 }
 
+/** The per-Person decision on an AI People-tag proposal (RICH-009): reject, or approve binding/creating. */
+export interface PersonProposalDecision {
+  label: string
+  approve: boolean
+  bindToPersonId?: string
+  createNew?: boolean
+}
+
+export async function respondToPersonProposal(id: string, decision: PersonProposalDecision): Promise<void> {
+  const res = await apiFetch(`/api/sessions/${id}/people-proposals/respond`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(decision),
+  })
+  if (!res.ok) throw new Error('Could not respond to the people proposal')
+}
+
 export async function saveMetadata(id: string, metadata: Metadata): Promise<void> {
   const res = await apiFetch(`/api/sessions/${id}/metadata`, {
     method: 'PUT',

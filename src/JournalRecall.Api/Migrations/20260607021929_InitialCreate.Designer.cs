@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JournalRecall.Api.Migrations
 {
     [DbContext(typeof(JournalRecallDbContext))]
-    [Migration("20260606211658_InitialCreate")]
+    [Migration("20260607021929_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -214,6 +214,9 @@ namespace JournalRecall.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("PhoneNumberConfirmed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequirePeopleTagApproval")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("SecurityStamp")
@@ -572,6 +575,32 @@ namespace JournalRecall.Api.Migrations
                                 .HasForeignKey("SessionId");
                         });
 
+                    b.OwnsMany("JournalRecall.Api.Domain.Sessions.Metadata.PersonTagProposal", "PeopleProposals", b1 =>
+                        {
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Label")
+                                .IsRequired()
+                                .HasColumnType("TEXT");
+
+                            b1.Property<Guid?>("MatchedPersonId")
+                                .HasColumnType("TEXT");
+
+                            b1.Property<Guid>("SessionId")
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("SessionId");
+
+                            b1.ToTable("session_people_proposals", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("SessionId");
+                        });
+
                     b.OwnsMany("JournalRecall.Api.Domain.Sessions.Metadata.SessionPerson", "People", b1 =>
                         {
                             b1.Property<int>("Id")
@@ -656,6 +685,8 @@ namespace JournalRecall.Api.Migrations
                     b.Navigation("CleanedRevisions");
 
                     b.Navigation("People");
+
+                    b.Navigation("PeopleProposals");
 
                     b.Navigation("RawRevisions");
 

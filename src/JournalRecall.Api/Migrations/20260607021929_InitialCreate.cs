@@ -52,6 +52,7 @@ namespace JournalRecall.Api.Migrations
                     TimeZoneId = table.Column<string>(type: "TEXT", nullable: true),
                     LocationCaptureEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     IsDisabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    RequirePeopleTagApproval = table.Column<bool>(type: "INTEGER", nullable: false),
                     MustChangePassword = table.Column<bool>(type: "INTEGER", nullable: false),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -363,6 +364,27 @@ namespace JournalRecall.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "session_people_proposals",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Label = table.Column<string>(type: "TEXT", nullable: false),
+                    MatchedPersonId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    SessionId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_session_people_proposals", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_session_people_proposals_sessions_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "sessions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "session_raw_revisions",
                 columns: table => new
                 {
@@ -491,6 +513,11 @@ namespace JournalRecall.Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_session_people_proposals_SessionId",
+                table: "session_people_proposals",
+                column: "SessionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_session_raw_revisions_SessionId_RevisionNumber",
                 table: "session_raw_revisions",
                 columns: new[] { "SessionId", "RevisionNumber" },
@@ -554,6 +581,9 @@ namespace JournalRecall.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "session_people");
+
+            migrationBuilder.DropTable(
+                name: "session_people_proposals");
 
             migrationBuilder.DropTable(
                 name: "session_raw_revisions");

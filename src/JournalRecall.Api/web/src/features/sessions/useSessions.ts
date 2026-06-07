@@ -168,6 +168,21 @@ export function useRespondToSuggestion(id: string) {
   })
 }
 
+/** Approve/reject an AI People-tag proposal (RICH-009). Approval inserts mentions + may create a Person. */
+export function useRespondToPersonProposal(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (decision: sessionsApi.PersonProposalDecision) =>
+      sessionsApi.respondToPersonProposal(id, decision),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session', id] }) // proposals + projected People badges
+      queryClient.invalidateQueries({ queryKey: ['session', id, 'cleaned-revisions'] }) // approval appends one
+      queryClient.invalidateQueries({ queryKey: ['sessions'] }) // timeline People chips
+      queryClient.invalidateQueries({ queryKey: ['people'] }) // approval may add a directory Person
+    },
+  })
+}
+
 export function useSaveCleaned(id: string) {
   const queryClient = useQueryClient()
   return useMutation({

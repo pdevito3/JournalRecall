@@ -70,6 +70,15 @@ public static class SessionEndpoints
             return handled ? Results.NoContent() : Results.NotFound();
         });
 
+        // Approve/reject an AI People-tag proposal (RICH-009). Approve inserts mentions deterministically
+        // into the Cleaned copy (reassign / create-new / exact-match), reject drops the proposal.
+        group.MapPost("/{id:guid}/people-proposals/respond", async (Guid id, PersonTagDecision body, ISender sender) =>
+        {
+            var handled = await sender.Send(
+                new RespondToPersonProposal.Command(id, body.Label, body.Approve, body.BindToPersonId, body.CreateNew));
+            return handled ? Results.NoContent() : Results.NotFound();
+        });
+
         // Hand-edit the Cleaned copy: appends a Cleaned Revision; never touches Raw (issue 0010).
         group.MapPut("/{id:guid}/cleaned", async (Guid id, SaveCleaned.Request body, ISender sender) =>
         {

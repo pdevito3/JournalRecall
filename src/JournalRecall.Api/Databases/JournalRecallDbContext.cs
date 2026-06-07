@@ -125,13 +125,23 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             });
 
             // Pending AI metadata Suggestions (issue 0012): an owned collection on the Session, with a
-            // store-generated shadow PK. Promoted to Topics/People/Mood on accept, dropped on reject.
+            // store-generated shadow PK. Promoted to Topics/Mood on accept, dropped on reject.
             session.OwnsMany(s => s.Suggestions, suggestion =>
             {
                 suggestion.ToTable("session_metadata_suggestions");
                 suggestion.WithOwner().HasForeignKey("SessionId");
                 suggestion.Property<int>("Id");
                 suggestion.HasKey("Id");
+            });
+
+            // Pending AI People-tag proposals (PRD-0006, RICH-009): an owned collection on the Session, with
+            // a store-generated shadow PK. Resolved into inline mentions on approval, dropped on reject.
+            session.OwnsMany(s => s.PeopleProposals, proposal =>
+            {
+                proposal.ToTable("session_people_proposals");
+                proposal.WithOwner().HasForeignKey("SessionId");
+                proposal.Property<int>("Id");
+                proposal.HasKey("Id");
             });
         });
 

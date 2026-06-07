@@ -17,7 +17,8 @@ namespace JournalRecall.Api.Domain.Sessions.Services;
 /// success, Failed otherwise) — all without ever touching Raw (issue 0008, ADR-0003/0004). The runner's
 /// event stream is surfaced verbatim so the endpoint can stream live progress to the client.
 /// </summary>
-public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner runner, SummaryStaleness staleness)
+public sealed class SessionCleanupRunner(
+    JournalRecallDbContext db, IAgentRunner runner, SummaryStaleness staleness, PeopleTagService peopleTags)
 {
     /// <summary>
     /// Runs Cleanup, yielding each lifecycle event as it occurs. The Session's terminal state is
@@ -56,7 +57,7 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
 
             if (terminal is not null)
             {
-                Apply(session, terminal, corrections);
+                await ApplyAsync(session, terminal, corrections, cancellationToken);
                 await db.SaveChangesAsync(cancellationToken);
 
                 // A successful run rewrote the Cleaned copy, which the period Summaries read — invalidate
@@ -80,7 +81,30 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
         // Same scoped DbContext → the tracked, just-updated instance from the EF identity map.
         var session = await db.Sessions.FirstAsync(s => s.Id == sessionId, cancellationToken);
         var peopleLabels = await ResolvePeopleLabelsAsync(session, cancellationToken);
-        return SessionDto.From(session, peopleLabels);
+        var proposals = await ResolveProposalDtosAsync(session, cancellationToken);
+        return SessionDto.From(session, peopleLabels, proposals);
+    }
+
+    /// <summary>Projects a Session's pending People-tag proposals for display (match labels + context previews).</summary>
+    private async Task<IReadOnlyList<PersonTagProposalDto>> ResolveProposalDtosAsync(
+        Session session, CancellationToken cancellationToken)
+    {
+        if (session.PeopleProposals.Count == 0)
+            return [];
+
+        var matchedIds = session.PeopleProposals
+            .Where(p => p.MatchedPersonId is not null)
+            .Select(p => p.MatchedPersonId!.Value)
+            .Distinct()
+            .ToList();
+        var labels = matchedIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.People.Where(p => matchedIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.Label, cancellationToken);
+
+        return session.PeopleProposals
+            .Select(p => PersonTagProposalDto.From(p, session.CleanedPlainText, labels))
+            .ToList();
     }
 
     /// <summary>Resolves a Session's People references to their directory labels (per-user), sorted for display.</summary>
@@ -97,24 +121,48 @@ public sealed class SessionCleanupRunner(JournalRecallDbContext db, IAgentRunner
             .ToListAsync(cancellationToken);
     }
 
-    private static void Apply(Session session, AgentOutcome outcome, IReadOnlyList<Correction> corrections)
+    private async Task ApplyAsync(
+        Session session, AgentOutcome outcome, IReadOnlyList<Correction> corrections, CancellationToken cancellationToken)
     {
-        if (outcome is AgentOutcome.Completed completed && CleanupAgent.TryParse(completed, out var parsed))
-        {
-            // Hard-replace Corrections are applied deterministically to the Cleaned copy only. By contract
-            // (RICH-004) the model returns Markdown prose; the server converts it to canonical ProseMirror
-            // JSON so the Cleaned editor renders with formatting (ADR-0009).
-            var cleanedMarkdown = CorrectionApplier.ApplyHardReplacements(parsed.CleanedMarkdown, corrections);
-            session.CompleteCleanup(MarkdownToProseMirror.ConvertToJson(cleanedMarkdown), parsed.Synopsis);
-            // The same run proposes Topic/Mood Suggestions (issue 0012) — pending until accepted/rejected.
-            // PeopleProposal is carried by the contract but consumed by the people-proposal flow (RICH-009).
-            session.ReplaceAiSuggestions(parsed.TopicSuggestions, parsed.MoodSuggestions);
-        }
-        else
+        if (outcome is not AgentOutcome.Completed completed || !CleanupAgent.TryParse(completed, out var parsed))
         {
             // A model failure, a guardrail stop, or unparseable output: record the failure. Raw and any
             // prior Cleaned copy are untouched (acceptance criteria).
             session.FailCleanup();
+            return;
+        }
+
+        // Hard-replace Corrections are applied deterministically to the Cleaned copy only. By contract
+        // (RICH-004) the model returns Markdown prose; the server converts it to canonical ProseMirror
+        // JSON so the Cleaned editor renders with formatting (ADR-0009).
+        var cleanedMarkdown = CorrectionApplier.ApplyHardReplacements(parsed.CleanedMarkdown, corrections);
+        var cleanedJson = MarkdownToProseMirror.ConvertToJson(cleanedMarkdown);
+
+        // People-tag handling (RICH-009): by default the run proposes People for per-Person review; a User
+        // who has turned approval off has resolved mentions tagged inline at Cleanup time. The setting
+        // defaults to requiring approval so the AI never writes to the directory without the User's say-so.
+        var requireApproval = await db.Users.AsNoTracking()
+            .Where(u => u.Id == session.UserId)
+            .Select(u => u.RequirePeopleTagApproval)
+            .FirstAsync(cancellationToken);
+
+        if (!requireApproval)
+            cleanedJson = await peopleTags.InsertInlineAsync(cleanedJson, parsed.PeopleProposal, session.UserId, cancellationToken);
+
+        session.CompleteCleanup(cleanedJson, parsed.Synopsis);
+        // The same run proposes Topic/Mood Suggestions (issue 0012) — pending until accepted/rejected.
+        session.ReplaceAiSuggestions(parsed.TopicSuggestions, parsed.MoodSuggestions);
+
+        if (requireApproval)
+        {
+            session.ReplacePeopleProposals(
+                await peopleTags.BuildProposalsAsync(session.CleanedPlainText, parsed.PeopleProposal, cancellationToken));
+        }
+        else
+        {
+            // Inline-tagged already: no proposals pending, and the new mentions project onto the badges.
+            session.ReplacePeopleProposals([]);
+            session.ReconcileMentionedPeople();
         }
     }
 }

@@ -17,12 +17,25 @@ export interface Person {
   label: string
 }
 
-export type SuggestionKind = 'Topic' | 'Person' | 'Mood'
+// People left the shared suggestion machinery for their own proposal flow (RICH-009); Topics/Moods remain.
+export type SuggestionKind = 'Topic' | 'Mood'
 
 export interface Suggestion {
   kind: SuggestionKind
   // For a Mood, the value is the known mood name or custom text; Topics carry their name.
   value: string
+}
+
+/**
+ * An AI People-tag proposal awaiting per-Person review (PRD-0006, RICH-009): the proposed name, whether it
+ * is new to the directory or auto-links to an existing Person, and every sentence the tag would land in.
+ */
+export interface PersonTagProposal {
+  label: string
+  matchedPersonId: string | null
+  matchedLabel: string | null
+  isNew: boolean
+  contexts: string[]
 }
 
 /** A captured geo-point (CONTEXT.md Location): coordinates only. */
@@ -43,6 +56,7 @@ export interface Session {
   people: string[]
   moods: string[]
   suggestions: Suggestion[]
+  peopleProposals: PersonTagProposal[]
   location: GeoPoint | null
 }
 

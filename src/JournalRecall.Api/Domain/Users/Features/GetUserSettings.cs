@@ -18,7 +18,7 @@ public static class GetUserSettings
             var userId = currentUser.UserId ?? throw new InvalidOperationException("No authenticated user.");
             var settings = await db.Users
                 .Where(u => u.Id == userId)
-                .Select(u => new UserSettingsDto(u.TimeZoneId, u.LocationCaptureEnabled))
+                .Select(u => new UserSettingsDto(u.TimeZoneId, u.LocationCaptureEnabled, u.RequirePeopleTagApproval))
                 .FirstAsync(cancellationToken);
 
             return settings;

@@ -30,6 +30,14 @@ public sealed class User : IdentityUser<Guid>
     public bool IsDisabled { get; set; }
 
     /// <summary>
+    /// Whether AI Cleanup must surface proposed People tags for the User's per-Person approval before any
+    /// is written into the Cleaned copy or the directory (PRD-0006, RICH-009). Defaults to true so the AI
+    /// never tags inline or adds to the People directory without the User's say-so; turning it off lets a
+    /// run insert resolved mentions automatically. Strictly per-User.
+    /// </summary>
+    public bool RequirePeopleTagApproval { get; set; } = true;
+
+    /// <summary>
     /// True when the User must replace a temporary password before doing anything else (issue 0024): set
     /// on Admin-create and Admin-reset, cleared when the User sets their own password. While set, the
     /// server confines them to the change-password flow (the password-change sentinel).

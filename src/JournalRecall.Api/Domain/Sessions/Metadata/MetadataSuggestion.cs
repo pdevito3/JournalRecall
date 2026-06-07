@@ -7,7 +7,6 @@ namespace JournalRecall.Api.Domain.Sessions.Metadata;
 public enum SuggestionKind
 {
     Topic,
-    Person,
     Mood,
 }
 

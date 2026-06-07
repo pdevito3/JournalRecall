@@ -20,6 +20,7 @@ public sealed class Session : BaseEntity
     private readonly List<SessionPerson> _people = [];
     private readonly List<string> _moods = [];
     private readonly List<MetadataSuggestion> _suggestions = [];
+    private readonly List<PersonTagProposal> _peopleProposals = [];
 
     public Guid UserId { get; private set; }
 
@@ -87,6 +88,13 @@ public sealed class Session : BaseEntity
 
     /// <summary>AI-proposed metadata awaiting accept/reject (CONTEXT.md). Distinct from accepted metadata.</summary>
     public IReadOnlyList<MetadataSuggestion> Suggestions => _suggestions;
+
+    /// <summary>
+    /// AI-proposed People tags from the last Cleanup awaiting per-Person review (PRD-0006, RICH-009).
+    /// Distinct from the shared <see cref="Suggestions"/> chip flow — People are tagged inline in the prose,
+    /// so approval inserts mention nodes rather than promoting a chip.
+    /// </summary>
+    public IReadOnlyList<PersonTagProposal> PeopleProposals => _peopleProposals;
 
     /// <summary>
     /// The Session's Moods (PRD-0006): canonical mood strings — known mood names or custom text — deduped
@@ -309,5 +317,45 @@ public sealed class Session : BaseEntity
 
         _suggestions.Remove(suggestion);
         return true;
+    }
+
+    /// <summary>
+    /// Replaces the pending People-tag proposals with a fresh set from a Cleanup run (PRD-0006, RICH-009).
+    /// A new run supersedes any prior, un-reviewed proposals.
+    /// </summary>
+    public void ReplacePeopleProposals(IEnumerable<PersonTagProposal> proposals)
+    {
+        _peopleProposals.Clear();
+        _peopleProposals.AddRange(proposals ?? []);
+    }
+
+    /// <summary>Drops a pending People-tag proposal by label (after it is approved or rejected). Returns false when absent.</summary>
+    public bool RemovePersonProposal(string label)
+    {
+        var proposal = _peopleProposals.FirstOrDefault(p => p.Matches(label));
+        if (proposal is null)
+            return false;
+
+        _peopleProposals.Remove(proposal);
+        return true;
+    }
+
+    /// <summary>
+    /// Applies an approved People-tag insertion (RICH-009): the caller has wrapped the approved spans in
+    /// mention nodes (<see cref="MentionInsertion"/>) — this commits the resulting Cleaned copy. When the
+    /// copy actually changed a Cleaned Revision is appended (ADR-0003 append-only), and the People badges
+    /// are reconciled from the prose. This is an approved AI tag, not a free-form hand-edit, so the
+    /// hand-edit flag is left untouched (a re-run warns only about the User's own edits).
+    /// </summary>
+    public void ApplyCleanedMentions(string cleanedText)
+    {
+        cleanedText ??= string.Empty;
+        if (!string.Equals(cleanedText, CleanedDraft, StringComparison.Ordinal))
+        {
+            CleanedDraft = cleanedText;
+            CleanedPlainText = ProseMirrorToPlainText.Render(cleanedText);
+            _cleanedRevisions.Add(new CleanedRevision(_cleanedRevisions.Count + 1, cleanedText));
+        }
+        ReconcileMentionedPeople();
     }
 }

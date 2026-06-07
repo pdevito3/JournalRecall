@@ -85,6 +85,7 @@ public static class ServiceRegistration
         AddConfigurableChatModel(services, JournalRecall.Api.Domain.Summaries.Ai.SummaryAgent.ModelKey,
             builder.Configuration.GetSection("ChatModels:summary"));
         services.AddScoped<SessionCleanupRunner>();
+        services.AddScoped<JournalRecall.Api.Domain.Sessions.Services.PeopleTagService>();
         services.AddScoped<JournalRecall.Api.Domain.People.PersonResolver>();
         services.AddScoped<JournalRecall.Api.Domain.Summaries.Services.SummarySourceReader>();
         services.AddScoped<JournalRecall.Api.Domain.Summaries.Services.SummaryRollupReader>();

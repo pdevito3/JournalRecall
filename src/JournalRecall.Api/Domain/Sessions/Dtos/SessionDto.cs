@@ -17,19 +17,23 @@ public sealed record SessionDto(
     IReadOnlyList<string> People,
     IReadOnlyList<string> Moods,
     IReadOnlyList<SuggestionDto> Suggestions,
+    IReadOnlyList<PersonTagProposalDto> PeopleProposals,
     LocationDto? Location)
 {
     /// <summary>
-    /// Projects a loaded Session, surfacing its effective status, metadata, and AI Suggestions. People are
-    /// directory references; the caller resolves their display labels (<paramref name="peopleLabels"/>).
+    /// Projects a loaded Session, surfacing its effective status, metadata, AI Suggestions, and pending
+    /// People-tag proposals. People are directory references; the caller resolves their display labels
+    /// (<paramref name="peopleLabels"/>) and the proposal previews (<paramref name="peopleProposals"/>).
     /// </summary>
-    public static SessionDto From(Session session, IReadOnlyList<string> peopleLabels) => new(
+    public static SessionDto From(
+        Session session, IReadOnlyList<string> peopleLabels, IReadOnlyList<PersonTagProposalDto> peopleProposals) => new(
         session.Id, session.CreatedAt, session.RawDraft, session.CleanedDraft, session.Synopsis,
         session.EffectiveCleanupStatus, session.CleanedHasHandEdits,
         session.Topics.Select(t => t.Name).ToList(),
         peopleLabels,
         session.Moods.ToList(),
         session.Suggestions.Select(s => new SuggestionDto(s.Kind, s.Value)).ToList(),
+        peopleProposals,
         session.Location is { } location ? new LocationDto(location.Latitude, location.Longitude) : null);
 }
 

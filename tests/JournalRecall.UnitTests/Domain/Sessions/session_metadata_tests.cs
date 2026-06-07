@@ -195,7 +195,7 @@ public class session_metadata_tests
     {
         var s = New();
         s.AcceptSuggestion(SuggestionKind.Topic, "nope").ShouldBeFalse();
-        s.RejectSuggestion(SuggestionKind.Person, "nope").ShouldBeFalse();
+        s.RejectSuggestion(SuggestionKind.Mood, "nope").ShouldBeFalse();
     }
 
     [Fact]

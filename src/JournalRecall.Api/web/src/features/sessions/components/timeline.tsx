@@ -14,6 +14,7 @@ const route = getRouteApi('/')
 export interface TimelineSettings {
   timeZoneId: string | null
   locationCaptureEnabled: boolean
+  requirePeopleTagApproval: boolean
 }
 
 export interface TimelineProps {
@@ -53,6 +54,7 @@ export function Timeline({ settings, onUpdateSettings }: TimelineProps) {
       <div className="flex flex-wrap items-center gap-4">
         <TimeZonePicker settings={settings} onUpdateSettings={onUpdateSettings} />
         <LocationToggle settings={settings} onUpdateSettings={onUpdateSettings} />
+        <PeopleTagApprovalToggle settings={settings} onUpdateSettings={onUpdateSettings} />
         <label className="flex items-center gap-2 text-sm text-muted">
           Jump to day
           <input
@@ -202,6 +204,26 @@ function LocationToggle({ settings, onUpdateSettings }: TimelineProps) {
         className="rounded border-border accent-accent"
       />
       Capture location on new sessions
+    </label>
+  )
+}
+
+/**
+ * Per-user gate on AI People-tagging (PRD-0006, RICH-009): on by default, Cleanup proposes People tags for
+ * per-Person approval. Turning it off lets a run tag resolved People inline automatically.
+ */
+function PeopleTagApprovalToggle({ settings, onUpdateSettings }: TimelineProps) {
+  if (!settings) return null
+
+  return (
+    <label className="flex items-center gap-2 text-sm text-muted">
+      <input
+        type="checkbox"
+        checked={settings.requirePeopleTagApproval}
+        onChange={(e) => onUpdateSettings({ ...settings, requirePeopleTagApproval: e.target.checked })}
+        className="rounded border-border accent-accent"
+      />
+      Review AI people tags before applying
     </label>
   )
 }

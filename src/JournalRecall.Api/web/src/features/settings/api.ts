@@ -3,6 +3,8 @@ import { apiFetch } from '@/shared/api/client'
 export interface UserSettings {
   timeZoneId: string | null
   locationCaptureEnabled: boolean
+  // When true (default), AI Cleanup proposes People tags for per-Person approval instead of tagging inline.
+  requirePeopleTagApproval: boolean
 }
 
 export async function getSettings(): Promise<UserSettings> {

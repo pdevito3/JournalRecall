@@ -37,10 +37,9 @@ public class cleanup_suggestion_tests : TestBase
         session!.Topics.ShouldBeEmpty();   // nothing accepted yet
         session.People.ShouldBeEmpty();
         session.Moods.ShouldBeEmpty();
-        // Only Topic + Mood flow through MetadataSuggestion now — never Person.
+        // Only Topic + Mood flow through MetadataSuggestion now — People left for the proposal flow (RICH-009).
         session.Suggestions.Select(s => (s.Kind, s.Value)).ShouldBe(
             [(SuggestionKind.Topic, "work"), (SuggestionKind.Mood, "Joyful")], ignoreOrder: true);
-        session.Suggestions.ShouldNotContain(s => s.Kind == SuggestionKind.Person);
     }
 
     [Fact]

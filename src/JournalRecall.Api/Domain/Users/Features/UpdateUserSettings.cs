@@ -8,12 +8,13 @@ namespace JournalRecall.Api.Domain.Users.Features;
 
 public static class UpdateUserSettings
 {
-    public sealed record Request(string? TimeZoneId, bool LocationCaptureEnabled);
+    public sealed record Request(string? TimeZoneId, bool LocationCaptureEnabled, bool RequirePeopleTagApproval);
 
     /// <summary>Result: Ok, or Invalid when the timezone id can't be resolved (→ 400).</summary>
     public enum Result { Ok, InvalidTimeZone }
 
-    public sealed record Command(string? TimeZoneId, bool LocationCaptureEnabled) : IRequest<Result>;
+    public sealed record Command(string? TimeZoneId, bool LocationCaptureEnabled, bool RequirePeopleTagApproval)
+        : IRequest<Result>;
 
     public sealed class Handler(JournalRecallDbContext db, ICurrentUserService currentUser)
         : IRequestHandler<Command, Result>
@@ -27,6 +28,7 @@ public static class UpdateUserSettings
             var user = await db.Users.FirstAsync(u => u.Id == userId, cancellationToken);
             user.TimeZoneId = request.TimeZoneId;
             user.LocationCaptureEnabled = request.LocationCaptureEnabled;
+            user.RequirePeopleTagApproval = request.RequirePeopleTagApproval;
             await db.SaveChangesAsync(cancellationToken);
 
             return Result.Ok;
