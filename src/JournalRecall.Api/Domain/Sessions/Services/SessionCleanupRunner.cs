@@ -146,23 +146,20 @@ public sealed class SessionCleanupRunner(
             .Select(u => u.RequirePeopleTagApproval)
             .FirstAsync(cancellationToken);
 
-        if (!requireApproval)
-            cleanedJson = await peopleTags.InsertInlineAsync(cleanedJson, parsed.PeopleProposal, session.UserId, cancellationToken);
-
-        session.CompleteCleanup(cleanedJson, parsed.Synopsis);
-        // The same run proposes Topic/Mood Suggestions (issue 0012) — pending until accepted/rejected.
-        session.ReplaceAiSuggestions(parsed.TopicSuggestions, parsed.MoodSuggestions);
-
+        // Each branch hands the aggregate the data for one whole terminal state (Suggestions always
+        // accompany the run, issue 0012); the Session owns the proposal-vs-inline invariant from there.
         if (requireApproval)
         {
-            session.ReplacePeopleProposals(
-                await peopleTags.BuildProposalsAsync(session.CleanedPlainText, parsed.PeopleProposal, cancellationToken));
+            var cleanedPlainText = ProseMirrorToPlainText.Render(cleanedJson);
+            var proposals = await peopleTags.BuildProposalsAsync(cleanedPlainText, parsed.PeopleProposal, cancellationToken);
+            session.CompleteCleanupWithProposals(
+                cleanedJson, parsed.Synopsis, parsed.TopicSuggestions, parsed.MoodSuggestions, proposals);
         }
         else
         {
-            // Inline-tagged already: no proposals pending, and the new mentions project onto the badges.
-            session.ReplacePeopleProposals([]);
-            session.ReconcileMentionedPeople();
+            cleanedJson = await peopleTags.InsertInlineAsync(cleanedJson, parsed.PeopleProposal, session.UserId, cancellationToken);
+            session.CompleteCleanupWithInlineMentions(
+                cleanedJson, parsed.Synopsis, parsed.TopicSuggestions, parsed.MoodSuggestions);
         }
     }
 }

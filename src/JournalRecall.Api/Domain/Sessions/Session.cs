@@ -174,6 +174,38 @@ public sealed class Session : BaseEntity
         CleanedHasHandEdits = false;
     }
 
+    /// <summary>
+    /// Folds in a successful Cleanup whose proposed People await per-Person approval (the default,
+    /// PRD-0006/RICH-009): completes the copy + Synopsis, records the AI Topic/Mood Suggestions, and parks
+    /// the People-tag <paramref name="proposals"/> for review. The People badges are deliberately left as
+    /// they were — nothing is tagged until the User approves each proposal. This is the cohesive
+    /// counterpart to <see cref="CompleteCleanupWithInlineMentions"/>: one of the two is always the whole
+    /// terminal state, so the proposal-vs-inline invariant can't drift across separate calls.
+    /// </summary>
+    public void CompleteCleanupWithProposals(
+        string cleanedText, string synopsis, IEnumerable<string> topicSuggestions, IEnumerable<Mood> moodSuggestions,
+        IEnumerable<PersonTagProposal> proposals)
+    {
+        CompleteCleanup(cleanedText, synopsis);
+        ReplaceAiSuggestions(topicSuggestions, moodSuggestions);
+        ReplacePeopleProposals(proposals);
+    }
+
+    /// <summary>
+    /// Folds in a successful Cleanup whose People were resolved and tagged inline at run time (approval
+    /// off, PRD-0006/RICH-009): <paramref name="cleanedText"/> already carries the mention nodes, so no
+    /// proposals are pending and the People badges are reconciled straight from the prose. The cohesive
+    /// counterpart to <see cref="CompleteCleanupWithProposals"/>.
+    /// </summary>
+    public void CompleteCleanupWithInlineMentions(
+        string cleanedText, string synopsis, IEnumerable<string> topicSuggestions, IEnumerable<Mood> moodSuggestions)
+    {
+        CompleteCleanup(cleanedText, synopsis);
+        ReplaceAiSuggestions(topicSuggestions, moodSuggestions);
+        ReplacePeopleProposals([]);
+        ReconcileMentionedPeople();
+    }
+
     /// <summary>A failed Cleanup: records the failure without corrupting Raw or any prior Cleaned copy.</summary>
     public void FailCleanup() => CleanupStatus = CleanupStatus.Failed;
 
