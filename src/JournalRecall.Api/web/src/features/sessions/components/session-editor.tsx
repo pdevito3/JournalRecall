@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
 import {
@@ -27,6 +27,7 @@ import {
 import { Form, createForm } from '@/shared/forms'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils/cn'
+import { useAutosave } from '@/shared/utils/use-autosave'
 import { RichEditor } from './rich-editor'
 import { useMentionConfig } from './mention'
 
@@ -41,15 +42,9 @@ export function SessionEditor({ sessionId }: { sessionId: string }) {
   const [viewingCleaned, setViewingCleaned] = useState<number | null>(null)
   // Raw and Cleaned share one pane via a toggle; Raw is the default view.
   const [tab, setTab] = useState<EditorTab>('raw')
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  useEffect(() => () => clearTimeout(timer.current), [])
-
-  // Debounced autosave of the serialized tiptap JSON (kept at 600ms to match prior behavior).
-  function onChange(json: string) {
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => saveDraft.mutate(json), 600)
-  }
+  // Debounced autosave of the serialized tiptap JSON.
+  const onChange = useAutosave(saveDraft.mutate)
 
   const hasCleaned = session.cleanedDraft.length > 0
 
@@ -509,14 +504,7 @@ function CleanedEditor({ session }: { session: Session }) {
   const saveCleaned = useSaveCleaned(session.id)
   const mention = useMentionConfig()
   // Uncontrolled, keyed per cleaned-Revision by CleanedEditorBoundary → seed directly from server JSON.
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-
-  useEffect(() => () => clearTimeout(timer.current), [])
-
-  function onChange(json: string) {
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => saveCleaned.mutate(json), 600) // debounced autosave
-  }
+  const onChange = useAutosave(saveCleaned.mutate) // debounced autosave
 
   return (
     <div className="space-y-2">
