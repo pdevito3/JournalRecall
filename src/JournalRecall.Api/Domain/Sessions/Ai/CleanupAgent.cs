@@ -25,11 +25,16 @@ public static class CleanupAgent
         a single journaling session. Produce:
 
         1. "cleanedMarkdown": a lightly polished copy of the Raw text, as Markdown. Fix typos, punctuation,
-           capitalization, spacing, and obvious dictation/transcription errors. Do NOT change the meaning,
-           the voice, the tense, or the content. Do not add, remove, summarize, or reorder ideas. Preserve
-           the user's wording wherever it is already correct. Use Markdown only to reflect structure the
-           text already implies (paragraphs, lists). If the Raw text is empty, return an empty string.
-        2. "synopsis": a one-to-three sentence recap of this single session, in the third person.
+           capitalization, spacing, obvious dictation/transcription errors, and mangled names of people
+           who are being tagged. Do NOT change the meaning, the voice, the tense, or the content. Do not
+           add, remove, summarize, or reword ideas. Preserve the user's wording wherever it is already
+           correct. Organize the text into sections by topic, each introduced by a short Markdown header
+           (## ...) that names the topic; group related ideas under their header, but keep every idea the
+           user expressed and do not invent headers for topics the text does not cover. Within a section,
+           use Markdown to reflect structure the text already implies (paragraphs, lists). If the Raw text
+           is empty, return an empty string.
+        2. "synopsis": a one-to-three sentence recap of this single session, written in the first person
+           ("I ...") as though the user wrote it themselves.
         3. "topicSuggestions": 0-5 short life-area tags you infer (e.g. "work", "parenthood", "travel").
         4. "peopleProposal": names of people referenced in the text (0-5).
         5. "moodSuggestions": 0-3 of the writer's apparent moods, each one of [{{KnownMoods}}]; [] if unclear.
