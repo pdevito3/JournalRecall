@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { useSetup } from './useAuth'
+import { authKeys } from './keys'
 import * as authApi from './api'
 
 /**
@@ -23,14 +24,14 @@ describe('useSetup', () => {
     vi.spyOn(authApi, 'setup').mockResolvedValue(undefined)
     const queryClient = new QueryClient()
     // Prime the cache the way the route guard would have, pre-setup.
-    queryClient.setQueryData(['auth', 'config'], { needsSetup: true, selfRegistrationEnabled: false })
+    queryClient.setQueryData(authKeys.config, { needsSetup: true, selfRegistrationEnabled: false })
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries')
 
     const { result } = renderHook(() => useSetup(), { wrapper: wrap(queryClient) })
     await result.current.mutateAsync({ username: 'alice', password: 'b' } as never)
 
     await waitFor(() =>
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['auth', 'config'] }),
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: authKeys.config }),
     )
   })
 })

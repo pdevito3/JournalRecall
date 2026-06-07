@@ -1,10 +1,9 @@
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import * as correctionsApi from './api'
-
-const key = ['corrections']
+import { correctionKeys } from './keys'
 
 export function correctionsQueryOptions() {
-  return queryOptions({ queryKey: key, queryFn: correctionsApi.getCorrections })
+  return queryOptions({ queryKey: correctionKeys.all, queryFn: correctionsApi.getCorrections })
 }
 
 // Primed (awaited) by the Corrections route loader — read via Suspense so the router's default
@@ -17,7 +16,7 @@ export function useCreateCorrection() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: correctionsApi.createCorrection,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: correctionKeys.all }),
   })
 }
 
@@ -26,7 +25,7 @@ export function useUpdateCorrection() {
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: correctionsApi.CorrectionForWrite }) =>
       correctionsApi.updateCorrection(id, body),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: correctionKeys.all }),
   })
 }
 
@@ -34,6 +33,6 @@ export function useDeleteCorrection() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: correctionsApi.deleteCorrection,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: correctionKeys.all }),
   })
 }

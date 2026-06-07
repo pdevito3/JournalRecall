@@ -1,16 +1,18 @@
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { authKeys } from '@/features/auth'
 import * as adminApi from './api'
+import { adminKeys } from './keys'
 
 export function adminUsersQueryOptions() {
-  return queryOptions({ queryKey: ['admin', 'users'], queryFn: adminApi.getUsers })
+  return queryOptions({ queryKey: adminKeys.users(), queryFn: adminApi.getUsers })
 }
 
 export function registrationSettingsQueryOptions() {
-  return queryOptions({ queryKey: ['admin', 'registration'], queryFn: adminApi.getRegistration })
+  return queryOptions({ queryKey: adminKeys.registration(), queryFn: adminApi.getRegistration })
 }
 
 export function aiProviderQueryOptions() {
-  return queryOptions({ queryKey: ['admin', 'ai-provider'], queryFn: adminApi.getAiProvider })
+  return queryOptions({ queryKey: adminKeys.aiProvider(), queryFn: adminApi.getAiProvider })
 }
 
 // Primed (awaited) by the Admin route loader — read via Suspense so the router's default pending/error
@@ -23,7 +25,7 @@ function useUsersMutation<TArgs>(fn: (args: TArgs) => Promise<void>) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.users() }),
   })
 }
 
@@ -56,9 +58,10 @@ export function useUpdateRegistration() {
   return useMutation({
     mutationFn: adminApi.updateRegistration,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'registration'] })
-      // The public auth config exposes the same flag (conditional register link / route guard).
-      queryClient.invalidateQueries({ queryKey: ['auth', 'config'] })
+      queryClient.invalidateQueries({ queryKey: adminKeys.registration() })
+      // The public auth config exposes the same flag (conditional register link / route guard) — invalidate
+      // via the owning auth feature's factory so the key isn't re-typed here.
+      queryClient.invalidateQueries({ queryKey: authKeys.config })
     },
   })
 }
@@ -71,6 +74,6 @@ export function useUpdateAiProvider() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: adminApi.updateAiProvider,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'ai-provider'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.aiProvider() }),
   })
 }

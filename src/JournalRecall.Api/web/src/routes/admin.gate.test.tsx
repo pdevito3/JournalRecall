@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { QueryClient } from '@tanstack/react-query'
 import { isRedirect } from '@tanstack/react-router'
 import { ensureAdmin } from './admin'
+import { authKeys } from '@/features/auth'
 import type { AuthUser } from '@/features/auth/api'
 
 /**
@@ -17,7 +18,7 @@ const member: AuthUser = { id: '2', username: 'jo', roles: ['Member'], mustChang
 
 function clientWithMe(me: AuthUser | null) {
   const queryClient = new QueryClient()
-  queryClient.setQueryData(['me'], me)
+  queryClient.setQueryData(authKeys.me, me)
   return queryClient
 }
 

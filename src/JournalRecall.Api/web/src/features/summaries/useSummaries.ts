@@ -2,6 +2,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/r
 import { z } from 'zod'
 import type { SummaryPeriod } from './api'
 import * as summariesApi from './api'
+import { summaryKeys } from './keys'
 
 /** Today as a YYYY-MM-DD anchor — the default the URL falls back to when no date is given. */
 export function todayYmd(): string {
@@ -27,7 +28,7 @@ export type SummarySearch = z.infer<typeof summarySearchSchema>
 
 export function summaryQueryOptions(period: SummaryPeriod, date: string) {
   return queryOptions({
-    queryKey: ['summary', period, date],
+    queryKey: summaryKeys.detail(period, date),
     queryFn: () => summariesApi.getSummary(period, date),
   })
 }
@@ -41,6 +42,6 @@ export function useGenerateSummary(period: SummaryPeriod, date: string) {
   return useMutation({
     mutationFn: () => summariesApi.generateSummary(period, date),
     // The freshly generated Summary is the canonical state — prime the read cache with it.
-    onSuccess: (summary) => queryClient.setQueryData(['summary', period, date], summary),
+    onSuccess: (summary) => queryClient.setQueryData(summaryKeys.detail(period, date), summary),
   })
 }

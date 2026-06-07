@@ -3,6 +3,7 @@
 // public component. From `api.ts` only call-site types/constants and the geo helper are exposed; the
 // raw fetch fns stay internal.
 export * from './useSessions'
+export { sessionKeys } from './keys'
 export { Timeline } from './components/timeline'
 export type { TimelineProps, TimelineSettings } from './components/timeline'
 export { SessionEditor } from './components/session-editor'

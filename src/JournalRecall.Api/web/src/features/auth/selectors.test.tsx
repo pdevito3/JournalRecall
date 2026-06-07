@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook } from '@testing-library/react'
 import { selectIsAdmin, selectRoles, useAuthRoles, useIsAdmin } from './useAuth'
+import { authKeys } from './keys'
 import type { AuthUser } from './api'
 
 /**
@@ -32,7 +33,7 @@ describe('auth selectors', () => {
 describe('derived auth hooks', () => {
   function wrap(me: AuthUser | null) {
     const queryClient = new QueryClient()
-    queryClient.setQueryData(['me'], me)
+    queryClient.setQueryData(authKeys.me, me)
     return ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )

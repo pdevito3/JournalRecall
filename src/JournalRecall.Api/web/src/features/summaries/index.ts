@@ -2,6 +2,7 @@
 // (hooks + queryOptions + URL-search schema). From `api.ts` only the call-site types/constants are
 // exposed; the fetch fns are internal.
 export * from './useSummaries'
+export { summaryKeys } from './keys'
 export { SummariesPage } from './components/summaries-page'
 export { PERIODS } from './api'
 export type { Summary, SummaryPeriod, SummaryStatus } from './api'

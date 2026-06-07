@@ -15,4 +15,5 @@ export {
   useRegister,
   useSetup,
 } from './useAuth'
+export { authKeys } from './keys'
 export type { AuthConfig, AuthUser, Credentials } from './api'

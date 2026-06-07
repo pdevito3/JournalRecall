@@ -3,6 +3,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient, useSuspenseQuery }
 import { z } from 'zod'
 import { KNOWN_MOODS } from './api'
 import * as sessionsApi from './api'
+import { sessionKeys } from './keys'
 
 /**
  * Timeline filters as URL search state (FE-009): a filtered view is shareable, bookmarkable, and
@@ -29,21 +30,21 @@ export function buildSessionFilter({ topic }: TimelineSearch): string | undefine
 
 export function sessionListQueryOptions(filter?: string, mood?: string) {
   return queryOptions({
-    queryKey: ['sessions', filter ?? null, mood ?? null],
+    queryKey: sessionKeys.list({ filter, mood }),
     queryFn: () => sessionsApi.getSessionList(filter, mood),
   })
 }
 
 export function sessionQueryOptions(id: string) {
   return queryOptions({
-    queryKey: ['session', id],
+    queryKey: sessionKeys.detail(id),
     queryFn: () => sessionsApi.getSession(id),
   })
 }
 
 export function topicsQueryOptions() {
   return queryOptions({
-    queryKey: ['topics'],
+    queryKey: sessionKeys.topics,
     queryFn: () => sessionsApi.getTopics(),
   })
 }
@@ -54,7 +55,7 @@ export function useTopics() {
 
 export function peopleQueryOptions() {
   return queryOptions({
-    queryKey: ['people'],
+    queryKey: sessionKeys.people,
     queryFn: () => sessionsApi.getPeople(),
   })
 }
@@ -69,20 +70,20 @@ export function useCreatePerson() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (label: string) => sessionsApi.createPerson(label),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['people'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: sessionKeys.people }),
   })
 }
 
 export function revisionsQueryOptions(id: string) {
   return queryOptions({
-    queryKey: ['session', id, 'revisions'],
+    queryKey: sessionKeys.revisions(id),
     queryFn: () => sessionsApi.getRevisions(id),
   })
 }
 
 export function revisionQueryOptions(id: string, revisionNumber: number | null) {
   return queryOptions({
-    queryKey: ['session', id, 'revisions', revisionNumber],
+    queryKey: sessionKeys.revision(id, revisionNumber),
     queryFn: () => sessionsApi.getRevision(id, revisionNumber!),
     enabled: revisionNumber != null,
   })
@@ -90,14 +91,14 @@ export function revisionQueryOptions(id: string, revisionNumber: number | null) 
 
 export function cleanedRevisionsQueryOptions(id: string) {
   return queryOptions({
-    queryKey: ['session', id, 'cleaned-revisions'],
+    queryKey: sessionKeys.cleanedRevisions(id),
     queryFn: () => sessionsApi.getCleanedRevisions(id),
   })
 }
 
 export function cleanedRevisionQueryOptions(id: string, revisionNumber: number | null) {
   return queryOptions({
-    queryKey: ['session', id, 'cleaned-revisions', revisionNumber],
+    queryKey: sessionKeys.cleanedRevision(id, revisionNumber),
     queryFn: () => sessionsApi.getCleanedRevision(id, revisionNumber!),
     enabled: revisionNumber != null,
   })
@@ -125,12 +126,13 @@ export function useSaveDraft(id: string) {
   return useMutation({
     mutationFn: (rawText: string) => sessionsApi.saveDraft(id, rawText),
     onSuccess: () => {
-      // A save point may have appended a Revision — refresh the history.
-      queryClient.invalidateQueries({ queryKey: ['session', id, 'revisions'] })
-      // Saving reconciles People from the prose @-mentions (RICH-007) — refresh the Session (badges) and
-      // the timeline rows that display them.
-      queryClient.invalidateQueries({ queryKey: ['session', id] })
-      queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      // A save point may have appended a Revision, and saving reconciles People from the prose
+      // @-mentions (RICH-007) — refresh the Session (badges). `detail(id)` is a prefix of its revision
+      // stream, so this one invalidate cascades to the history too. Then refresh the timeline rows.
+      queryClient.invalidateQueries({ queryKey: sessionKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: sessionKeys.lists() })
+      // Saving may have introduced a new directory Person via an @-mention.
+      queryClient.invalidateQueries({ queryKey: sessionKeys.people })
     },
   })
 }
@@ -148,9 +150,9 @@ export function useSaveMetadata(id: string) {
   return useMutation({
     mutationFn: (metadata: sessionsApi.Metadata) => sessionsApi.saveMetadata(id, metadata),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['session', id] })
-      queryClient.invalidateQueries({ queryKey: ['sessions'] }) // timeline chips/filters
-      queryClient.invalidateQueries({ queryKey: ['topics'] }) // a new Topic may now exist for autocomplete
+      queryClient.invalidateQueries({ queryKey: sessionKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: sessionKeys.lists() }) // timeline chips/filters
+      queryClient.invalidateQueries({ queryKey: sessionKeys.topics }) // a new Topic may now exist for autocomplete
     },
   })
 }
@@ -161,9 +163,9 @@ export function useRespondToSuggestion(id: string) {
     mutationFn: ({ suggestion, action }: { suggestion: sessionsApi.Suggestion; action: 'accept' | 'reject' }) =>
       sessionsApi.respondToSuggestion(id, suggestion, action),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['session', id] })
-      queryClient.invalidateQueries({ queryKey: ['sessions'] }) // accepted tags show on the timeline
-      queryClient.invalidateQueries({ queryKey: ['topics'] }) // an accepted Topic may be new
+      queryClient.invalidateQueries({ queryKey: sessionKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: sessionKeys.lists() }) // accepted tags show on the timeline
+      queryClient.invalidateQueries({ queryKey: sessionKeys.topics }) // an accepted Topic may be new
     },
   })
 }
@@ -175,10 +177,11 @@ export function useRespondToPersonProposal(id: string) {
     mutationFn: (decision: sessionsApi.PersonProposalDecision) =>
       sessionsApi.respondToPersonProposal(id, decision),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['session', id] }) // proposals + projected People badges
-      queryClient.invalidateQueries({ queryKey: ['session', id, 'cleaned-revisions'] }) // approval appends one
-      queryClient.invalidateQueries({ queryKey: ['sessions'] }) // timeline People chips
-      queryClient.invalidateQueries({ queryKey: ['people'] }) // approval may add a directory Person
+      // `detail(id)` covers proposals + projected People badges, and (as a prefix) the cleaned-revision
+      // stream the approval appends to — so one invalidate replaces the former detail + cleaned-revisions pair.
+      queryClient.invalidateQueries({ queryKey: sessionKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: sessionKeys.lists() }) // timeline People chips
+      queryClient.invalidateQueries({ queryKey: sessionKeys.people }) // approval may add a directory Person
     },
   })
 }
@@ -189,9 +192,11 @@ export function useSaveCleaned(id: string) {
     mutationFn: (cleanedText: string) => sessionsApi.saveCleaned(id, cleanedText),
     onSuccess: () => {
       // A hand-edit appended a Cleaned Revision and flipped the hand-edit flag — and reconciles People
-      // from the Cleaned prose @-mentions (RICH-007). Refresh the Session and the timeline rows.
-      queryClient.invalidateQueries({ queryKey: ['session', id] })
-      queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      // from the Cleaned prose @-mentions (RICH-007). `detail(id)` cascades to the cleaned-revision
+      // stream; refresh the timeline rows and the People directory too.
+      queryClient.invalidateQueries({ queryKey: sessionKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: sessionKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: sessionKeys.people })
     },
   })
 }
@@ -227,7 +232,7 @@ export function useCleanup(id: string) {
       setError(true)
     } finally {
       setRunning(false)
-      await queryClient.invalidateQueries({ queryKey: ['session', id] })
+      await queryClient.invalidateQueries({ queryKey: sessionKeys.detail(id) })
     }
   }, [id, queryClient])
 
