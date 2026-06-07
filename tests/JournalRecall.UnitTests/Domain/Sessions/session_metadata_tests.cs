@@ -101,6 +101,55 @@ public class session_metadata_tests
     }
 
     [Fact]
+    public void reconciling_people_takes_the_union_of_raw_and_cleaned_mentions()
+    {
+        var sam = Guid.CreateVersion7();
+        var alex = Guid.CreateVersion7();
+        var jordan = Guid.CreateVersion7();
+
+        var s = New();
+        s.SaveDraft(DocWithMentions((sam, "Sam"), (alex, "Alex")));
+        s.BeginCleanup();
+        // Cleaned drops Alex but keeps Sam and adds Jordan — the union is all three.
+        s.CompleteCleanup(DocWithMentions((sam, "Sam"), (jordan, "Jordan")), "recap");
+
+        s.ReconcileMentionedPeople();
+
+        s.People.Select(p => p.PersonId).ShouldBe([sam, alex, jordan], ignoreOrder: true);
+    }
+
+    [Fact]
+    public void a_mention_kept_in_only_one_copy_keeps_the_person()
+    {
+        var sam = Guid.CreateVersion7();
+
+        var s = New();
+        s.SaveDraft(DocWithMentions((sam, "Sam"))); // Raw mentions Sam
+        s.BeginCleanup();
+        s.CompleteCleanup(Doc("polished, no mentions"), "recap"); // Cleaned drops the mention
+
+        s.ReconcileMentionedPeople();
+
+        s.People.Select(p => p.PersonId).ShouldBe([sam]); // union semantics keep Sam
+    }
+
+    [Fact]
+    public void removing_a_mention_from_both_copies_untags_the_person()
+    {
+        var sam = Guid.CreateVersion7();
+
+        var s = New();
+        s.SaveDraft(DocWithMentions((sam, "Sam")));
+        s.ReconcileMentionedPeople();
+        s.People.Select(p => p.PersonId).ShouldBe([sam]);
+
+        s.SaveDraft(Doc("the mention is gone now")); // edited away in Raw, never in Cleaned
+        s.ReconcileMentionedPeople();
+
+        s.People.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void ai_suggestions_never_duplicate_existing_metadata_but_may_add_more_moods()
     {
         var s = New();

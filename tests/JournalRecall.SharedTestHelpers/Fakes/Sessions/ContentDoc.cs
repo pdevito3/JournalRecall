@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using JournalRecall.Api.Domain.Sessions.Content;
 
 namespace JournalRecall.SharedTestHelpers.Fakes.Sessions;
@@ -15,4 +16,33 @@ public static class ContentDoc
 
     /// <summary>A stored ProseMirror JSON document string → its derived plain text projection.</summary>
     public static string PlainText(string json) => ProseMirrorToPlainText.Render(json);
+
+    /// <summary>
+    /// A canonical document whose single paragraph holds an <c>@</c>-mention node per entry — the payload
+    /// the editor saves once a User mentions directory People (PRD-0006). Each mention carries the durable
+    /// <c>personId</c> and a display <c>label</c> snapshot.
+    /// </summary>
+    public static string DocWithMentions(params (Guid PersonId, string Label)[] mentions)
+    {
+        var content = new JsonArray();
+        foreach (var (personId, label) in mentions)
+            content.Add(new JsonObject
+            {
+                ["type"] = "mention",
+                ["attrs"] = new JsonObject
+                {
+                    ["personId"] = personId.ToString(),
+                    ["label"] = label,
+                },
+            });
+
+        return new JsonObject
+        {
+            ["type"] = "doc",
+            ["content"] = new JsonArray
+            {
+                new JsonObject { ["type"] = "paragraph", ["content"] = content },
+            },
+        }.ToJsonString();
+    }
 }

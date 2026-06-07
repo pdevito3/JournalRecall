@@ -212,6 +212,19 @@ public sealed class Session : BaseEntity
     }
 
     /// <summary>
+    /// Reconciles the Session's People references to the <b>union</b> of the directory People mentioned in
+    /// the Raw and Cleaned copies (PRD-0006, RICH-006), so the People badges are a pure projection of the
+    /// prose: a mention in either copy keeps the Person; a Person mentioned in neither is dropped. Called at
+    /// each save point once the editors produce mention nodes (RICH-007).
+    /// </summary>
+    public void ReconcileMentionedPeople()
+    {
+        var mentioned = new HashSet<Guid>(MentionProjection.ExtractPersonIds(RawDraft));
+        mentioned.UnionWith(MentionProjection.ExtractPersonIds(CleanedDraft));
+        SetUserPeople(mentioned);
+    }
+
+    /// <summary>
     /// Replaces the Session's Moods. Each input string is resolved (known-vs-custom) to its canonical form
     /// and the set is deduped case-insensitively; blanks are dropped, multiple customs are allowed.
     /// </summary>
