@@ -82,7 +82,13 @@ export function SessionEditor({ sessionId }: { sessionId: string }) {
             mention={mention}
           />
         ) : hasCleaned ? (
-          <CleanedEditorBoundary session={session} />
+          // Keyed on the server's Cleaned copy itself, so a server-side regeneration (Cleanup re-run,
+          // approved People-tag) remounts and re-seeds, while local keystrokes and no-op refetches don't
+          // (keystrokes never touch the server's `cleanedDraft`). Keying on the same `session` field we
+          // seed from — not the separate cleaned-revisions stream — keeps the remount and the seed in
+          // lockstep: no refresh needed after an approval inserts mentions (the two streams could settle
+          // in either order, leaving a revision-number key to remount on a still-stale draft).
+          <CleanedEditor key={`${session.id}:${session.cleanedDraft}`} session={session} />
         ) : (
           <CleanedEmptyState />
         )}
@@ -496,19 +502,6 @@ function splitList(value: string): string[] {
     .split(',')
     .map((t) => t.trim())
     .filter((t) => t.length > 0)
-}
-
-// Change-token for the Cleaned editor: the latest cleaned Revision number. A Cleanup re-run appends a
-// new cleaned Revision (server regeneration), so the number changes → the editor remounts → re-seeds
-// from the fresh server copy. Within a stable number, local unsaved edits persist (no remount on
-// keystrokes/refetch). Concurrent-edit policy: local edits win until a save point; a server
-// regeneration re-seeds. Falls back to the seed text so the first paint (before history loads) is keyed
-// stably rather than flapping when the revisions list arrives.
-function CleanedEditorBoundary({ session }: { session: Session }) {
-  const { data: revisions } = useCleanedRevisions(session.id)
-  const latest = revisions?.at(-1)
-  const token = latest ? `v${latest.revisionNumber}` : session.cleanedDraft
-  return <CleanedEditor key={`${session.id}:${token}`} session={session} />
 }
 
 /** The AI-derived Cleaned copy, hand-editable. Edits debounce-save and append a Cleaned Revision. */
