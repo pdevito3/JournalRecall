@@ -1,6 +1,8 @@
 using System.Net;
 using JournalRecall.Api.Domain.People.Dtos;
+using JournalRecall.Api.Domain.Sessions.Dtos;
 using JournalRecall.FunctionalTests.TestUtilities;
+using JournalRecall.SharedTestHelpers.Fakes.Sessions;
 
 namespace JournalRecall.FunctionalTests.People;
 
@@ -61,6 +63,26 @@ public class people_endpoint_tests(WebTestFixture fixture) : TestBase(fixture)
             .ShouldNotContain(p => p.Label == "Confidant");
         (await bob.PatchJsonAsync(ApiRoutes.People.Rename(alicePerson!.Id), new { label = "Hacked" }))
             .StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task mentioning_a_created_person_projects_onto_the_session_people_badges()
+    {
+        var client = FakeAuth.CreateClient().AsUser(Guid.CreateVersion7());
+        var sam = await (await client.PostJsonAsync(ApiRoutes.People.Create(), new { label = "Sam" }))
+            .ReadJsonAsync<PersonDto>();
+        var session = await (await client.PostAsync(ApiRoutes.Sessions.Create(), null)).ReadJsonAsync<SessionDto>();
+
+        // Saving prose that @-mentions Sam reconciles the People badges (the create/pick + projection flow).
+        await client.PutJsonAsync(ApiRoutes.Sessions.Draft(session!.Id),
+            new { rawText = ContentDoc.DocWithMentions((sam!.Id, "Sam")) });
+        (await (await client.GetAsync(ApiRoutes.Sessions.Get(session.Id))).ReadJsonAsync<SessionDto>())!
+            .People.ShouldBe(["Sam"]);
+
+        // Removing the mention untags Sam — the one obvious way to untag.
+        await client.PutJsonAsync(ApiRoutes.Sessions.Draft(session.Id), new { rawText = ContentDoc.Doc("Sam left") });
+        (await (await client.GetAsync(ApiRoutes.Sessions.Get(session.Id))).ReadJsonAsync<SessionDto>())!
+            .People.ShouldBeEmpty();
     }
 
     [Fact]

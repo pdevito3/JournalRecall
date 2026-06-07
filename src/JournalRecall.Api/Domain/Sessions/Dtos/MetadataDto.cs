@@ -10,10 +10,9 @@ public sealed record SuggestionDto(SuggestionKind Kind, string Value);
 public sealed record SuggestionRef(SuggestionKind Kind, string Value);
 
 /// <summary>
-/// The editable manual metadata for a Session. Moods are plain strings (known mood names or custom text);
-/// People are labels the server resolves to directory references.
+/// The editable manual metadata for a Session: Topics and Moods (known mood names or custom text). People
+/// are not here — they project from the prose @-mentions, reconciled on save (PRD-0006, RICH-007).
 /// </summary>
 public sealed record MetadataForWrite(
     IReadOnlyList<string>? Topics,
-    IReadOnlyList<string>? People,
     IReadOnlyList<string>? Moods);

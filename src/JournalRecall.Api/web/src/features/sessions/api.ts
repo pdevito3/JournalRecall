@@ -4,6 +4,7 @@ import type {
   CleanupEvent,
   GeoPoint,
   Metadata,
+  Person,
   Revision,
   RevisionSummary,
   Session,
@@ -86,6 +87,25 @@ export async function getSession(id: string): Promise<Session> {
 export async function getTopics(): Promise<string[]> {
   const res = await apiFetch('/api/topics', { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load topics')
+  return res.json()
+}
+
+/** The User's Person directory (powers @-mention autocomplete). */
+export async function getPeople(): Promise<Person[]> {
+  const res = await apiFetch('/api/people', { credentials: 'include' })
+  if (!res.ok) throw new Error('Could not load people')
+  return res.json()
+}
+
+/** Creates a directory Person inline from the @-mention flow, returning the durable entry to mention. */
+export async function createPerson(label: string): Promise<Person> {
+  const res = await apiFetch('/api/people', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ label }),
+  })
+  if (!res.ok) throw new Error('Could not create person')
   return res.json()
 }
 

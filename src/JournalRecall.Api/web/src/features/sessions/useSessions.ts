@@ -52,6 +52,27 @@ export function useTopics() {
   return useQuery(topicsQueryOptions())
 }
 
+export function peopleQueryOptions() {
+  return queryOptions({
+    queryKey: ['people'],
+    queryFn: () => sessionsApi.getPeople(),
+  })
+}
+
+/** The User's Person directory — autocomplete source for the @-mention flow. */
+export function usePeople() {
+  return useQuery(peopleQueryOptions())
+}
+
+/** Creates a directory Person inline (the @ "create new" path); refreshes the directory for autocomplete. */
+export function useCreatePerson() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (label: string) => sessionsApi.createPerson(label),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['people'] }),
+  })
+}
+
 export function revisionsQueryOptions(id: string) {
   return queryOptions({
     queryKey: ['session', id, 'revisions'],
@@ -103,8 +124,14 @@ export function useSaveDraft(id: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (rawText: string) => sessionsApi.saveDraft(id, rawText),
-    // A save point may have appended a Revision — refresh the history.
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['session', id, 'revisions'] }),
+    onSuccess: () => {
+      // A save point may have appended a Revision — refresh the history.
+      queryClient.invalidateQueries({ queryKey: ['session', id, 'revisions'] })
+      // Saving reconciles People from the prose @-mentions (RICH-007) — refresh the Session (badges) and
+      // the timeline rows that display them.
+      queryClient.invalidateQueries({ queryKey: ['session', id] })
+      queryClient.invalidateQueries({ queryKey: ['sessions'] })
+    },
   })
 }
 
@@ -145,8 +172,12 @@ export function useSaveCleaned(id: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (cleanedText: string) => sessionsApi.saveCleaned(id, cleanedText),
-    // A hand-edit appended a Cleaned Revision and flipped the hand-edit flag — refresh both.
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['session', id] }),
+    onSuccess: () => {
+      // A hand-edit appended a Cleaned Revision and flipped the hand-edit flag — and reconciles People
+      // from the Cleaned prose @-mentions (RICH-007). Refresh the Session and the timeline rows.
+      queryClient.invalidateQueries({ queryKey: ['session', id] })
+      queryClient.invalidateQueries({ queryKey: ['sessions'] })
+    },
   })
 }
 

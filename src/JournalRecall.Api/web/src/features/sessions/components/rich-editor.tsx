@@ -3,17 +3,19 @@ import { EditorContent, useEditor, type Extensions, type JSONContent } from '@ti
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
 import { cn } from '@/shared/utils/cn'
+import { createPersonMention, type MentionConfig } from './mention'
 
 // Canonical node/mark set for RICH-003 (LOCKED wire contract):
-//   nodes: doc, paragraph, heading (1,2,3), bulletList, orderedList, listItem, blockquote, codeBlock
+//   nodes: doc, paragraph, heading (1,2,3), bulletList, orderedList, listItem, blockquote, codeBlock,
+//          mention (RICH-007)
 //   marks: bold, italic, code
 // Everything outside this set is disabled. StarterKit also bundles utility extensions
 // (text, hardBreak, dropcursor, gapcursor, listKeymap, trailingNode, undoRedo) which are kept —
 // they carry no out-of-set nodes/marks and just make editing pleasant.
 //
-// Mention is intentionally NOT here (arrives in RICH-007). To extend later, append a mention
-// extension to `extensions` below — nothing else needs to change.
-function buildExtensions(placeholder?: string): Extensions {
+// The `mention` node is added only when a `mention` config is supplied (the editing surfaces); read-only
+// revision views render mention nodes from their stored content without the suggestion machinery.
+function buildExtensions(placeholder?: string, mention?: MentionConfig): Extensions {
   return [
     StarterKit.configure({
       heading: { levels: [1, 2, 3] },
@@ -24,6 +26,9 @@ function buildExtensions(placeholder?: string): Extensions {
       underline: false,
     }),
     Placeholder.configure({ placeholder: placeholder ?? '' }),
+    // The mention node is always registered (so read-only views preserve stored mentions); the `@`
+    // autocomplete is wired only when a config is supplied.
+    createPersonMention(mention),
   ]
 }
 
@@ -56,6 +61,8 @@ export interface RichEditorProps {
   editable?: boolean
   autoFocus?: boolean
   className?: string
+  /** Wires the `@`-mention autocomplete (editing surfaces); omit for read-only views. */
+  mention?: MentionConfig
 }
 
 /**
@@ -75,13 +82,14 @@ export function RichEditor({
   editable = true,
   autoFocus = false,
   className,
+  mention,
 }: RichEditorProps) {
   // Keep the latest onChange without re-creating the editor (which would lose editor state).
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
 
   const editor = useEditor({
-    extensions: buildExtensions(placeholder),
+    extensions: buildExtensions(placeholder, mention),
     content: parseContent(initialContent),
     editable,
     autofocus: autoFocus ? 'end' : false,

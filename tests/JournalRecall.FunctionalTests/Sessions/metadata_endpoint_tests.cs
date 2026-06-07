@@ -24,7 +24,7 @@ public class metadata_endpoint_tests(WebTestFixture fixture) : TestBase(fixture)
         var (client, id) = await NewSession();
 
         var response = await client.PutJsonAsync(ApiRoutes.Sessions.Metadata(id),
-            new { topics = new[] { "work" }, people = Array.Empty<string>(), moods = new[] { "Joyful", "bittersweet" } });
+            new { topics = new[] { "work" }, moods = new[] { "Joyful", "bittersweet" } });
 
         response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
     }
@@ -36,7 +36,7 @@ public class metadata_endpoint_tests(WebTestFixture fixture) : TestBase(fixture)
         var bob = await RealAuth.CreateAuthenticatedClientAsync();
 
         var response = await bob.PutJsonAsync(ApiRoutes.Sessions.Metadata(id),
-            new { topics = new[] { "x" }, people = Array.Empty<string>(), moods = Array.Empty<string>() });
+            new { topics = new[] { "x" }, moods = Array.Empty<string>() });
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }

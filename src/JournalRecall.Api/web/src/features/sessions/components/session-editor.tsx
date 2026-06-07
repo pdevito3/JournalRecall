@@ -21,16 +21,18 @@ import {
   type Session,
   type Suggestion,
 } from '@/features/sessions/api'
-import { Form, TextField, createForm } from '@/shared/forms'
+import { Form, createForm } from '@/shared/forms'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils/cn'
 import { RichEditor } from './rich-editor'
+import { useMentionConfig } from './mention'
 
 type EditorTab = 'raw' | 'cleaned'
 
 export function SessionEditor({ sessionId }: { sessionId: string }) {
   const { data: session } = useSession(sessionId)
   const saveDraft = useSaveDraft(sessionId)
+  const mention = useMentionConfig()
 
   const [viewingRaw, setViewingRaw] = useState<number | null>(null)
   const [viewingCleaned, setViewingCleaned] = useState<number | null>(null)
@@ -72,8 +74,9 @@ export function SessionEditor({ sessionId }: { sessionId: string }) {
           <RichEditor
             initialContent={session.rawDraft}
             onChange={onChange}
-            placeholder="Write freely…"
+            placeholder="Write freely… type @ to tag someone"
             autoFocus
+            mention={mention}
           />
         ) : hasCleaned ? (
           <CleanedEditorBoundary session={session} />
@@ -186,9 +189,9 @@ function SuggestionChips({ session }: { session: Session }) {
 
 export const metadataSchema = z.object({
   topics: z.string(),
-  people: z.string(),
   // Moods are held as a comma-joined string in the form (the chip control parses/serializes it); the
-  // server resolves known-vs-custom and dedupes. Comma-joined to match the Topics/People form pattern.
+  // server resolves known-vs-custom and dedupes. Comma-joined to match the Topics form pattern. People are
+  // not here — they project from the prose @-mentions (RICH-007), shown as read-only badges.
   moods: z.string(),
 })
 
@@ -197,20 +200,20 @@ type MetadataFormValues = z.infer<typeof metadataSchema>
 const { Field, applyServerErrors } = createForm<typeof metadataSchema>()
 
 // Change-token for the metadata editor: the Session DTO carries no revision field, so derive one from
-// the metadata values themselves. When the server changes them (accepted Suggestion, Cleanup re-run),
-// this key changes and the editor remounts, re-seeding its defaults from the fresh server values.
+// the form values themselves. When the server changes them (accepted Suggestion, Cleanup re-run), this key
+// changes and the editor remounts, re-seeding its defaults from the fresh server values. People are not a
+// form field (they project from the prose), so they're excluded — the read-only badges re-render on refetch.
 function metadataKey(session: Session): string {
-  return JSON.stringify([session.topics, session.people, session.moods])
+  return JSON.stringify([session.topics, session.moods])
 }
 
-/** Per-Session manual metadata: Topics, People, and one-or-more Moods (known or custom free text). */
+/** Per-Session manual metadata: Topics and one-or-more Moods (known or custom free text). */
 function MetadataEditor({ session }: { session: Session }) {
   const save = useSaveMetadata(session.id)
 
   const form = useForm({
     defaultValues: {
       topics: session.topics.join(', '),
-      people: session.people.join(', '),
       moods: session.moods.join(', '),
     } satisfies MetadataFormValues,
     validators: { onBlur: metadataSchema },
@@ -218,7 +221,6 @@ function MetadataEditor({ session }: { session: Session }) {
       try {
         await save.mutateAsync({
           topics: splitList(value.topics),
-          people: splitList(value.people),
           moods: splitList(value.moods),
         })
       } catch (error) {
@@ -238,13 +240,38 @@ function MetadataEditor({ session }: { session: Session }) {
         className="space-y-3 rounded-lg border border-border bg-surface-2 p-4"
       >
         <Field name="topics">{(field) => <TopicBadges field={field} />}</Field>
-        <Field name="people">
-          {(field) => <TextField field={field} label="People (comma-separated)" placeholder="Sam, Alex" />}
-        </Field>
+        <ProjectedPeople people={session.people} />
         <Field name="moods">{(field) => <MoodChips field={field} />}</Field>
         <Form.Errors />
         <Form.Submit>Save metadata</Form.Submit>
       </Form>
+    </div>
+  )
+}
+
+/**
+ * Read-only People badges (PRD-0006, RICH-007): the projection of who's @-mentioned in the Raw + Cleaned
+ * prose, reconciled on save. Not editable here — tag People by mentioning them in either editor; remove a
+ * mention to untag.
+ */
+function ProjectedPeople({ people }: { people: string[] }) {
+  return (
+    <div className="space-y-2">
+      <span className="text-sm text-muted">People</span>
+      {people.length > 0 ? (
+        <div className="flex flex-wrap gap-2" data-testid="people-badges">
+          {people.map((label) => (
+            <span
+              key={label}
+              className="rounded-full border border-border bg-surface-3 px-3 py-0.5 text-sm text-content"
+            >
+              @{label}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted">Type @ in an editor to tag someone.</p>
+      )}
     </div>
   )
 }
@@ -398,6 +425,7 @@ function CleanedEditorBoundary({ session }: { session: Session }) {
 /** The AI-derived Cleaned copy, hand-editable. Edits debounce-save and append a Cleaned Revision. */
 function CleanedEditor({ session }: { session: Session }) {
   const saveCleaned = useSaveCleaned(session.id)
+  const mention = useMentionConfig()
   // Uncontrolled, keyed per cleaned-Revision by CleanedEditorBoundary → seed directly from server JSON.
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -413,7 +441,7 @@ function CleanedEditor({ session }: { session: Session }) {
       <div className="flex items-center justify-end">
         <SaveStatus pending={saveCleaned.isPending} success={saveCleaned.isSuccess} error={saveCleaned.isError} />
       </div>
-      <RichEditor initialContent={session.cleanedDraft} onChange={onChange} className="bg-surface-3" />
+      <RichEditor initialContent={session.cleanedDraft} onChange={onChange} className="bg-surface-3" mention={mention} />
     </div>
   )
 }

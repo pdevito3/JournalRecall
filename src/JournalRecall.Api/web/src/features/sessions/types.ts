@@ -6,9 +6,15 @@ export type CleanupStatus = 'NotRun' | 'Running' | 'Clean' | 'Stale' | 'Failed'
 
 export interface Metadata {
   topics: string[]
-  people: string[]
-  // Moods are plain strings: a known mood name or free-text custom mood (PRD-0006).
+  // Moods are plain strings: a known mood name or free-text custom mood (PRD-0006). People are not here —
+  // they project from the prose @-mentions, reconciled on save (RICH-007).
   moods: string[]
+}
+
+/** A directory Person (PRD-0006): the durable id a mention references + its display label. */
+export interface Person {
+  id: string
+  label: string
 }
 
 export type SuggestionKind = 'Topic' | 'Person' | 'Mood'

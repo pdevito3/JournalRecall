@@ -25,6 +25,9 @@ public static class SaveCleaned
             // A user hand-edit of the Cleaned copy — appends a Cleaned Revision, flags hand-edits, and
             // never touches Raw (ADR-0003, CONTEXT.md).
             var changed = session.EditCleaned(request.CleanedText);
+            // People Metadata projects from the prose (PRD-0006, RICH-007): reconcile to the union of
+            // Raw + Cleaned @-mentions so editing the Cleaned copy retags People too.
+            session.ReconcileMentionedPeople();
             await db.SaveChangesAsync(cancellationToken);
 
             // A changed Cleaned copy is what a Day/Week Summary reads — invalidate the period chain (issue 0014).

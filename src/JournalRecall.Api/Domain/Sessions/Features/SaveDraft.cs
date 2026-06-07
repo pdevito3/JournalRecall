@@ -24,6 +24,9 @@ public static class SaveDraft
 
             var revisionsBefore = session.LatestRawRevisionNumber;
             session.SaveDraft(request.RawText);
+            // People Metadata is a pure projection of the prose (PRD-0006, RICH-007): reconcile the
+            // SessionPerson refs to the union of Raw + Cleaned @-mentions on every save.
+            session.ReconcileMentionedPeople();
             await db.SaveChangesAsync(cancellationToken);
 
             // A real Raw change (a Revision was appended) makes the day's period Summaries Stale (issue 0014).
