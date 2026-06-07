@@ -69,6 +69,10 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             session.Ignore(s => s.LatestRawRevisionNumber);
             // Location is a value object reconstructed from the scalar Latitude/Longitude columns.
             session.Ignore(s => s.Location);
+            // The Draft setters derive *PlainText in lockstep; reading the backing field on materialization
+            // bypasses that setter so EF doesn't re-render the stored projection on every load (ADR-0009).
+            session.Property(s => s.RawDraft).UsePropertyAccessMode(PropertyAccessMode.Field);
+            session.Property(s => s.CleanedDraft).UsePropertyAccessMode(PropertyAccessMode.Field);
             // Moods are a primitive string collection serialized to a single JSON column (EF Core),
             // read/written through the read-only property's backing field (PRD-0006).
             session.PrimitiveCollection(s => s.Moods).UsePropertyAccessMode(PropertyAccessMode.Field);

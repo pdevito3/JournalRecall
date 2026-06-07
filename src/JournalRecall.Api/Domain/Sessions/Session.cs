@@ -28,7 +28,16 @@ public sealed class Session : BaseEntity
     /// The live, autosaved Raw content as canonical ProseMirror/tiptap JSON (ADR-0009). Human-owned and
     /// stored exactly as the editor serialized it — never mutated by the server. Empty until first typed.
     /// </summary>
-    public string RawDraft { get; private set; } = string.Empty;
+    public string RawDraft
+    {
+        get => field;
+        // RawPlainText is derived in lockstep here, so the projection can never drift from the draft.
+        private set
+        {
+            field = value ?? string.Empty;
+            RawPlainText = ProseMirrorToPlainText.Render(field);
+        }
+    } = string.Empty;
 
     /// <summary>
     /// The derived plaintext projection of <see cref="RawDraft"/> (ADR-0009), recomputed on every save.
@@ -48,7 +57,16 @@ public sealed class Session : BaseEntity
     /// The AI-derived, polished copy produced by the latest Cleanup (CONTEXT.md), as canonical
     /// ProseMirror/tiptap JSON (ADR-0009). Also user hand-editable. Empty until a run succeeds.
     /// </summary>
-    public string CleanedDraft { get; private set; } = string.Empty;
+    public string CleanedDraft
+    {
+        get => field;
+        // CleanedPlainText is derived in lockstep here, so the projection can never drift from the draft.
+        private set
+        {
+            field = value ?? string.Empty;
+            CleanedPlainText = ProseMirrorToPlainText.Render(field);
+        }
+    } = string.Empty;
 
     /// <summary>The derived plaintext projection of <see cref="CleanedDraft"/> (ADR-0009), recomputed on every save.</summary>
     public string CleanedPlainText { get; private set; } = string.Empty;
@@ -140,7 +158,6 @@ public sealed class Session : BaseEntity
         var changed = !string.Equals(rawText, LatestRawContent, StringComparison.Ordinal);
 
         RawDraft = rawText;
-        RawPlainText = ProseMirrorToPlainText.Render(rawText);
         if (changed)
             _rawRevisions.Add(new RawRevision(_rawRevisions.Count + 1, rawText));
     }
@@ -165,7 +182,6 @@ public sealed class Session : BaseEntity
     {
         cleanedText ??= string.Empty;
         CleanedDraft = cleanedText;
-        CleanedPlainText = ProseMirrorToPlainText.Render(cleanedText);
         Synopsis = synopsis ?? string.Empty;
         _cleanedRevisions.Add(new CleanedRevision(_cleanedRevisions.Count + 1, cleanedText));
         LastCleanedRawRevisionNumber = _cleaningFromRawRevisionNumber;
@@ -221,7 +237,6 @@ public sealed class Session : BaseEntity
             return false;
 
         CleanedDraft = cleanedText;
-        CleanedPlainText = ProseMirrorToPlainText.Render(cleanedText);
         _cleanedRevisions.Add(new CleanedRevision(_cleanedRevisions.Count + 1, cleanedText));
         CleanedHasHandEdits = true;
         return true;
@@ -385,7 +400,6 @@ public sealed class Session : BaseEntity
         if (!string.Equals(cleanedText, CleanedDraft, StringComparison.Ordinal))
         {
             CleanedDraft = cleanedText;
-            CleanedPlainText = ProseMirrorToPlainText.Render(cleanedText);
             _cleanedRevisions.Add(new CleanedRevision(_cleanedRevisions.Count + 1, cleanedText));
         }
         ReconcileMentionedPeople();
