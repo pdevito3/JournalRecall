@@ -6,10 +6,11 @@ namespace JournalRecall.UnitTests.Domain.Sessions.Content;
 
 /// <summary>
 /// Unit tests for <see cref="MarkdownToProseMirror"/>: markdown parses to canonical Content JSON over
-/// the supported node/mark set (paragraph, heading, lists, blockquote, codeBlock, bold/italic/code),
-/// nested lists nest, unsupported constructs degrade without throwing, and the words survive a
-/// markdown→JSON→plaintext walk (the round-trip the AC asks for, proven against the JSON directly
-/// rather than the sibling ProseMirrorToPlainText module).
+/// the ADR-0010 supported node/mark set (paragraph, heading, bullet/ordered/task lists, blockquote,
+/// codeBlock, horizontalRule; bold/italic/code/strike/underline/highlight/link), nested lists nest,
+/// unsupported constructs degrade without throwing, and the words survive a markdown→JSON→plaintext
+/// walk (the round-trip the AC asks for, proven against the JSON directly rather than the sibling
+/// ProseMirrorToPlainText module).
 /// </summary>
 public class markdown_to_prose_mirror_tests
 {
@@ -61,6 +62,12 @@ public class markdown_to_prose_mirror_tests
         textNode["marks"] is JsonArray a
             ? a.Select(m => m!["type"]!.GetValue<string>()).ToArray()
             : Array.Empty<string>();
+
+    /// <summary>The attrs object of the named mark on a text node, or null if the mark is absent.</summary>
+    private static JsonObject? MarkAttrs(JsonNode textNode, string markType) =>
+        textNode["marks"] is JsonArray a
+            ? a.FirstOrDefault(m => m!["type"]!.GetValue<string>() == markType)?["attrs"] as JsonObject
+            : null;
 
     // ---- empty / degrade-to-empty -------------------------------------------------------------
 
@@ -278,14 +285,14 @@ public class markdown_to_prose_mirror_tests
     // ---- graceful degradation -----------------------------------------------------------------
 
     [Fact]
-    public void a_link_degrades_to_its_visible_text()
+    public void a_link_keeps_its_visible_text_as_words()
     {
         var block = FirstBlock("see [the docs](https://example.com)");
 
         Type(block).ShouldBe("paragraph");
         PlainText(MarkdownToProseMirror.Convert("see [the docs](https://example.com)"))
             .ShouldBe("see the docs");
-        // No link node, no URL leaks into text.
+        // The URL lives in the mark attrs, never leaking into any text node.
         block["content"]!.AsArray().Any(n => n!["text"]!.GetValue<string>().Contains("example.com"))
             .ShouldBeFalse();
     }
@@ -312,12 +319,15 @@ public class markdown_to_prose_mirror_tests
     }
 
     [Fact]
-    public void a_thematic_break_is_dropped_without_throwing()
+    public void a_thematic_break_emits_a_horizontal_rule_between_the_paragraphs()
     {
         var doc = MarkdownToProseMirror.Convert("before\n\n---\n\nafter");
 
-        // The break itself produces no node; the surrounding paragraphs remain.
-        DocContent(doc).ToList().ShouldAllBe(b => Type(b!) == "paragraph");
+        var blocks = DocContent(doc);
+        Type(blocks[0]!).ShouldBe("paragraph");
+        Type(blocks[1]!).ShouldBe("horizontalRule");
+        Type(blocks[2]!).ShouldBe("paragraph");
+        // The rule carries no content/attrs; the surrounding words survive.
         PlainText(doc).ShouldBe("before after");
     }
 
@@ -333,6 +343,236 @@ public class markdown_to_prose_mirror_tests
     {
         var doc = MarkdownToProseMirror.Convert("a <span>tagged</span> word");
         PlainText(doc).ShouldContain("tagged");
+    }
+
+    // ---- expanded marks: strike / highlight / underline (ADR-0010) ----------------------------
+
+    [Fact]
+    public void double_tilde_becomes_a_strike_mark()
+    {
+        var block = FirstBlock("~~struck~~");
+        MarksOf(block["content"]![0]!).ShouldBe(new[] { "strike" });
+        block["content"]![0]!["text"]!.GetValue<string>().ShouldBe("struck");
+    }
+
+    [Fact]
+    public void double_equals_becomes_a_highlight_mark()
+    {
+        var block = FirstBlock("==marked==");
+        MarksOf(block["content"]![0]!).ShouldBe(new[] { "highlight" });
+        block["content"]![0]!["text"]!.GetValue<string>().ShouldBe("marked");
+    }
+
+    [Fact]
+    public void double_plus_becomes_an_underline_mark()
+    {
+        var block = FirstBlock("++inserted++");
+        MarksOf(block["content"]![0]!).ShouldBe(new[] { "underline" });
+        block["content"]![0]!["text"]!.GetValue<string>().ShouldBe("inserted");
+    }
+
+    [Fact]
+    public void expanded_marks_combine_with_inherited_marks_in_deterministic_order()
+    {
+        // **bold _italic ~~strike~~_** — the innermost run carries all three, sorted Ordinal.
+        var block = FirstBlock("**bold _italic ~~strike~~_**");
+        var struck = block["content"]!.AsArray().First(n => n!["text"]!.GetValue<string>() == "strike")!;
+        MarksOf(struck).ShouldBe(new[] { "bold", "italic", "strike" });
+    }
+
+    // Subscript/superscript are NOT enabled — these delimiters stay literal text (ADR-0010).
+    [Theory]
+    [InlineData("~single~", "~single~")]
+    [InlineData("^carets^", "^carets^")]
+    [InlineData("=one=", "=one=")]
+    [InlineData("+one+", "+one+")]
+    public void unenabled_single_delimiters_stay_literal_text(string markdown, string expected)
+    {
+        var block = FirstBlock(markdown);
+        Type(block).ShouldBe("paragraph");
+        block["content"]![0]!["text"]!.GetValue<string>().ShouldBe(expected);
+        MarksOf(block["content"]![0]!).ShouldBeEmpty();
+    }
+
+    // ---- links (link mark with tiptap default attrs) ------------------------------------------
+
+    [Fact]
+    public void a_link_emits_a_link_mark_with_tiptap_default_attrs()
+    {
+        var block = FirstBlock("[the docs](https://example.com)");
+        var run = block["content"]![0]!;
+
+        run["text"]!.GetValue<string>().ShouldBe("the docs");
+        MarksOf(run).ShouldBe(new[] { "link" });
+
+        var attrs = MarkAttrs(run, "link")!;
+        attrs["href"]!.GetValue<string>().ShouldBe("https://example.com");
+        attrs["target"]!.GetValue<string>().ShouldBe("_blank");
+        attrs["rel"]!.GetValue<string>().ShouldBe("noopener noreferrer nofollow");
+    }
+
+    [Fact]
+    public void a_link_mark_combines_with_inherited_marks()
+    {
+        // Bold wrapping a link: the visible text carries both bold and link (sorted Ordinal).
+        var block = FirstBlock("**see [docs](https://example.com)**");
+        var run = block["content"]!.AsArray().First(n => n!["text"]!.GetValue<string>() == "docs")!;
+        MarksOf(run).ShouldBe(new[] { "bold", "link" });
+        MarkAttrs(run, "link")!["href"]!.GetValue<string>().ShouldBe("https://example.com");
+    }
+
+    [Fact]
+    public void an_image_still_degrades_to_its_alt_text_with_no_link_mark()
+    {
+        var block = FirstBlock("![a sunset photo](pic.png)");
+        var run = block["content"]![0]!;
+        run["text"]!.GetValue<string>().ShouldBe("a sunset photo");
+        MarksOf(run).ShouldBeEmpty();
+        block["content"]!.AsArray().Any(n => n!["text"]!.GetValue<string>().Contains("pic.png")).ShouldBeFalse();
+    }
+
+    // ---- horizontal rule ----------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("---")]
+    [InlineData("***")]
+    [InlineData("___")]
+    public void a_thematic_break_emits_a_bare_horizontal_rule_node(string markdown)
+    {
+        var block = FirstBlock(markdown);
+        Type(block).ShouldBe("horizontalRule");
+        // A bare atom: no content, no attrs.
+        block.AsObject().ContainsKey("content").ShouldBeFalse();
+        block.AsObject().ContainsKey("attrs").ShouldBeFalse();
+    }
+
+    // ---- task lists ---------------------------------------------------------------------------
+
+    [Fact]
+    public void task_list_items_become_task_list_and_task_items_with_checked_state()
+    {
+        var block = FirstBlock("- [ ] todo\n- [x] done");
+
+        Type(block).ShouldBe("taskList");
+        var items = block["content"]!.AsArray();
+        items.Count.ShouldBe(2);
+
+        Type(items[0]!).ShouldBe("taskItem");
+        items[0]!["attrs"]!["checked"]!.GetValue<bool>().ShouldBeFalse();
+        Type(items[1]!).ShouldBe("taskItem");
+        items[1]!["attrs"]!["checked"]!.GetValue<bool>().ShouldBeTrue();
+    }
+
+    [Fact]
+    public void a_task_item_wraps_its_text_in_a_paragraph_without_the_marker_glyph()
+    {
+        var block = FirstBlock("- [x] buy milk");
+
+        var item = block["content"]![0]!;
+        Type(item["content"]![0]!).ShouldBe("paragraph");
+        // The "[x]" marker is stripped — only the words (and Markdig's trailing space) survive.
+        item["content"]![0]!["content"]![0]!["text"]!.GetValue<string>().Trim().ShouldBe("buy milk");
+        // No literal "[x]"/"[ ]" leaks anywhere.
+        PlainText(MarkdownToProseMirror.Convert("- [x] buy milk")).ShouldNotContain("[");
+    }
+
+    [Fact]
+    public void capital_X_marks_a_task_item_checked()
+    {
+        var block = FirstBlock("- [X] done");
+        block["content"]![0]!["attrs"]!["checked"]!.GetValue<bool>().ShouldBeTrue();
+    }
+
+    [Fact]
+    public void a_mixed_list_degrades_to_a_bullet_list_when_not_every_item_is_a_task()
+    {
+        // Only some items are tasks → fall back to bulletList; the task marker is still stripped.
+        var block = FirstBlock("- [ ] todo\n- plain");
+
+        Type(block).ShouldBe("bulletList");
+        var items = block["content"]!.AsArray();
+        items.Count.ShouldBe(2);
+        items.ToList().ShouldAllBe(i => Type(i!) == "listItem");
+        PlainText(MarkdownToProseMirror.Convert("- [ ] todo\n- plain")).ShouldNotContain("[");
+    }
+
+    // ---- parity invariant (ADR-0010) ----------------------------------------------------------
+
+    [Fact]
+    public void every_adr0010_node_and_mark_except_mention_is_producible_from_markdown()
+    {
+        // One document exercising every supported shape; assert each node type and mark appears.
+        const string md = """
+            # h1
+            ## h2
+            ### h3
+
+            A paragraph with **bold**, *italic*, `code`, ~~strike~~, ==highlight==, ++underline++,
+            and a [link](https://example.com).
+
+            > a blockquote
+
+            - bullet one
+            - bullet two
+
+            1. ordered one
+            2. ordered two
+
+            - [ ] task open
+            - [x] task done
+
+            ```
+            code block
+            ```
+
+            ---
+            """;
+
+        var doc = MarkdownToProseMirror.Convert(md);
+
+        var nodeTypes = new HashSet<string>();
+        var markTypes = new HashSet<string>();
+        Collect(doc);
+
+        foreach (var node in new[]
+                 {
+                     "doc", "paragraph", "heading", "bulletList", "orderedList", "listItem",
+                     "taskList", "taskItem", "blockquote", "codeBlock", "horizontalRule",
+                 })
+            nodeTypes.ShouldContain(node);
+
+        foreach (var mark in new[] { "bold", "italic", "code", "strike", "underline", "highlight", "link" })
+            markTypes.ShouldContain(mark);
+
+        // heading levels 1-3 all reachable.
+        var headingLevels = new HashSet<int>();
+        CollectHeadingLevels(doc);
+        headingLevels.ShouldBe(new HashSet<int> { 1, 2, 3 }, ignoreOrder: true);
+
+        void Collect(JsonNode? node)
+        {
+            if (node is not JsonObject obj)
+                return;
+            if (obj["type"]?.GetValue<string>() is { } t)
+                nodeTypes.Add(t);
+            if (obj["marks"] is JsonArray marks)
+                foreach (var m in marks)
+                    markTypes.Add(m!["type"]!.GetValue<string>());
+            if (obj["content"] is JsonArray content)
+                foreach (var c in content)
+                    Collect(c);
+        }
+
+        void CollectHeadingLevels(JsonNode? node)
+        {
+            if (node is not JsonObject obj)
+                return;
+            if (obj["type"]?.GetValue<string>() == "heading")
+                headingLevels.Add(obj["attrs"]!["level"]!.GetValue<int>());
+            if (obj["content"] is JsonArray content)
+                foreach (var c in content)
+                    CollectHeadingLevels(c);
+        }
     }
 
     // ---- round-trip word preservation (the AC) ------------------------------------------------

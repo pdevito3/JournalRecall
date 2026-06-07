@@ -60,4 +60,39 @@ public class markdown_round_trip_tests
         text.ShouldContain("italic");
         text.ShouldContain("mono");
     }
+
+    [Fact]
+    public void expanded_marks_drop_their_delimiters_but_keep_the_words()
+    {
+        var text = RoundTrip("~~struck~~ and ==marked== and ++under++ and a [link](https://x.com).");
+
+        text.ShouldNotContain("~");
+        text.ShouldNotContain("=");
+        text.ShouldNotContain("+");
+        text.ShouldNotContain("https://x.com"); // the URL lives in the link mark, not the words
+        foreach (var word in new[] { "struck", "marked", "under", "link" })
+            text.ShouldContain(word);
+    }
+
+    [Fact]
+    public void task_lists_and_rules_round_trip_to_their_words_only()
+    {
+        const string markdown = """
+            - [ ] open task
+            - [x] closed task
+
+            ---
+
+            after the rule
+            """;
+
+        var text = RoundTrip(markdown);
+
+        text.ShouldNotContain("["); // no checkbox glyph
+        text.ShouldContain("open task");
+        text.ShouldContain("closed task");
+        text.ShouldContain("after the rule");
+        // The horizontalRule contributes no blank line.
+        text.ShouldNotContain("\n\n");
+    }
 }

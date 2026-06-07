@@ -12,8 +12,9 @@ namespace JournalRecall.Api.Domain.Sessions.Content;
 /// malformed/unknown input.
 /// </summary>
 /// <remarks>
-/// Projection scheme: each <i>block</i> node (paragraph, heading, listItem, blockquote, codeBlock,
-/// and each list as a whole) renders to one line; blocks are joined with a single newline ('\n').
+/// Projection scheme: each <i>block</i> node (paragraph, heading, listItem, taskItem, blockquote,
+/// codeBlock, and each list as a whole) renders to one line; blocks are joined with a single newline
+/// ('\n'). <c>horizontalRule</c> is an atom that contributes no line.
 /// Inline nodes (text, mention) within a block concatenate with no separator — the rich layer already
 /// carries explicit spaces in the text. The final result is trimmed so empty/whitespace docs yield "".
 /// Numbering and bullets are intentionally omitted: the goal is faithful words for search, not visual
@@ -80,10 +81,17 @@ public static class ProseMirrorToPlainText
                 blocks.Add(line.ToString());
                 break;
             }
+            // horizontalRule is an atom with no text; it contributes no line (and must not add an
+            // empty one — falling into the container branch would still add nothing, but being explicit
+            // documents the intent and guards against a future `content` array sneaking in).
+            case "horizontalRule":
+                break;
             case "listItem":
+            case "taskItem": // renders its text only, like listItem — no checkbox glyph (ADR-0010)
             case "blockquote":
             case "bulletList":
             case "orderedList":
+            case "taskList":
             case "doc":
             default:
                 // Containers (and unknown types) recurse: each child block becomes its own line.

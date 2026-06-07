@@ -130,6 +130,47 @@ public class prose_mirror_to_plain_text_tests
     }
 
     [Fact]
+    public void a_task_list_renders_each_item_text_without_a_checkbox_glyph()
+    {
+        var json = """
+        {"type":"doc","content":[{"type":"taskList","content":[
+          {"type":"taskItem","attrs":{"checked":false},"content":[{"type":"paragraph","content":[{"type":"text","text":"buy milk"}]}]},
+          {"type":"taskItem","attrs":{"checked":true},"content":[{"type":"paragraph","content":[{"type":"text","text":"call mom"}]}]}
+        ]}]}
+        """;
+
+        // Both checked states render their text only — no glyph, no per-state difference.
+        ProseMirrorToPlainText.Render(json).ShouldBe("buy milk\ncall mom");
+    }
+
+    [Fact]
+    public void a_horizontal_rule_contributes_no_line()
+    {
+        var json = """
+        {"type":"doc","content":[
+          {"type":"paragraph","content":[{"type":"text","text":"above"}]},
+          {"type":"horizontalRule"},
+          {"type":"paragraph","content":[{"type":"text","text":"below"}]}
+        ]}
+        """;
+
+        // The rule adds no empty line between the two paragraphs.
+        ProseMirrorToPlainText.Render(json).ShouldBe("above\nbelow");
+    }
+
+    [Theory]
+    [InlineData("strike")]
+    [InlineData("underline")]
+    [InlineData("highlight")]
+    [InlineData("link")]
+    public void expanded_marks_are_stripped_so_only_the_words_contribute(string mark)
+    {
+        var json = $$"""{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"emphasized","marks":[{"type":"{{mark}}"}]}]}]}""";
+
+        ProseMirrorToPlainText.Render(json).ShouldBe("emphasized");
+    }
+
+    [Fact]
     public void a_mention_renders_its_label()
     {
         var json = """

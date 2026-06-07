@@ -1,7 +1,9 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using Markdig;
+using Markdig.Extensions.EmphasisExtras;
 using Markdig.Extensions.Tables;
+using Markdig.Extensions.TaskLists;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 
@@ -9,20 +11,32 @@ namespace JournalRecall.Api.Domain.Sessions.Content;
 
 /// <summary>
 /// Pure, deterministic conversion from AI-emitted markdown to canonical Content
-/// (ProseMirror/tiptap JSON), restricted to a small node/mark set: paragraph, heading (levels 1-3),
-/// bulletList/orderedList/listItem, blockquote, codeBlock, and the text node with bold/italic/code
-/// marks. The AI is never asked to emit schema-valid editor JSON — it emits markdown and the server
-/// converts here. No DB, no network. Mention insertion is out of scope (RICH-008).
+/// (ProseMirror/tiptap JSON). Per ADR-0010 the supported set is exactly what markdown can express:
+/// nodes doc, paragraph, heading (levels 1-3), bulletList/orderedList/listItem, taskList/taskItem,
+/// blockquote, codeBlock, horizontalRule; marks bold, italic, code, strike, underline, highlight, link.
+/// (The <c>mention</c> atom is the one sanctioned non-markdown node — produced by the editor and
+/// MentionInsertion, never here.) The AI is never asked to emit schema-valid editor JSON — it emits
+/// markdown and the server converts here. No DB, no network.
 ///
 /// Unsupported markdown never throws: it degrades to the nearest supported node. The degrade choices
 /// are documented inline at each call site.
 /// </summary>
 public static class MarkdownToProseMirror
 {
-    // A pipeline with tables enabled so a table parses as a Table block we can flatten to text
-    // (rather than being left as ambiguous paragraph text). Everything else stays CommonMark.
+    // Pipeline (ADR-0010 parity contract):
+    //   - Tables (pipe + grid) so a table parses as a Table block we can flatten to text.
+    //   - EmphasisExtras restricted to Strikethrough | Marked | Inserted so ~~x~~ → strike, ==x== →
+    //     highlight, ++x++ → underline. Subscript/superscript are deliberately NOT enabled, so a single
+    //     ~tilde~ and ^carets^ stay literal text.
+    //   - TaskLists so "- [ ]" / "- [x]" parse into list items carrying a TaskList inline marker.
+    // Everything else stays CommonMark.
     private static readonly MarkdownPipeline Pipeline =
-        new MarkdownPipelineBuilder().UsePipeTables().UseGridTables().Build();
+        new MarkdownPipelineBuilder()
+            .UsePipeTables()
+            .UseGridTables()
+            .UseEmphasisExtras(EmphasisExtraOptions.Strikethrough | EmphasisExtraOptions.Marked | EmphasisExtraOptions.Inserted)
+            .UseTaskLists()
+            .Build();
 
     /// <summary>Converts markdown to the canonical Content doc node. Never returns null; never throws.</summary>
     public static JsonNode Convert(string? markdown)
@@ -70,9 +84,9 @@ public static class MarkdownToProseMirror
                 target.Add(CodeBlockNode(code));
                 break;
 
-            // Thematic break (---/***) has no supported equivalent: drop it silently rather than
-            // emit a stray empty paragraph.
+            // Thematic break (---/***) → a horizontalRule node (ADR-0010 re-enables it).
             case ThematicBreakBlock:
+                target.Add(new JsonObject { ["type"] = "horizontalRule" });
                 break;
 
             // Raw HTML block degrades to a paragraph carrying its literal text, so words survive.
@@ -125,20 +139,41 @@ public static class MarkdownToProseMirror
 
     private static JsonObject List(ListBlock list)
     {
-        var isOrdered = list.IsOrdered;
-        var items = new JsonArray();
-        foreach (var child in list)
-        {
-            if (child is not ListItemBlock itemBlock)
-                continue;
+        // A list is a TASK list when its items carry task markers ("- [ ]" / "- [x]"): Markdig puts a
+        // TaskList inline as the first inline of each such item's leading paragraph. We treat a list as
+        // a task list when every (non-empty) item is a task item — mixed lists fall back to bullet/
+        // ordered with the markers stripped from the task rows.
+        var itemBlocks = list.OfType<ListItemBlock>().ToList();
+        var isTaskList = itemBlocks.Count > 0 && itemBlocks.All(IsTaskItem);
 
-            var itemContent = new JsonArray();
-            foreach (var inner in itemBlock)
-                AppendBlock(itemContent, inner); // paragraphs + nested lists nest inside the listItem
-            items.Add(new JsonObject { ["type"] = "listItem", ["content"] = itemContent });
+        var items = new JsonArray();
+        foreach (var itemBlock in itemBlocks)
+        {
+            if (isTaskList)
+            {
+                var itemContent = new JsonArray();
+                foreach (var inner in itemBlock)
+                    AppendBlock(itemContent, inner);
+                items.Add(new JsonObject
+                {
+                    ["type"] = "taskItem",
+                    ["attrs"] = new JsonObject { ["checked"] = TaskItemChecked(itemBlock) },
+                    ["content"] = itemContent,
+                });
+            }
+            else
+            {
+                var itemContent = new JsonArray();
+                foreach (var inner in itemBlock)
+                    AppendBlock(itemContent, inner); // paragraphs + nested lists nest inside the listItem
+                items.Add(new JsonObject { ["type"] = "listItem", ["content"] = itemContent });
+            }
         }
 
-        if (!isOrdered)
+        if (isTaskList)
+            return new JsonObject { ["type"] = "taskList", ["content"] = items };
+
+        if (!list.IsOrdered)
             return new JsonObject { ["type"] = "bulletList", ["content"] = items };
 
         // Carry the ordered-list start (markdown "3." → start:3); default to 1.
@@ -150,6 +185,16 @@ public static class MarkdownToProseMirror
             ["content"] = items,
         };
     }
+
+    // A task item's leading paragraph starts with a Markdig TaskList inline.
+    private static bool IsTaskItem(ListItemBlock item) => FindTaskMarker(item) is not null;
+
+    private static bool TaskItemChecked(ListItemBlock item) => FindTaskMarker(item)?.Checked ?? false;
+
+    private static TaskList? FindTaskMarker(ListItemBlock item) =>
+        item.FirstOrDefault() is ParagraphBlock { Inline: { } inline }
+            ? inline.FirstChild as TaskList
+            : null;
 
     private static JsonObject CodeBlockNode(CodeBlock code)
     {
@@ -211,11 +256,16 @@ public static class MarkdownToProseMirror
         return array;
     }
 
-    // marks: the active mark set inherited from enclosing emphasis/code wrappers.
-    private static void AppendInline(JsonArray target, Inline inline, HashSet<string>? marks)
+    // marks: the active mark set inherited from enclosing emphasis/code/link wrappers.
+    private static void AppendInline(JsonArray target, Inline inline, MarkSet? marks)
     {
         switch (inline)
         {
+            // The TaskList marker inline ("[ ]"/"[x]") is structural, not content — never render it as
+            // literal text; the checked state is read off the item in List().
+            case TaskList:
+                break;
+
             case LiteralInline literal:
                 AddText(target, literal.Content.ToString(), marks);
                 break;
@@ -226,21 +276,36 @@ public static class MarkdownToProseMirror
                 break;
 
             case CodeInline code:
-                AddText(target, code.Content, With(marks, "code"));
+                AddText(target, code.Content, MarkSet.With(marks, Mark.Of("code")));
                 break;
 
             case EmphasisInline emphasis:
             {
-                // Markdig: 1 delimiter → italic, 2 → bold (delimiter char ~/= are other extensions).
-                var mark = emphasis.DelimiterCount >= 2 ? "bold" : "italic";
-                var nested = With(marks, mark);
+                // Branch on the delimiter CHARACTER, not only the count, so the EmphasisExtras
+                // delimiters carry their own marks (Markdig 0.42):
+                //   * / _  → 2+ delimiters = bold, 1 = italic   (CommonMark emphasis)
+                //   ~      → strikethrough (DelimiterChar '~', count 2)  → strike
+                //   =      → marked        (DelimiterChar '=', count 2)  → highlight
+                //   +      → inserted      (DelimiterChar '+', count 2)  → underline
+                // An unrecognized delimiter char carries NO mark — we just recurse the children as
+                // plain text so its words survive (this is the safe degrade for any future extra).
+                Mark? mark = emphasis.DelimiterChar switch
+                {
+                    '*' or '_' => Mark.Of(emphasis.DelimiterCount >= 2 ? "bold" : "italic"),
+                    '~' => Mark.Of("strike"),
+                    '=' => Mark.Of("highlight"),
+                    '+' => Mark.Of("underline"),
+                    _ => null,
+                };
+
+                var nested = mark is null ? marks : MarkSet.With(marks, mark);
                 foreach (var child in emphasis)
                     AppendInline(target, child, nested);
                 break;
             }
 
-            // Links degrade to their visible text; images degrade to their alt text. Either way the
-            // words survive and no link/image node is emitted.
+            // Links emit a link mark on their visible text (matching tiptap's Link default attrs);
+            // images degrade to their alt text (no image node in the set). Either way the words survive.
             case LinkInline link:
             {
                 if (link.IsImage)
@@ -249,8 +314,9 @@ public static class MarkdownToProseMirror
                 }
                 else
                 {
+                    var nested = MarkSet.With(marks, Mark.Link(link.Url));
                     foreach (var child in link)
-                        AppendInline(target, child, marks);
+                        AppendInline(target, child, nested);
                 }
                 break;
             }
@@ -273,32 +339,20 @@ public static class MarkdownToProseMirror
         }
     }
 
-    private static void AddText(JsonArray target, string? text, HashSet<string>? marks)
+    private static void AddText(JsonArray target, string? text, MarkSet? marks)
     {
         if (string.IsNullOrEmpty(text))
             return;
         target.Add(Text(text, marks));
     }
 
-    private static JsonObject Text(string text, HashSet<string>? marks = null)
+    private static JsonObject Text(string text, MarkSet? marks = null)
     {
         var node = new JsonObject { ["type"] = "text", ["text"] = text };
-        if (marks is { Count: > 0 })
-        {
-            var marksArray = new JsonArray();
-            // Deterministic order regardless of nesting order.
-            foreach (var mark in marks.OrderBy(m => m, StringComparer.Ordinal))
-                marksArray.Add(new JsonObject { ["type"] = mark });
+        var marksArray = marks?.ToJsonArray();
+        if (marksArray is { Count: > 0 })
             node["marks"] = marksArray;
-        }
         return node;
-    }
-
-    private static HashSet<string> With(HashSet<string>? existing, string mark)
-    {
-        var set = existing is null ? new HashSet<string>(StringComparer.Ordinal) : new HashSet<string>(existing, StringComparer.Ordinal);
-        set.Add(mark);
-        return set;
     }
 
     // Flatten an inline subtree to plain text (used for alt text, table cells, unknown inlines).
@@ -306,6 +360,8 @@ public static class MarkdownToProseMirror
     {
         switch (inline)
         {
+            case TaskList:
+                return string.Empty; // the "[ ]"/"[x]" marker is structural, not words
             case LiteralInline literal:
                 return literal.Content.ToString();
             case CodeInline code:
@@ -353,4 +409,64 @@ public static class MarkdownToProseMirror
 
     private static string RawLines(LeafBlock block) =>
         string.Join("\n", block.Lines.Lines.Take(block.Lines.Count).Select(l => l.ToString()));
+
+    // ---- mark model ---------------------------------------------------------------------------
+
+    /// <summary>
+    /// A single active mark. Most marks are attr-less (bold/italic/code/strike/underline/highlight) and
+    /// are uniquely identified by <see cref="Type"/>; <c>link</c> additionally carries attrs (href +
+    /// tiptap's default target/rel). Modeling attrs here lets the mark-emission path stay uniform.
+    /// </summary>
+    private sealed record Mark(string Type, JsonObject? Attrs = null)
+    {
+        public static Mark Of(string type) => new(type);
+
+        // Match tiptap's Link extension default attrs (href, target, rel) so the human-editor and
+        // AI-cleanup write paths produce identical link shapes. tiptap also emits a null `class`; we
+        // omit it (a null attr carries no information and keeps the JSON tidy).
+        public static Mark Link(string? href) => new(
+            "link",
+            new JsonObject
+            {
+                ["href"] = href ?? string.Empty,
+                ["target"] = "_blank",
+                ["rel"] = "noopener noreferrer nofollow",
+            });
+
+        public JsonObject ToJson()
+        {
+            var node = new JsonObject { ["type"] = Type };
+            if (Attrs is not null)
+                node["attrs"] = (JsonObject)Attrs.DeepClone();
+            return node;
+        }
+    }
+
+    /// <summary>
+    /// An immutable, deterministically-ordered set of active marks. Adding the same mark <c>Type</c>
+    /// twice keeps the first (so nested identical wrappers don't duplicate); emission sorts by mark
+    /// type with <see cref="StringComparer.Ordinal"/> so output is stable regardless of nesting order.
+    /// </summary>
+    private sealed class MarkSet
+    {
+        private readonly List<Mark> _marks;
+
+        private MarkSet(List<Mark> marks) => _marks = marks;
+
+        public static MarkSet With(MarkSet? existing, Mark mark)
+        {
+            var marks = existing is null ? new List<Mark>() : new List<Mark>(existing._marks);
+            if (marks.All(m => m.Type != mark.Type))
+                marks.Add(mark);
+            return new MarkSet(marks);
+        }
+
+        public JsonArray ToJsonArray()
+        {
+            var array = new JsonArray();
+            foreach (var mark in _marks.OrderBy(m => m.Type, StringComparer.Ordinal))
+                array.Add(mark.ToJson());
+            return array;
+        }
+    }
 }
