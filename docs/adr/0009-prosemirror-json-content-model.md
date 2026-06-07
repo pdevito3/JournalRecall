@@ -2,7 +2,10 @@
 
 ## Status
 
-accepted
+accepted — the JSON-content-model decision stands, but the **locked node/mark set** and the
+"no toolbar is required" rationale below are superseded by
+[ADR-0010](0010-markdown-expressible-content-model.md), which expands the set under a
+markdown-parity invariant and adds a formatting toolbar.
 
 ## Context & decision
 
