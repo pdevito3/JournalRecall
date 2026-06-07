@@ -2,32 +2,38 @@ import { useEffect, useRef } from 'react'
 import { EditorContent, useEditor, type Extensions, type JSONContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
+import { Highlight } from '@tiptap/extension-highlight'
+import { TaskItem, TaskList } from '@tiptap/extension-list'
 import { cn } from '@/shared/utils/cn'
 import { createPersonMention, type MentionConfig } from './mention'
+import { EditorToolbar } from './editor-toolbar'
 
-// Canonical node/mark set for RICH-003 (LOCKED wire contract):
-//   nodes: doc, paragraph, heading (1,2,3), bulletList, orderedList, listItem, blockquote, codeBlock,
-//          mention (RICH-007)
-//   marks: bold, italic, code
-// Everything outside this set is disabled. StarterKit also bundles utility extensions
-// (text, hardBreak, dropcursor, gapcursor, listKeymap, trailingNode, undoRedo) which are kept —
-// they carry no out-of-set nodes/marks and just make editing pleasant.
+// Markdown-expressible node/mark set (ADR-0010 / RICH-013) — exactly what MarkdownToProseMirror can emit:
+//   nodes: doc, paragraph, heading (1,2,3), bulletList, orderedList, listItem, taskList, taskItem,
+//          blockquote, codeBlock, horizontalRule, mention (RICH-007, the one sanctioned non-markdown atom)
+//   marks: bold, italic, code, strike, underline, highlight (single-color), link
+// StarterKit also bundles utility extensions (text, hardBreak, dropcursor, gapcursor, listKeymap,
+// trailingNode, undoRedo) which are kept — they carry no out-of-set nodes/marks and just make editing
+// pleasant. Each extension brings its markdown input rules, kept alongside the formatting toolbar.
 //
-// The `mention` node is added only when a `mention` config is supplied (the editing surfaces); read-only
-// revision views render mention nodes from their stored content without the suggestion machinery.
+// The `mention` node is always registered (so read-only views preserve stored mentions); the `@`
+// autocomplete is wired only when a `mention` config is supplied (the editing surfaces).
 function buildExtensions(placeholder?: string, mention?: MentionConfig): Extensions {
   return [
     StarterKit.configure({
       heading: { levels: [1, 2, 3] },
-      // Out-of-set marks/nodes — explicitly disabled.
-      strike: false,
-      horizontalRule: false,
-      link: false,
-      underline: false,
+      // strike / underline / horizontalRule / link ship in StarterKit and are now in-set — leave enabled.
+      // Links don't navigate on click inside the editor; href/target/rel stay at tiptap defaults so they
+      // match what the server converter (RICH-012) emits.
+      link: { openOnClick: false },
     }),
+    // Single-color highlight (no `multicolor`): `==text==` carries no color attribute (ADR-0010).
+    Highlight,
+    // Task lists / todos. TaskItem honors the editor's `editable` state for its checkbox automatically,
+    // so the read-only Revision view renders non-interactive checkboxes.
+    TaskList,
+    TaskItem.configure({ nested: true }),
     Placeholder.configure({ placeholder: placeholder ?? '' }),
-    // The mention node is always registered (so read-only views preserve stored mentions); the `@`
-    // autocomplete is wired only when a config is supplied.
     createPersonMention(mention),
   ]
 }
@@ -72,8 +78,10 @@ export interface RichEditorProps {
  * `initialContent` on mount and never re-fed from props — server state is not pushed back into a
  * live editor, which avoids cursor-reset bugs. To re-seed from the server, remount with a new key.
  *
- * StarterKit's markdown input rules supply the formatting affordances (`# ` → heading, `- ` → bullet,
- * `> ` → quote, ``` → code block, `**bold**`, `*italic*`, `` `code` ``), so no toolbar is required.
+ * A formatting toolbar (RICH-013) renders above the content on the editable surfaces (Raw + Cleaned) and
+ * never on the read-only Revision drill-down. Markdown input rules from the extensions still work alongside
+ * it (`# ` → heading, `- ` → bullet, `- [ ] ` → task, `> ` → quote, `---` → rule, `**bold**`, `~~strike~~`,
+ * `==highlight==`, `++underline++`, `` `code` ``).
  */
 export function RichEditor({
   initialContent,
@@ -104,15 +112,19 @@ export function RichEditor({
   }, [editor, editable])
 
   return (
-    <EditorContent
-      editor={editor}
-      className={cn(
-        'rich-editor w-full rounded-lg border border-border p-4 text-content',
-        editable
-          ? 'min-h-[50vh] bg-surface-2 focus-within:ring-2 focus-within:ring-accent'
-          : 'max-h-[40vh] overflow-auto bg-surface-3',
-        className,
-      )}
-    />
+    <div className="space-y-2">
+      {/* Toolbar only on the editable surfaces (Raw + Cleaned), never the read-only Revision drill-down. */}
+      {editable && editor ? <EditorToolbar editor={editor} /> : null}
+      <EditorContent
+        editor={editor}
+        className={cn(
+          'rich-editor w-full rounded-lg border border-border p-4 text-content',
+          editable
+            ? 'min-h-[50vh] bg-surface-2 focus-within:ring-2 focus-within:ring-accent'
+            : 'max-h-[40vh] overflow-auto bg-surface-3',
+          className,
+        )}
+      />
+    </div>
   )
 }
