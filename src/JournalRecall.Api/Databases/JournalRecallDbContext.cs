@@ -76,7 +76,9 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             // Moods are a primitive string collection serialized to a single JSON column (EF Core),
             // read/written through the read-only property's backing field (PRD-0006).
             session.PrimitiveCollection(s => s.Moods).UsePropertyAccessMode(PropertyAccessMode.Field);
-            session.HasIndex(s => s.UserId);
+            // Timeline + summary source-window reads scan a user's Sessions ordered by CreatedAt; the
+            // composite (UserId, CreatedAt) index serves both the tenant filter and that ordering (issue 0030).
+            session.HasIndex(s => new { s.UserId, s.CreatedAt });
             // Privacy invariant: referencing the instance field makes EF re-evaluate the owner per
             // query, so no User can ever read another User's Sessions (ADR-0002, CONTEXT.md).
             session.HasQueryFilter(TenantFilter, s => s.UserId == _currentUserId);

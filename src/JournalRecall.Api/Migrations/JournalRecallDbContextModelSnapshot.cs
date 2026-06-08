@@ -335,7 +335,7 @@ namespace JournalRecall.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "CreatedAt");
 
                     b.ToTable("sessions", (string)null);
                 });

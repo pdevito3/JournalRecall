@@ -529,9 +529,9 @@ namespace JournalRecall.Api.Migrations
                 columns: new[] { "SessionId", "Name" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_sessions_UserId",
+                name: "IX_sessions_UserId_CreatedAt",
                 table: "sessions",
-                column: "UserId");
+                columns: new[] { "UserId", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_summaries_UserId_Period_PeriodDate",
