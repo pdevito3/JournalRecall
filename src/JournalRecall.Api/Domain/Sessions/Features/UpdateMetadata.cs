@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using JournalRecall.Api.Databases;
 using JournalRecall.Api.Domain.Sessions.Dtos;
+using JournalRecall.Api.Domain.Sessions.Metadata;
 
 namespace JournalRecall.Api.Domain.Sessions.Features;
 
@@ -21,11 +22,14 @@ public static class UpdateMetadata
             if (session is null)
                 return Result.NotFound;
 
-            // Manual edits are all UserSet; AI-provenance topics (if any) are preserved by the entity. Moods
-            // are resolved known-vs-custom and deduped by the entity (any free text is a valid custom mood).
-            // People are not edited here — they project from the prose @-mentions (RICH-007).
+            // Full replace (ADR-0011): every field is written wholesale — a missing list clears it, it
+            // never means "leave alone". Manual edits are all UserSet; AI-provenance topics (if any) are
+            // preserved by the entity. Moods are resolved known-vs-custom and deduped by the entity. Activity
+            // is resolved known-vs-custom (blank → None). People are not edited here — they project from the
+            // prose @-mentions (RICH-007).
             session.SetUserTopics(request.Metadata.Topics ?? []);
             session.SetMoods(request.Metadata.Moods ?? []);
+            session.SetActivity(Activity.Resolve(request.Metadata.Activity));
             await db.SaveChangesAsync(cancellationToken);
 
             return Result.Ok;

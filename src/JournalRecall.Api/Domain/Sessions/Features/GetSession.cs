@@ -38,6 +38,8 @@ public static class GetSession
                     PersonIds = s.People.Select(p => p.PersonId).ToList(),
                     // Read the Moods JSON column as a whole (no element enumeration → no json_each/APPLY on SQLite).
                     Moods = s.Moods,
+                    // The single Activity, projected from its complex-type `activity` column (PRD-0007).
+                    Activity = s.Activity.Value,
                     Suggestions = s.Suggestions
                         .Select(g => new SuggestionDto(g.Kind, g.Value)).ToList(),
                     // Pending People-tag proposals (RICH-009); previews are derived from the Cleaned prose below.
@@ -71,7 +73,7 @@ public static class GetSession
             return new SessionDto(
                 row.Id, row.CreatedAt, row.RawDraft, row.CleanedDraft, row.Synopsis, row.Status,
                 row.CleanedHasHandEdits, row.CleanedRegenerationRevisionNumber, row.Topics, people, row.Moods,
-                row.Suggestions, proposals,
+                row.Activity, row.Suggestions, proposals,
                 Location.TryCreate(row.Latitude, row.Longitude, out var location)
                     ? new LocationDto(location.Latitude, location.Longitude)
                     : null);

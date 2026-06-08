@@ -14,3 +14,27 @@ export const KNOWN_MOODS = [
   'Excited',
   'Grateful',
 ] as const
+
+/**
+ * The app-defined known activities a User can pick, excluding the special 'None' zero value and the custom
+ * free-text escape hatch (mirrors the server's Activity.KnownKeys minus None). PRD-0007.
+ */
+export const KNOWN_ACTIVITIES = [
+  'Stationary',
+  'Walking',
+  'Eating',
+  'Commuting',
+  'Exercising',
+  'Resting',
+] as const
+
+/** A recognizable glyph per known activity (and the 'None' zero value) — purely presentational (PRD-0007). */
+export const ACTIVITY_ICONS: Record<string, string> = {
+  None: '—',
+  Stationary: '🛋️',
+  Walking: '🚶',
+  Eating: '🍽️',
+  Commuting: '🚌',
+  Exercising: '🏃',
+  Resting: '😴',
+}

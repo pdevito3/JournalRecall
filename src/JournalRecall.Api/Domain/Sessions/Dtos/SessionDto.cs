@@ -17,6 +17,7 @@ public sealed record SessionDto(
     IReadOnlyList<string> Topics,
     IReadOnlyList<string> People,
     IReadOnlyList<string> Moods,
+    string Activity,
     IReadOnlyList<SuggestionDto> Suggestions,
     IReadOnlyList<PersonTagProposalDto> PeopleProposals,
     LocationDto? Location)
@@ -34,6 +35,7 @@ public sealed record SessionDto(
         session.Topics.Select(t => t.Name).ToList(),
         peopleLabels,
         session.Moods.ToList(),
+        session.Activity.Value,
         session.Suggestions.Select(s => new SuggestionDto(s.Kind, s.Value)).ToList(),
         peopleProposals,
         session.Location is { } location ? new LocationDto(location.Latitude, location.Longitude) : null);

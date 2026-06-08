@@ -49,6 +49,8 @@ public static class GetSessionList
                     PersonIds = s.People.Select(p => p.PersonId).ToList(),
                     // Read the Moods JSON column as a whole (no element enumeration → no json_each/APPLY on SQLite).
                     Moods = s.Moods,
+                    // The single Activity, projected from its complex-type `activity` column (PRD-0007).
+                    Activity = s.Activity.Value,
                 })
                 .ToListAsync(cancellationToken);
 
@@ -67,7 +69,8 @@ public static class GetSessionList
                 Preview(s.RawPlainText),
                 s.Topics,
                 s.PersonIds.Where(labels.ContainsKey).Select(id => labels[id]).OrderBy(l => l).ToList(),
-                s.Moods)).ToList();
+                s.Moods,
+                s.Activity)).ToList();
         }
 
         private async Task<string?> CurrentUserTimeZone(CancellationToken cancellationToken)

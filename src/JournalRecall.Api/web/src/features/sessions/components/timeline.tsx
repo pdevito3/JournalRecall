@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, getRouteApi } from '@tanstack/react-router'
 import { buildSessionFilter, useSessionList, type TimelineSearch } from '@/features/sessions/useSessions'
-import { KNOWN_MOODS, type SessionListItem } from '@/features/sessions/api'
+import { ACTIVITY_ICONS, KNOWN_MOODS, type SessionListItem } from '@/features/sessions/api'
 
 const route = getRouteApi('/')
 
@@ -132,7 +132,10 @@ export function Timeline({ settings, onUpdateSettings }: TimelineProps) {
 }
 
 function MetadataChips({ item }: { item: SessionListItem }) {
+  // The single Activity shows first when set (not the 'None' zero value), with its glyph (PRD-0007).
+  const hasActivity = Boolean(item.activity) && item.activity !== 'None'
   const chips: string[] = [
+    ...(hasActivity ? [`${ACTIVITY_ICONS[item.activity] ?? ''} ${item.activity}`.trim()] : []),
     ...item.topics.map((t) => `#${t}`),
     ...item.people.map((p) => `@${p}`),
     ...item.moods,

@@ -129,6 +129,13 @@ public sealed class Session : BaseEntity, ITenantScoped
     /// </summary>
     public IReadOnlyList<string> Moods => _moods;
 
+    /// <summary>
+    /// What the User was physically doing while journaling (PRD-0007): exactly one Activity, non-nullable,
+    /// defaulting to <see cref="Metadata.Activity.None"/>. UserSet only — the AI never proposes or sets it,
+    /// and Cleanup leaves it untouched. Persisted as the single canonical <c>activity</c> column.
+    /// </summary>
+    public Activity Activity { get; private set; } = Activity.None;
+
     /// <summary>The latest Raw Revision number (== the count, since numbers are sequential). 0 when empty.</summary>
     public int LatestRawRevisionNumber => _rawRevisions.Count;
 
@@ -335,6 +342,12 @@ public sealed class Session : BaseEntity, ITenantScoped
         .Where(m => !string.IsNullOrWhiteSpace(m))
         .Select(m => Mood.Resolve(m).Value)
         .Distinct(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Sets the Session's single Activity (PRD-0007). A null argument is treated as
+    /// <see cref="Metadata.Activity.None"/> — there is no unset state.
+    /// </summary>
+    public void SetActivity(Activity activity) => Activity = activity ?? Activity.None;
 
     private static IEnumerable<string> Normalize(IEnumerable<string> names) => (names ?? [])
         .Select(n => n?.Trim() ?? string.Empty)

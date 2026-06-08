@@ -10,9 +10,13 @@ public sealed record SuggestionDto(SuggestionKind Kind, string Value);
 public sealed record SuggestionRef(SuggestionKind Kind, string Value);
 
 /// <summary>
-/// The editable manual metadata for a Session: Topics and Moods (known mood names or custom text). People
-/// are not here — they project from the prose @-mentions, reconciled on save (PRD-0006, RICH-007).
+/// The editable manual metadata for a Session: Topics, Moods (known mood names or custom text), and the
+/// single Activity (the canonical name, "None", or custom text). A <b>complete, non-partial</b> payload —
+/// the metadata editor holds all fields and always sends the whole object, so the write is a full replace,
+/// not a nullable "don't-touch" patch (ADR-0011). People are not here — they project from the prose
+/// @-mentions, reconciled on save (PRD-0006, RICH-007).
 /// </summary>
 public sealed record MetadataForWrite(
-    IReadOnlyList<string>? Topics,
-    IReadOnlyList<string>? Moods);
+    IReadOnlyList<string> Topics,
+    IReadOnlyList<string> Moods,
+    string Activity);

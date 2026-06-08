@@ -19,6 +19,7 @@ function makeSession(over: Partial<Session> = {}): Session {
     topics: [],
     people: [],
     moods: [],
+    activity: 'None',
     suggestions: [],
     peopleProposals: [],
     location: null,

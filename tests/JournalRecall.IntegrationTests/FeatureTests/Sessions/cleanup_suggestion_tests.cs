@@ -85,7 +85,7 @@ public class cleanup_suggestion_tests : TestBase
         await scope.InsertAsync(session);
         // The user has already set a Topic and a Mood themselves.
         await scope.SendAsync(new UpdateMetadata.Command(session.Id,
-            new MetadataForWrite(["work"], ["Sad"])));
+            new MetadataForWrite(["work"], ["Sad"], "None")));
 
         // AI suggests the same topic + a new one, the same mood + a new one.
         CleanupChat.SuggestTopics = ["work", "travel"];

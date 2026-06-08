@@ -17,8 +17,8 @@ public class metadata_tests : TestBase
         (await scope.SendAsync(new CreateSession.Command(null, null))).Id;
 
     private static Task<UpdateMetadata.Result> SetMetadata(
-        TestingServiceScope scope, Guid id, string[] topics, string[] moods) =>
-        scope.SendAsync(new UpdateMetadata.Command(id, new MetadataForWrite(topics, moods)));
+        TestingServiceScope scope, Guid id, string[] topics, string[] moods, string activity = "None") =>
+        scope.SendAsync(new UpdateMetadata.Command(id, new MetadataForWrite(topics, moods, activity)));
 
     [Fact]
     public async Task a_user_can_set_topics_and_multiple_moods_then_clear()
@@ -92,6 +92,41 @@ public class metadata_tests : TestBase
 
         // Bob cannot set metadata on Alice's Session (it doesn't exist for him).
         (await SetMetadata(bob, aliceSession, ["x"], [])).ShouldBe(UpdateMetadata.Result.NotFound);
+    }
+
+    [Fact]
+    public async Task a_new_session_defaults_to_activity_none()
+    {
+        using var scope = new TestingServiceScope();
+        var id = await NewSession(scope);
+
+        (await scope.SendAsync(new GetSession.Query(id)))!.Activity.ShouldBe("None");
+    }
+
+    [Fact]
+    public async Task metadata_write_round_trips_activity_and_replaces_all_fields_wholesale()
+    {
+        using var scope = new TestingServiceScope();
+        var id = await NewSession(scope);
+
+        // A known activity round-trips by its canonical name (case-insensitive in → canonical out).
+        await SetMetadata(scope, id, ["work"], ["Tired"], "walking");
+        var known = await scope.SendAsync(new GetSession.Query(id));
+        known!.Activity.ShouldBe("Walking");
+        known.Topics.ShouldBe(["work"]);
+        known.Moods.ShouldBe(["Tired"]);
+
+        // A custom activity round-trips as its raw free-text, never the literal "Custom".
+        await SetMetadata(scope, id, ["work"], ["Tired"], "cooking");
+        (await scope.SendAsync(new GetSession.Query(id)))!.Activity.ShouldBe("cooking");
+
+        // Full replace (ADR-0011): a blank activity + empty lists clears everything wholesale — no
+        // field is "left alone". None is distinct from a prior Walking/cooking choice.
+        await SetMetadata(scope, id, [], [], "");
+        var cleared = await scope.SendAsync(new GetSession.Query(id));
+        cleared!.Activity.ShouldBe("None");
+        cleared.Topics.ShouldBeEmpty();
+        cleared.Moods.ShouldBeEmpty();
     }
 
     [Fact]

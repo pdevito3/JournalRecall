@@ -17,6 +17,8 @@ import {
   useTopics,
 } from '@/features/sessions/useSessions'
 import {
+  ACTIVITY_ICONS,
+  KNOWN_ACTIVITIES,
   KNOWN_MOODS,
   type CleanupStatus,
   type PersonTagProposal,
@@ -286,6 +288,8 @@ export const metadataSchema = z.object({
   // server resolves known-vs-custom and dedupes. Comma-joined to match the Topics form pattern. People are
   // not here — they project from the prose @-mentions (RICH-007), shown as read-only badges.
   moods: z.string(),
+  // The single Activity as its canonical/custom string ('None' when unset) — single-valued, unlike Moods.
+  activity: z.string(),
 })
 
 type MetadataFormValues = z.infer<typeof metadataSchema>
@@ -297,7 +301,7 @@ const { Field, applyServerErrors } = createForm<typeof metadataSchema>()
 // changes and the editor remounts, re-seeding its defaults from the fresh server values. People are not a
 // form field (they project from the prose), so they're excluded — the read-only badges re-render on refetch.
 function metadataKey(session: Session): string {
-  return JSON.stringify([session.topics, session.moods])
+  return JSON.stringify([session.topics, session.moods, session.activity])
 }
 
 /** Per-Session manual metadata: Topics and one-or-more Moods (known or custom free text). */
@@ -308,6 +312,7 @@ function MetadataEditor({ session }: { session: Session }) {
     defaultValues: {
       topics: session.topics.join(', '),
       moods: session.moods.join(', '),
+      activity: session.activity || 'None',
     } satisfies MetadataFormValues,
     validators: { onBlur: metadataSchema },
     onSubmit: async ({ value }) => {
@@ -315,6 +320,7 @@ function MetadataEditor({ session }: { session: Session }) {
         await save.mutateAsync({
           topics: splitList(value.topics),
           moods: splitList(value.moods),
+          activity: value.activity || 'None',
         })
       } catch (error) {
         applyServerErrors(form, error)
@@ -335,6 +341,7 @@ function MetadataEditor({ session }: { session: Session }) {
         <Field name="topics">{(field) => <TopicBadges field={field} />}</Field>
         <ProjectedPeople people={session.people} />
         <Field name="moods">{(field) => <MoodChips field={field} />}</Field>
+        <Field name="activity">{(field) => <ActivityPicker field={field} />}</Field>
         <Form.Errors />
         <Form.Submit>Save metadata</Form.Submit>
       </Form>
@@ -428,6 +435,70 @@ function MoodChips({ field }: { field: { state: { value: string }; handleChange:
         />
         <button type="button" className="text-sm text-accent hover:underline" onClick={addCustom}>
           add
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Single-select Activity picker (PRD-0007): None + the known activities + a custom free-text escape hatch,
+ * each with a recognizable icon. Single-valued (unlike Moods) — selecting one replaces the prior choice.
+ */
+function ActivityPicker({ field }: { field: { state: { value: string }; handleChange: (next: string) => void } }) {
+  const value = field.state.value.trim()
+  const options = ['None', ...KNOWN_ACTIVITIES]
+  const matches = (a: string) => a.toLowerCase() === value.toLowerCase()
+  const isCustom = value !== '' && !options.some(matches)
+  const [draft, setDraft] = useState(isCustom ? value : '')
+
+  const commitCustom = () => {
+    const next = draft.trim()
+    if (next) field.handleChange(next)
+  }
+
+  return (
+    <div className="space-y-2">
+      <span className="text-sm text-muted">Activity</span>
+      <div className="flex flex-wrap gap-2">
+        {options.map((a) => {
+          const active = matches(a) || (a === 'None' && value === '')
+          return (
+            <button
+              key={a}
+              type="button"
+              aria-pressed={active}
+              onClick={() => field.handleChange(a)}
+              className={`flex items-center gap-1 rounded-full border px-3 py-0.5 text-sm ${
+                active ? 'border-accent bg-accent/15 text-content' : 'border-border bg-surface-3 text-muted hover:text-content'
+              }`}
+            >
+              <span aria-hidden>{ACTIVITY_ICONS[a]}</span>
+              {a}
+            </button>
+          )
+        })}
+        {isCustom ? (
+          <span className="flex items-center gap-1 rounded-full border border-accent bg-accent/15 px-3 py-0.5 text-sm text-content">
+            {value}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              commitCustom()
+            }
+          }}
+          placeholder="Or a custom activity"
+          className="rounded-lg border border-border bg-surface-3 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        />
+        <button type="button" className="text-sm text-accent hover:underline" onClick={commitCustom}>
+          set
         </button>
       </div>
     </div>

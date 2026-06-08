@@ -9,6 +9,9 @@ export interface Metadata {
   // Moods are plain strings: a known mood name or free-text custom mood (PRD-0006). People are not here —
   // they project from the prose @-mentions, reconciled on save (RICH-007).
   moods: string[]
+  // The single Activity (PRD-0007): a known activity name, 'None', or custom free text. Always present —
+  // a Session always has one, defaulting to 'None'. Sent on the full-replace metadata PUT (ADR-0011).
+  activity: string
 }
 
 /** A directory Person (PRD-0006): the durable id a mention references + its display label. */
@@ -59,6 +62,7 @@ export interface Session {
   topics: string[]
   people: string[]
   moods: string[]
+  activity: string
   suggestions: Suggestion[]
   peopleProposals: PersonTagProposal[]
   location: GeoPoint | null
@@ -72,6 +76,7 @@ export interface SessionListItem {
   topics: string[]
   people: string[]
   moods: string[]
+  activity: string
 }
 
 export interface RevisionSummary {

@@ -24,9 +24,27 @@ public class metadata_endpoint_tests(WebTestFixture fixture) : TestBase(fixture)
         var (client, id) = await NewSession();
 
         var response = await client.PutJsonAsync(ApiRoutes.Sessions.Metadata(id),
-            new { topics = new[] { "work" }, moods = new[] { "Joyful", "bittersweet" } });
+            new { topics = new[] { "work" }, moods = new[] { "Joyful", "bittersweet" }, activity = "Walking" });
 
         response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task a_full_replace_put_round_trips_activity_over_http()
+    {
+        var (client, id) = await NewSession();
+
+        // A known activity round-trips canonicalized; a custom one round-trips as its raw words.
+        await client.PutJsonAsync(ApiRoutes.Sessions.Metadata(id),
+            new { topics = new[] { "work" }, moods = Array.Empty<string>(), activity = "walking" });
+        (await (await client.GetAsync(ApiRoutes.Sessions.Get(id))).ReadJsonAsync<SessionDto>())!.Activity
+            .ShouldBe("Walking");
+
+        await client.PutJsonAsync(ApiRoutes.Sessions.Metadata(id),
+            new { topics = Array.Empty<string>(), moods = Array.Empty<string>(), activity = "cooking" });
+        var custom = await (await client.GetAsync(ApiRoutes.Sessions.Get(id))).ReadJsonAsync<SessionDto>();
+        custom!.Activity.ShouldBe("cooking");
+        custom.Topics.ShouldBeEmpty(); // the prior "work" topic was replaced wholesale (ADR-0011)
     }
 
     [Fact]

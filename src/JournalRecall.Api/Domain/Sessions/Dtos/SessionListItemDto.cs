@@ -13,4 +13,5 @@ public sealed record SessionListItemDto(
     string Preview,
     IReadOnlyList<string> Topics,
     IReadOnlyList<string> People,
-    IReadOnlyList<string> Moods);
+    IReadOnlyList<string> Moods,
+    string Activity);
