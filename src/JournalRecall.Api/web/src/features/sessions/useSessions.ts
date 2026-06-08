@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { queryOptions, useMutation, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { z } from 'zod'
-import { KNOWN_MOODS } from './api'
+import { KNOWN_ACTIVITIES, KNOWN_MOODS } from './api'
 import * as sessionsApi from './api'
 import { sessionKeys } from './keys'
 
@@ -13,6 +13,8 @@ import { sessionKeys } from './keys'
 export const timelineSearchSchema = z.object({
   topic: z.string().catch('').default(''),
   mood: z.enum(KNOWN_MOODS).or(z.literal('')).catch('').default(''),
+  // Single-select Activity facet (PRD-0007): a known activity name or '' for "any".
+  activity: z.enum(KNOWN_ACTIVITIES).or(z.literal('')).catch('').default(''),
 })
 
 export type TimelineSearch = z.infer<typeof timelineSearchSchema>
@@ -28,10 +30,10 @@ export function buildSessionFilter({ topic }: TimelineSearch): string | undefine
   return parts.length > 0 ? parts.join(' && ') : undefined
 }
 
-export function sessionListQueryOptions(filter?: string, mood?: string) {
+export function sessionListQueryOptions(filter?: string, mood?: string, activity?: string) {
   return queryOptions({
-    queryKey: sessionKeys.list({ filter, mood }),
-    queryFn: () => sessionsApi.getSessionList(filter, mood),
+    queryKey: sessionKeys.list({ filter, mood, activity }),
+    queryFn: () => sessionsApi.getSessionList(filter, mood, activity),
   })
 }
 
@@ -110,8 +112,8 @@ export function useCreateSession() {
   })
 }
 
-export function useSessionList(filter?: string, mood?: string) {
-  return useQuery(sessionListQueryOptions(filter, mood))
+export function useSessionList(filter?: string, mood?: string, activity?: string) {
+  return useQuery(sessionListQueryOptions(filter, mood, activity))
 }
 
 // Primed (awaited) by the Session-detail route loader — read via Suspense so the router's default

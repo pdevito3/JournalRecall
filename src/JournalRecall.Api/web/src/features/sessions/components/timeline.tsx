@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, getRouteApi } from '@tanstack/react-router'
 import { buildSessionFilter, useSessionList, type TimelineSearch } from '@/features/sessions/useSessions'
-import { ACTIVITY_ICONS, KNOWN_MOODS, type SessionListItem } from '@/features/sessions/api'
+import { ACTIVITY_ICONS, KNOWN_ACTIVITIES, KNOWN_MOODS, type SessionListItem } from '@/features/sessions/api'
 
 const route = getRouteApi('/')
 
@@ -36,18 +36,18 @@ const COMMON_ZONES = [
 
 export function Timeline({ settings, onUpdateSettings }: TimelineProps) {
   const [dayJump, setDayJump] = useState('') // YYYY-MM-DD, or '' for all
-  // Topic/Mood live in the URL (FE-009) so a filtered view is shareable and survives refresh.
-  const { topic, mood } = route.useSearch()
+  // Topic/Mood/Activity live in the URL (FE-009) so a filtered view is shareable and survives refresh.
+  const { topic, mood, activity } = route.useSearch()
   const navigate = route.useNavigate()
   const setFilters = (next: Partial<TimelineSearch>) =>
     navigate({ search: (prev) => ({ ...prev, ...next }) })
 
-  // Build a QueryKit filter string from the metadata controls (server-side filtering). Mood is a separate
-  // param (a JSON collection matched any-element, outside QueryKit).
-  const filter = useMemo(() => buildSessionFilter({ topic, mood }), [topic, mood])
+  // Build a QueryKit filter string from the metadata controls (server-side filtering). Mood and Activity
+  // are separate params (a JSON collection / a complex-type scalar, both outside QueryKit).
+  const filter = useMemo(() => buildSessionFilter({ topic, mood, activity }), [topic, mood, activity])
 
-  const { data: sessions } = useSessionList(filter, mood || undefined)
-  const hasFilter = Boolean(filter)
+  const { data: sessions } = useSessionList(filter, mood || undefined, activity || undefined)
+  const hasFilter = Boolean(filter) || Boolean(mood) || Boolean(activity)
 
   return (
     <div className="space-y-4">
@@ -90,11 +90,23 @@ export function Timeline({ settings, onUpdateSettings }: TimelineProps) {
             </option>
           ))}
         </select>
+        <select
+          value={activity}
+          onChange={(e) => setFilters({ activity: e.target.value as TimelineSearch['activity'] })}
+          className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-sm text-content outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <option value="">Any activity</option>
+          {KNOWN_ACTIVITIES.map((a) => (
+            <option key={a} value={a}>
+              {a}
+            </option>
+          ))}
+        </select>
         {hasFilter ? (
           <button
             type="button"
             className="text-sm text-accent hover:underline"
-            onClick={() => setFilters({ topic: '', mood: '' })}
+            onClick={() => setFilters({ topic: '', mood: '', activity: '' })}
           >
             clear filters
           </button>

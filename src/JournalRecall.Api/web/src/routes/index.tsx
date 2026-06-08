@@ -15,11 +15,13 @@ export const Route = createFileRoute('/')({
   // Timeline filters live in the URL (FE-009): validated → shareable/bookmark-safe, malformed → defaults.
   validateSearch: timelineSearchSchema,
   // Re-run the loader only when a param that changes the query changes.
-  loaderDeps: ({ search: { topic, mood } }) => ({ topic, mood }),
+  loaderDeps: ({ search: { topic, mood, activity } }) => ({ topic, mood, activity }),
   // Prime the timeline query for the active filters during navigation (kills the mount→fetch waterfall).
   // The component keeps reading via useQuery, so focus/reconnect refetch, dedup, and GC stay intact.
   loader: ({ context: { queryClient }, deps }) =>
-    queryClient.ensureQueryData(sessionListQueryOptions(buildSessionFilter(deps), deps.mood || undefined)),
+    queryClient.ensureQueryData(
+      sessionListQueryOptions(buildSessionFilter(deps), deps.mood || undefined, deps.activity || undefined),
+    ),
   component: Home,
 })
 

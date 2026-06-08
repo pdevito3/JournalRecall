@@ -13,9 +13,10 @@ public static class SessionEndpoints
         var group = app.MapGroup("/api/sessions").RequireAuthorization();
 
         // Reverse-chronological timeline (current state only), optionally QueryKit-filtered, plus an
-        // optional any-match `mood` (a JSON collection, filtered outside QueryKit).
-        group.MapGet("", async (string? filter, string? mood, ISender sender) =>
-            Results.Ok(await sender.Send(new GetSessionList.Query(filter, mood))));
+        // optional any-match `mood` (a JSON collection) and a single-select `activity` (a complex-type
+        // scalar) — both filtered outside QueryKit and combinable with each other (PRD-0007).
+        group.MapGet("", async (string? filter, string? mood, string? activity, ISender sender) =>
+            Results.Ok(await sender.Send(new GetSessionList.Query(filter, mood, activity))));
 
         // Optional body carries a captured lat/long (geo opt-in); a plain POST with no body creates
         // a location-less Session as before (issue 0015).

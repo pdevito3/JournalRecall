@@ -10,11 +10,13 @@ namespace JournalRecall.Api.Domain.Sessions.Features;
 public static class GetSessionList
 {
     /// <summary>
-    /// Optional QueryKit <paramref name="Filter"/> (e.g. topics, raw text, a CreatedAt range) plus an
-    /// optional <paramref name="Mood"/> match — a Session matches when any of its Moods equals it. Mood is
-    /// separate because it's a JSON collection QueryKit can't express on SQLite.
+    /// Optional QueryKit <paramref name="Filter"/> (e.g. topics, raw text, a CreatedAt range), an optional
+    /// <paramref name="Mood"/> match (a Session matches when any of its Moods equals it), and an optional
+    /// single-select <paramref name="Activity"/> match (PRD-0007). All combinable. Mood and Activity are
+    /// separate params — Mood is a JSON collection and Activity a complex-type scalar QueryKit can't express.
     /// </summary>
-    public sealed record Query(string? Filter, string? Mood = null) : IRequest<IReadOnlyList<SessionListItemDto>>;
+    public sealed record Query(string? Filter, string? Mood = null, string? Activity = null)
+        : IRequest<IReadOnlyList<SessionListItemDto>>;
 
     public sealed class Handler(JournalRecallDbContext db, ICurrentUserService currentUser)
         : IRequestHandler<Query, IReadOnlyList<SessionListItemDto>>
@@ -35,6 +37,14 @@ public static class GetSessionList
             {
                 var mood = Metadata.Mood.Resolve(request.Mood).Value;
                 query = query.Where(s => s.Moods.Contains(mood));
+            }
+
+            // Activity is a single complex-type scalar: match the canonical Value, resolved so "walking"
+            // matches "Walking" (PRD-0007). Combines with the Filter/Mood facets above.
+            if (!string.IsNullOrWhiteSpace(request.Activity))
+            {
+                var activity = Metadata.Activity.Resolve(request.Activity).Value;
+                query = query.Where(s => s.Activity.Value == activity);
             }
 
             // Project to the current-state fields only — the owned Revision history never becomes rows.

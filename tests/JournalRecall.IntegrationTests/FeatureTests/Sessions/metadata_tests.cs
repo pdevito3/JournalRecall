@@ -95,6 +95,29 @@ public class metadata_tests : TestBase
     }
 
     [Fact]
+    public async Task the_timeline_filters_by_activity_and_combines_with_a_mood_facet()
+    {
+        using var scope = new TestingServiceScope();
+        var walk = await NewSession(scope);
+        var commute = await NewSession(scope);
+        await SetMetadata(scope, walk, ["health"], ["Calm"], "Walking");
+        await SetMetadata(scope, commute, ["work"], ["Anxious"], "Commuting");
+
+        // Single-select Activity facet, case-insensitive (resolves "walking" → "Walking").
+        (await scope.SendAsync(new GetSessionList.Query(null, null, "walking"))).Select(s => s.Id).ShouldBe([walk]);
+        (await scope.SendAsync(new GetSessionList.Query(null, null, "Commuting"))).Select(s => s.Id).ShouldBe([commute]);
+
+        // Combines with a Mood facet: anxious entries written while commuting.
+        (await scope.SendAsync(new GetSessionList.Query(null, "Anxious", "Commuting"))).Select(s => s.Id)
+            .ShouldBe([commute]);
+        // A non-matching combination returns nothing (the two facets intersect, not union).
+        (await scope.SendAsync(new GetSessionList.Query(null, "Calm", "Commuting"))).ShouldBeEmpty();
+
+        // The chosen Activity surfaces on the timeline row for display.
+        (await scope.SendAsync(new GetSessionList.Query(null))).Single(s => s.Id == walk).Activity.ShouldBe("Walking");
+    }
+
+    [Fact]
     public async Task a_new_session_defaults_to_activity_none()
     {
         using var scope = new TestingServiceScope();

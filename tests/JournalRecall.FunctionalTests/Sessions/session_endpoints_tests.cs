@@ -63,4 +63,21 @@ public class session_endpoints_tests(WebTestFixture fixture) : TestBase(fixture)
         list.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await list.ReadJsonAsync<List<SessionListItemDto>>())!.Count.ShouldBeGreaterThanOrEqualTo(2);
     }
+
+    [Fact]
+    public async Task the_timeline_endpoint_filters_by_activity()
+    {
+        var client = await RealAuth.CreateAuthenticatedClientAsync();
+        var walk = (await (await client.PostAsync(ApiRoutes.Sessions.Create(), null)).ReadJsonAsync<SessionDto>())!.Id;
+        var commute = (await (await client.PostAsync(ApiRoutes.Sessions.Create(), null)).ReadJsonAsync<SessionDto>())!.Id;
+        await client.PutJsonAsync(ApiRoutes.Sessions.Metadata(walk),
+            new { topics = Array.Empty<string>(), moods = Array.Empty<string>(), activity = "Walking" });
+        await client.PutJsonAsync(ApiRoutes.Sessions.Metadata(commute),
+            new { topics = Array.Empty<string>(), moods = Array.Empty<string>(), activity = "Commuting" });
+
+        var filtered = await client.GetAsync($"{ApiRoutes.Sessions.Root}?activity=walking");
+        var rows = (await filtered.ReadJsonAsync<List<SessionListItemDto>>())!;
+        rows.Select(s => s.Id).ShouldBe([walk]);
+        rows.Single().Activity.ShouldBe("Walking");
+    }
 }

@@ -85,10 +85,11 @@ export function captureLocation(): Promise<GeoPoint | undefined> {
   })
 }
 
-export async function getSessionList(filter?: string, mood?: string): Promise<SessionListItem[]> {
+export async function getSessionList(filter?: string, mood?: string, activity?: string): Promise<SessionListItem[]> {
   const params = new URLSearchParams()
   if (filter) params.set('filter', filter)
   if (mood) params.set('mood', mood)
+  if (activity) params.set('activity', activity)
   const query = params.toString()
   const res = await apiFetch(query ? `/api/sessions?${query}` : '/api/sessions', { credentials: 'include' })
   if (!res.ok) throw new Error('Could not load your timeline')

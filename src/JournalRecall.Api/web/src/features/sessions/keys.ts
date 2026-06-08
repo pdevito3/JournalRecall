@@ -10,7 +10,7 @@
 export const sessionKeys = {
   all: ['sessions'] as const,
   lists: () => [...sessionKeys.all, 'list'] as const,
-  list: (params: { filter?: string; mood?: string }) => [...sessionKeys.lists(), params] as const,
+  list: (params: { filter?: string; mood?: string; activity?: string }) => [...sessionKeys.lists(), params] as const,
   details: () => [...sessionKeys.all, 'detail'] as const,
   detail: (id: string) => [...sessionKeys.details(), id] as const,
   revisions: (id: string) => [...sessionKeys.detail(id), 'revisions'] as const,
