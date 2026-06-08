@@ -58,6 +58,44 @@ public class session_cleanup_state_machine_tests
     }
 
     [Fact]
+    public void a_failed_re_run_on_edited_raw_after_a_clean_still_derives_stale()
+    {
+        // Clean, then edit Raw, fail a re-run, then edit Raw again: the prior success means the latest
+        // Raw is newer than the last cleaned Revision, so the user is offered a re-run (Stale), not Failed.
+        var session = new FakeSessionBuilder().WithRawText("original").Cleaned("good copy").Build();
+        session.SaveDraft(Doc("edited once"));
+        session.BeginCleanup();
+        session.FailCleanup();
+        session.SaveDraft(Doc("edited twice"));
+
+        session.CleanupStatus.ShouldBe(CleanupStatus.Failed);              // stored status is untouched
+        session.EffectiveCleanupStatus.ShouldBe(CleanupStatus.Stale);     // but the user sees Stale
+    }
+
+    [Fact]
+    public void a_failed_cleanup_with_no_prior_success_reads_failed()
+    {
+        // First-ever Cleanup fails: there's no prior successful Cleanup to be stale against.
+        var session = new FakeSessionBuilder().WithRawText("never cleaned").Failed().Build();
+
+        session.LastCleanedRawRevisionNumber.ShouldBe(0);
+        session.EffectiveCleanupStatus.ShouldBe(CleanupStatus.Failed);
+    }
+
+    [Fact]
+    public void a_running_cleanup_is_never_overridden_to_stale()
+    {
+        // Clean, edit Raw, then start a re-run: while it's in flight the status stays Running, even
+        // though Raw has advanced past the last cleaned Revision.
+        var session = new FakeSessionBuilder().WithRawText("original").Cleaned("good copy").Build();
+        session.SaveDraft(Doc("edited"));
+        session.BeginCleanup();
+
+        session.LatestRawRevisionNumber.ShouldBeGreaterThan(session.LastCleanedRawRevisionNumber);
+        session.EffectiveCleanupStatus.ShouldBe(CleanupStatus.Running);
+    }
+
+    [Fact]
     public void a_re_run_supersedes_hand_edits_and_clears_the_flag()
     {
         var session = new FakeSessionBuilder().Cleaned("v1").WithHandEdit("hand edited").Build();

@@ -124,12 +124,17 @@ public sealed class Session : BaseEntity
     public int LatestRawRevisionNumber => _rawRevisions.Count;
 
     /// <summary>
-    /// The Cleanup status as the user sees it: the stored status, except a <see cref="CleanupStatus.Clean"/>
-    /// Session whose Raw has advanced past the last cleaned Revision reads as <see cref="CleanupStatus.Stale"/>
+    /// The Cleanup status as the user sees it: the stored status, except a Session that has a prior
+    /// successful Cleanup whose Raw has since advanced past it reads as <see cref="CleanupStatus.Stale"/>
     /// (CONTEXT.md — "Stale means the latest Raw Revision is newer than the last successful Cleanup").
+    /// This holds for any non-<see cref="CleanupStatus.Running"/> state — so a Clean → Raw edit →
+    /// Failed re-run → Raw edit still reads Stale, not Failed. <see cref="CleanupStatus.Running"/> is
+    /// never overridden (a run is in flight), and a Failed run with no prior success reads Failed.
     /// </summary>
     public CleanupStatus EffectiveCleanupStatus =>
-        CleanupStatus == CleanupStatus.Clean && LatestRawRevisionNumber > LastCleanedRawRevisionNumber
+        CleanupStatus != CleanupStatus.Running
+        && LastCleanedRawRevisionNumber > 0
+        && LatestRawRevisionNumber > LastCleanedRawRevisionNumber
             ? CleanupStatus.Stale
             : CleanupStatus;
 
