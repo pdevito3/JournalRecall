@@ -6,7 +6,7 @@ namespace JournalRecall.Api.Domain.Summaries;
 /// directly (issue 0013); the Month/Quarter/Year roll-ups and staleness propagation arrive in 0014.
 /// Per-user and private via the global query filter (Privacy invariant).
 /// </summary>
-public sealed class Summary : BaseEntity
+public sealed class Summary : BaseEntity, ITenantScoped
 {
     public Guid UserId { get; private set; }
     public SummaryPeriod Period { get; private set; }

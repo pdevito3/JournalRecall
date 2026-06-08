@@ -12,7 +12,7 @@ namespace JournalRecall.Api.Domain.Sessions;
 /// Revision stream minted at save points lands in issue 0005. Raw is human-owned and stored exactly as
 /// typed — never mutated by the server.
 /// </summary>
-public sealed class Session : BaseEntity
+public sealed class Session : BaseEntity, ITenantScoped
 {
     private readonly List<RawRevision> _rawRevisions = [];
     private readonly List<CleanedRevision> _cleanedRevisions = [];

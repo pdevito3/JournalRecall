@@ -7,7 +7,7 @@ namespace JournalRecall.Api.Domain.People;
 /// The <see cref="Label"/> is the single display name; an alias collection can be layered on later
 /// without reshaping callers (aliases themselves are out of scope here).
 /// </summary>
-public sealed class Person : BaseEntity
+public sealed class Person : BaseEntity, ITenantScoped
 {
     public Guid UserId { get; private set; }
     public string Label { get; private set; } = string.Empty;

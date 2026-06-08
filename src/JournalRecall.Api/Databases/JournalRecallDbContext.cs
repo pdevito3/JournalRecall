@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -79,9 +80,8 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             // Timeline + summary source-window reads scan a user's Sessions ordered by CreatedAt; the
             // composite (UserId, CreatedAt) index serves both the tenant filter and that ordering (issue 0030).
             session.HasIndex(s => new { s.UserId, s.CreatedAt });
-            // Privacy invariant: referencing the instance field makes EF re-evaluate the owner per
-            // query, so no User can ever read another User's Sessions (ADR-0002, CONTEXT.md).
-            session.HasQueryFilter(TenantFilter, s => s.UserId == _currentUserId);
+            // Tenant scoping (the Privacy invariant) is applied automatically to Session via its
+            // ITenantScoped marker — see ApplyTenantFilters below (ADR-0012).
 
             // The append-only Raw Revision stream is part of the Session aggregate, not an
             // independently-queried/indexed entity (ADR-0003) — hence an owned collection.
@@ -158,8 +158,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             summary.Ignore(s => s.DomainEvents);
             // One Summary per (user, period, anchor date) — the natural key for upsert/lookup.
             summary.HasIndex(s => new { s.UserId, s.Period, s.PeriodDate }).IsUnique();
-            // Privacy invariant: scope every Summary query to the current user (ADR-0002, CONTEXT.md).
-            summary.HasQueryFilter(TenantFilter, s => s.UserId == _currentUserId);
+            // Tenant scoping applied automatically via ITenantScoped (ApplyTenantFilters, ADR-0012).
         });
 
         modelBuilder.Entity<AiProviderSettings>(provider =>
@@ -198,8 +197,7 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             person.Ignore(p => p.DomainEvents);
             // Directory lookup + autocomplete is by (user, label); also the find-or-create dedup key.
             person.HasIndex(p => new { p.UserId, p.Label });
-            // Privacy invariant: scope every Person query to the current user (ADR-0002, CONTEXT.md).
-            person.HasQueryFilter(TenantFilter, p => p.UserId == _currentUserId);
+            // Tenant scoping applied automatically via ITenantScoped (ApplyTenantFilters, ADR-0012).
         });
 
         modelBuilder.Entity<Correction>(correction =>
@@ -211,10 +209,33 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
             // Mishearings are a primitive collection serialized to a single JSON column (EF Core),
             // read/written through the read-only property's backing field.
             correction.PrimitiveCollection(c => c.Mishearings).UsePropertyAccessMode(PropertyAccessMode.Field);
-            // Privacy invariant: scope every Correction query to the current user (ADR-0002, CONTEXT.md).
-            correction.HasQueryFilter(TenantFilter, c => c.UserId == _currentUserId);
+            // Tenant scoping applied automatically via ITenantScoped (ApplyTenantFilters, ADR-0012).
         });
+
+        ApplyTenantFilters(modelBuilder);
     }
+
+    /// <summary>
+    /// Applies the per-User <see cref="TenantFilter"/> to every <see cref="ITenantScoped"/> entity in the
+    /// model (ADR-0012), replacing the hand-written per-entity filters. Reflection selects <em>which</em>
+    /// entities are scoped; the predicate itself is the strongly-typed closure in
+    /// <see cref="ApplyTenantFilter{TEntity}"/>, so it still references the instance field
+    /// <see cref="_currentUserId"/> and EF re-evaluates it <b>per query</b>. Capturing the id's value here
+    /// would bake one User into EF's cached compiled model and leak rows across tenants — the worst bug
+    /// this app can have — which is exactly why the predicate is never rebuilt by reflection.
+    /// </summary>
+    private void ApplyTenantFilters(ModelBuilder modelBuilder)
+    {
+        var applyTenantFilter = typeof(JournalRecallDbContext)
+            .GetMethod(nameof(ApplyTenantFilter), BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes()
+                     .Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
+            applyTenantFilter.MakeGenericMethod(entityType.ClrType).Invoke(this, [modelBuilder]);
+    }
+
+    private void ApplyTenantFilter<TEntity>(ModelBuilder modelBuilder) where TEntity : class, ITenantScoped =>
+        modelBuilder.Entity<TEntity>().HasQueryFilter(TenantFilter, e => e.UserId == _currentUserId);
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {

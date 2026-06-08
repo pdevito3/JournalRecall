@@ -7,7 +7,7 @@ namespace JournalRecall.Api.Domain.Corrections;
 /// Applied only to the Cleaned copy — Raw is never touched. Belongs to exactly one User (Privacy
 /// invariant), enforced by the global query filter.
 /// </summary>
-public sealed class Correction : BaseEntity
+public sealed class Correction : BaseEntity, ITenantScoped
 {
     private readonly List<string> _mishearings = [];
 
