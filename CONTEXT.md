@@ -84,6 +84,16 @@ A Session may reference many.
 How the user felt, as a value object: a known mood from an app-defined **SmartEnum**, or the
 `Custom` member which additionally carries the user's free-text mood value.
 
+**Activity**:
+What the user was physically doing *while journaling* — a value object, **exactly one per
+Session** (single-valued, unlike Mood/Topic). A known activity from an app-defined **SmartEnum**,
+or the `Custom` member which additionally carries the user's free-text value. **Non-nullable**:
+every Session always has an Activity, defaulting to `None`. The `None` member means "didn't say /
+not applicable" and is the zero value — there is no separate `null`/unset state. Distinct from
+`Stationary`, which means the user was deliberately sitting still. Describes the *act of
+journaling* (posture/motion), **not** the content — life-areas are Topics, feelings are Moods.
+_Avoid_: using `None` and "unset" as two different things (there is only `None`).
+
 **Suggestion**:
 An AI-proposed piece of metadata (a Topic, Person, or Mood) awaiting the user's accept/reject. Not
 yet authoritative metadata.
