@@ -9,20 +9,20 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Xunit.SkippableFact" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="FsCheck.Xunit" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
     <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
-    <PackageReference Include="Microsoft.Extensions.AI.Evaluation" />
-    <PackageReference Include="Microsoft.Extensions.AI.Evaluation.Quality" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\JournalRecall.AI\JournalRecall.AI.csproj" />
     <ProjectReference Include="..\..\src\JournalRecall.AI.EntityFrameworkCore\JournalRecall.AI.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\JournalRecall.AI.OpenAI\JournalRecall.AI.OpenAI.csproj" />
+    <ProjectReference Include="..\..\src\JournalRecall.Api\JournalRecall.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

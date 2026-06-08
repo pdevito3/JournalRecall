@@ -1,20 +1,19 @@
 using System.ClientModel;
 using Shouldly;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.AI.Evaluation;
-using Microsoft.Extensions.AI.Evaluation.Quality;
 using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
 using JournalRecall.AI.Core;
 using JournalRecall.AI.DependencyInjection;
 using JournalRecall.AI.Runtime;
+using JournalRecall.Api.Domain.Sessions.Ai;
 
 namespace JournalRecall.AI.Tests.Evaluation;
 
 /// <summary>
-/// Opt-in agent answer-quality evals against a real model (Ollama). Env-gated by JOURNALRECALL_EVAL=1 so
-/// they are excluded from the deterministic CI gate (ADR-0008). Uses M.E.AI.Evaluation quality
-/// evaluators (the model also acts as the judge).
+/// Opt-in answer-quality eval for the real Cleanup agent against a live model (Ollama). Env-gated by
+/// JOURNALRECALL_EVAL=1 so it is excluded from the deterministic CI gate (ADR-0008). When the flag is
+/// unset the test is SKIPPED (via SkippableFact), never reported as an assertion-free pass.
 /// </summary>
 public class AnswerQualityEvalTests(Xunit.Abstractions.ITestOutputHelper output)
 {
@@ -25,41 +24,42 @@ public class AnswerQualityEvalTests(Xunit.Abstractions.ITestOutputHelper output)
                 new OpenAIClientOptions { Endpoint = new Uri("http://localhost:11434/v1") })
             .GetChatClient("qwen2.5:7b-instruct").AsIChatClient();
 
-    [Fact]
-    public async Task Nutrition_answer_is_relevant_to_the_question()
+    [SkippableFact]
+    public async Task Cleanup_synopsis_is_first_person_and_preserves_the_entry()
     {
-        if (!Enabled)
-            return; // skipped outside the opt-in local/nightly eval run
+        Skip.IfNot(Enabled, "Set JOURNALRECALL_EVAL=1 to run the opt-in answer-quality eval against a live model.");
 
         var chat = Ollama();
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddKeyedSingleton("fast", chat);
+        // The Cleanup agent resolves its IChatClient from the keyed "cleanup" model slot.
+        services.AddKeyedSingleton(CleanupAgent.ModelKey, chat);
         services.AddJournalRecallAgents();
         var runner = services.BuildServiceProvider().GetRequiredService<IAgentRunner>();
 
-        const string question = "Which macronutrient is most abundant in chicken breast?";
-        var definition = Agent.Define("nutritionist")
-            .UsingModel("fast")
-            .WithInstructions("You are a dietitian. Answer in one concise sentence.")
-            .WithMaxTurns(2)
-            .Build();
+        const string raw =
+            "had coffee w/ sarah this mroning before work. we talked about the move to portland and " +
+            "wether the new job is worth it. felt anxious but also kind of excited about it.";
 
-        var outcome = await runner.RunAsync(definition, Conversation.FromUser(question), new RunContext());
-        var answer = outcome.ShouldBeOfType<AgentOutcome.Completed>().Messages.Last().Text;
-        output.WriteLine($"Answer: {answer}");
+        var definition = CleanupAgent.BuildDefinition();
+        var outcome = await runner.RunAsync(definition, Conversation.FromUser(raw), new RunContext());
+        var completed = outcome.ShouldBeOfType<AgentOutcome.Completed>();
 
-        // The model also judges quality (relevance on a 1-5 scale).
-        var evaluator = new RelevanceEvaluator();
-        var configuration = new ChatConfiguration(chat);
-        var result = await evaluator.EvaluateAsync(
-            [new ChatMessage(ChatRole.User, question)],
-            new ChatResponse(new ChatMessage(ChatRole.Assistant, answer)),
-            configuration);
+        CleanupAgent.TryParse(completed, out var parsed).ShouldBeTrue("Cleanup agent did not return parseable JSON.");
+        output.WriteLine($"Cleaned:\n{parsed.CleanedMarkdown}\n\nSynopsis: {parsed.Synopsis}");
 
-        var relevance = result.Get<NumericMetric>(RelevanceEvaluator.RelevanceMetricName);
-        output.WriteLine($"Relevance: {relevance.Value} ({relevance.Reason})");
-        var score = relevance.Value.ShouldNotBeNull();
-        score.ShouldBeGreaterThanOrEqualTo(3.0);
+        // Quality properties of a good Cleanup result:
+        // 1. The synopsis is a non-empty first-person recap ("I ...").
+        parsed.Synopsis.ShouldNotBeNullOrWhiteSpace();
+        parsed.Synopsis.ShouldContain("I", Case.Sensitive);
+
+        // 2. The cleaned copy preserves the entry's content (Sarah is still referenced) and fixes the
+        //    obvious dictation typo ("mroning" -> "morning"), without dropping the topic.
+        parsed.CleanedMarkdown.ShouldNotBeNullOrWhiteSpace();
+        parsed.CleanedMarkdown.ShouldContain("Sarah", Case.Insensitive);
+        parsed.CleanedMarkdown.ShouldNotContain("mroning", Case.Insensitive);
+
+        // 3. The people-proposal side-channel surfaces the tagged person.
+        parsed.PeopleProposal.ShouldContain(p => p.Contains("Sarah", StringComparison.OrdinalIgnoreCase));
     }
 }
