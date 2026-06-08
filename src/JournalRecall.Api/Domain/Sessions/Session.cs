@@ -282,6 +282,33 @@ public sealed class Session : BaseEntity
     }
 
     /// <summary>
+    /// Re-labels every @-mention pointing at <paramref name="personId"/> in the Raw and Cleaned copies to
+    /// <paramref name="newLabel"/> (PRD-0006, RICH-005/006), so a directory rename propagates to the stored
+    /// prose the editor renders and — via the lockstep plaintext setters — to <see cref="RawPlainText"/> /
+    /// <see cref="CleanedPlainText"/> that feed search and AI input. The durable <c>personId</c> link is
+    /// untouched, so no Revision is minted and the People badges are unaffected. Returns whether anything
+    /// changed.
+    /// </summary>
+    public bool RenamePersonMentions(Guid personId, string newLabel)
+    {
+        var rawRewritten = MentionLabelRewrite.Rewrite(RawDraft, personId, newLabel);
+        var cleanedRewritten = MentionLabelRewrite.Rewrite(CleanedDraft, personId, newLabel);
+        var changed = false;
+
+        if (!string.Equals(rawRewritten, RawDraft, StringComparison.Ordinal))
+        {
+            RawDraft = rawRewritten; // re-derives RawPlainText in lockstep
+            changed = true;
+        }
+        if (!string.Equals(cleanedRewritten, CleanedDraft, StringComparison.Ordinal))
+        {
+            CleanedDraft = cleanedRewritten; // re-derives CleanedPlainText in lockstep
+            changed = true;
+        }
+        return changed;
+    }
+
+    /// <summary>
     /// Reconciles the Session's People references to the <b>union</b> of the directory People mentioned in
     /// the Raw and Cleaned copies (PRD-0006, RICH-006), so the People badges are a pure projection of the
     /// prose: a mention in either copy keeps the Person; a Person mentioned in neither is dropped. Called at
