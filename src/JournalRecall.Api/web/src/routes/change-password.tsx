@@ -29,7 +29,7 @@ function ChangePasswordPage() {
 
   const form = useForm({
     defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
-    validators: { onBlur: changePasswordSchema },
+    validators: { onChange: changePasswordSchema },
     onSubmit: async ({ value }) => {
       try {
         await changePassword.mutateAsync({ currentPassword: value.currentPassword, newPassword: value.newPassword })

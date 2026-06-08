@@ -27,7 +27,7 @@ function SetupPage() {
 
   const form = useForm({
     defaultValues: { username: '', password: '', confirmPassword: '' },
-    validators: { onBlur: setupSchema },
+    validators: { onChange: setupSchema },
     onSubmit: async ({ value }) => {
       const credentials = { username: value.username, password: value.password }
       try {

@@ -27,7 +27,7 @@ function RegisterPage() {
 
   const form = useForm({
     defaultValues: { username: '', password: '', confirmPassword: '' },
-    validators: { onBlur: registerSchema },
+    validators: { onChange: registerSchema },
     onSubmit: async ({ value }) => {
       const credentials = { username: value.username, password: value.password }
       try {
