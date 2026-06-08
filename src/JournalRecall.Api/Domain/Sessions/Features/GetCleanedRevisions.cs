@@ -15,16 +15,22 @@ public static class GetCleanedRevisions
     {
         public async Task<IReadOnlyList<CleanedRevisionSummaryDto>?> Handle(Query request, CancellationToken cancellationToken)
         {
-            var session = await db.Sessions
+            // Project the summary rows in SQL: select only (RevisionNumber, CreatedAt) per Revision so the
+            // owned Revision bodies and the Session's other owned collections are never materialized.
+            var summary = await db.Sessions
                 .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
-            if (session is null)
-                return null;
+                .Where(s => s.Id == request.SessionId)
+                .Select(s => new
+                {
+                    Revisions = s.CleanedRevisions
+                        .OrderByDescending(r => r.RevisionNumber) // newest first
+                        .Select(r => new CleanedRevisionSummaryDto(r.RevisionNumber, r.CreatedAt))
+                        .ToList(),
+                })
+                .FirstOrDefaultAsync(cancellationToken);
 
-            return session.CleanedRevisions
-                .OrderByDescending(r => r.RevisionNumber) // newest first
-                .Select(r => new CleanedRevisionSummaryDto(r.RevisionNumber, r.CreatedAt))
-                .ToList();
+            // Null wrapper => the Session doesn't exist for this user (→ 404); empty list => no Revisions yet.
+            return summary?.Revisions;
         }
     }
 }
