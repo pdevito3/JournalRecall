@@ -26,6 +26,7 @@ import {
   type Session,
   type Suggestion,
 } from '@/features/sessions/api'
+import { useAuthConfig } from '@/features/auth'
 import { Form, createForm } from '@/shared/forms'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils/cn'
@@ -610,6 +611,9 @@ const STATUS_LABELS: Record<CleanupStatus, string> = {
 
 function CleanupBar({ session }: { session: Session }) {
   const { run, running, progress, error } = useCleanup(session.id)
+  // No AI provider set → cleanup has nothing to call. Default to enabled while the (app-loaded, cached)
+  // config resolves so the button doesn't flash disabled. The provider is set on the Admin page.
+  const aiConfigured = useAuthConfig().data?.aiConfigured ?? true
   // Server status, or the live in-flight status while a run streams.
   const status: CleanupStatus = running ? 'Running' : session.cleanupStatus
   const isStale = status === 'Stale'
@@ -645,9 +649,12 @@ function CleanupBar({ session }: { session: Session }) {
           <span className="text-sm text-muted">{progress[progress.length - 1]}</span>
         ) : null}
         {error ? <span className="text-sm text-amber-400">Something went wrong.</span> : null}
+        {!aiConfigured ? (
+          <span className="text-sm text-muted">No AI provider is configured — ask an Admin to set one up.</span>
+        ) : null}
       </div>
 
-      <Button variant="primary" onPress={handleRun} isDisabled={running}>
+      <Button variant="primary" onPress={handleRun} isDisabled={running || !aiConfigured}>
         {running ? 'Cleaning…' : isStale || status === 'Clean' || status === 'Failed' ? 'Re-run cleanup' : 'Clean up with AI'}
       </Button>
     </div>

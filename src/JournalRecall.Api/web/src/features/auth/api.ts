@@ -19,6 +19,8 @@ const jsonHeaders = { 'Content-Type': 'application/json' }
 export interface AuthConfig {
   needsSetup: boolean
   selfRegistrationEnabled: boolean
+  /** An Admin has configured an AI provider — gates the AI cleanup action (the provider config is Admin-only). */
+  aiConfigured: boolean
 }
 
 /** Public config that drives anonymous routing (the access gate / client guard). Always reachable. */

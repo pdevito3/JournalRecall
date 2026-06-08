@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
+using JournalRecall.Api.Databases;
 using JournalRecall.Api.Domain.Identity;
 
 namespace JournalRecall.Api.Auth;
@@ -14,7 +15,8 @@ public static class AuthEndpoints
     /// <summary>Change-own-password (issue 0024): clears the forced-change flag and revokes other sessions.</summary>
     public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
     /// <summary>Public config that drives all anonymous routing (server gate + client guard, issue 0022).</summary>
-    public sealed record AuthConfigResponse(bool NeedsSetup, bool SelfRegistrationEnabled);
+    /// <param name="AiConfigured">An Admin has set an AI provider — the cue the client uses to enable AI cleanup.</param>
+    public sealed record AuthConfigResponse(bool NeedsSetup, bool SelfRegistrationEnabled, bool AiConfigured);
     /// <summary>Mobile refresh: the refresh token is presented in the body (web uses the HttpOnly cookie).</summary>
     public sealed record RefreshRequest(string? RefreshToken);
     /// <summary>Mobile refresh response: tokens in the body (web gets cookies + an empty body).</summary>
@@ -26,10 +28,14 @@ public static class AuthEndpoints
 
         // Anonymous: drives the access gate and onboarding routing. needsSetup = zero Users exist;
         // selfRegistrationEnabled is the operator-controlled toggle (issue 0023).
-        group.MapGet("/auth/config", async (UserManager<User> users, AuthSettingsService authSettings) =>
+        group.MapGet("/auth/config", async (UserManager<User> users, AuthSettingsService authSettings, JournalRecallDbContext db) =>
         {
             var needsSetup = !await users.Users.AnyAsync();
-            return Results.Ok(new AuthConfigResponse(needsSetup, await authSettings.SelfRegistrationEnabledAsync()));
+            // aiConfigured = an Admin has set the app-wide provider (non-empty model). Surfaced here, on the
+            // always-reachable config, because the AI-provider endpoint itself is Admin-only — a Member needs
+            // this to know whether the Cleanup button can do anything.
+            var aiSettings = await db.AiProviderSettings.AsNoTracking().FirstOrDefaultAsync();
+            return Results.Ok(new AuthConfigResponse(needsSetup, await authSettings.SelfRegistrationEnabledAsync(), aiSettings?.IsConfigured ?? false));
         });
 
         group.MapPost("/auth/register", async (Credentials body, UserManager<User> users, AuthSettingsService authSettings) =>
