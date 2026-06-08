@@ -52,6 +52,10 @@ export interface Session {
   synopsis: string
   cleanupStatus: CleanupStatus
   cleanedHasHandEdits: boolean
+  // The Cleaned Revision number of the latest server *regeneration* (Cleanup run or approved People-tag
+  // insertion), NOT a user hand-edit. The Cleaned editor keys its remount on this so a regeneration
+  // re-seeds it while the user's own debounced saves do not (issue 0028).
+  cleanedRegenerationRevisionNumber: number
   topics: string[]
   people: string[]
   moods: string[]

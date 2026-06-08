@@ -77,13 +77,16 @@ export function SessionEditor({ sessionId }: { sessionId: string }) {
             mention={mention}
           />
         ) : hasCleaned ? (
-          // Keyed on the server's Cleaned copy itself, so a server-side regeneration (Cleanup re-run,
-          // approved People-tag) remounts and re-seeds, while local keystrokes and no-op refetches don't
-          // (keystrokes never touch the server's `cleanedDraft`). Keying on the same `session` field we
-          // seed from — not the separate cleaned-revisions stream — keeps the remount and the seed in
-          // lockstep: no refresh needed after an approval inserts mentions (the two streams could settle
-          // in either order, leaving a revision-number key to remount on a still-stale draft).
-          <CleanedEditor key={`${session.id}:${session.cleanedDraft}`} session={session} />
+          // Keyed on a server-*regeneration* token — the Cleaned Revision number of the last Cleanup run
+          // or approved People-tag insertion — NOT on `cleanedDraft`. A hand-edit autosave appends a
+          // Cleaned Revision and refetches `cleanedDraft` to the just-saved text; keying on the draft (or
+          // the raw revision count) would remount the uncontrolled editor on every save, resetting the
+          // caret and dropping keystrokes typed during the debounce + round-trip (issue 0028). The token
+          // doesn't move on a hand-edit, so the editor stays mounted; it only changes on a regeneration,
+          // which re-seeds it. Concurrent-edit policy: local unsaved edits win until a save point — only a
+          // server regeneration re-seeds (FE-015). Both the token and the seed ride the same Session DTO,
+          // so the remount and the re-seed stay in lockstep.
+          <CleanedEditor key={cleanedEditorKey(session)} session={session} />
         ) : (
           <CleanedEmptyState />
         )}
@@ -497,6 +500,16 @@ function splitList(value: string): string[] {
     .split(',')
     .map((t) => t.trim())
     .filter((t) => t.length > 0)
+}
+
+/**
+ * Remount key for the Cleaned editor: scoped per Session and bumped only by a server *regeneration*
+ * (Cleanup re-run or approved People-tag insertion), so the uncontrolled editor re-seeds on a
+ * regeneration but NOT on the user's own debounced hand-edit saves (issue 0028). Deliberately excludes
+ * `cleanedDraft` — a hand-edit save mutates it and would otherwise force a remount.
+ */
+export function cleanedEditorKey(session: Session): string {
+  return `${session.id}:${session.cleanedRegenerationRevisionNumber}`
 }
 
 /** The AI-derived Cleaned copy, hand-editable. Edits debounce-save and append a Cleaned Revision. */

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JournalRecall.Api.Migrations
 {
     [DbContext(typeof(JournalRecallDbContext))]
-    [Migration("20260608001356_InitialCreate")]
+    [Migration("20260608002302_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -292,6 +292,9 @@ namespace JournalRecall.Api.Migrations
                     b.Property<string>("CleanedPlainText")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("CleanedRegenerationRevisionNumber")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("CleanupStatus")
                         .HasColumnType("INTEGER");

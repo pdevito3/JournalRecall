@@ -84,6 +84,15 @@ public sealed class Session : BaseEntity
     public int LastCleanedRawRevisionNumber { get; private set; }
 
     /// <summary>
+    /// The Cleaned Revision number of the most recent <em>server regeneration</em> of the Cleaned copy —
+    /// a Cleanup run (<see cref="CompleteCleanup"/>) or an approved People-tag insertion
+    /// (<see cref="ApplyCleanedMentions"/>) — never a user hand-edit (<see cref="EditCleaned"/>). 0 when
+    /// never cleaned. The client keys the Cleaned editor remount on this so a regeneration re-seeds the
+    /// editor while the user's own debounced saves do not (issue 0028).
+    /// </summary>
+    public int CleanedRegenerationRevisionNumber { get; private set; }
+
+    /// <summary>
     /// True when the current Cleaned copy carries user hand-edits made since the last AI run — the cue
     /// to warn before a re-run overwrites them (CONTEXT.md, ADR-0003). Cleared when Cleanup regenerates.
     /// </summary>
@@ -189,6 +198,7 @@ public sealed class Session : BaseEntity
         CleanedDraft = cleanedText;
         Synopsis = synopsis ?? string.Empty;
         _cleanedRevisions.Add(new CleanedRevision(_cleanedRevisions.Count + 1, cleanedText));
+        CleanedRegenerationRevisionNumber = _cleanedRevisions.Count; // server regeneration → client re-seeds (issue 0028)
         LastCleanedRawRevisionNumber = _cleaningFromRawRevisionNumber;
         CleanupStatus = CleanupStatus.Clean;
         // A fresh AI copy supersedes any prior hand-edits — the prior Revision stays in history.
@@ -406,6 +416,7 @@ public sealed class Session : BaseEntity
         {
             CleanedDraft = cleanedText;
             _cleanedRevisions.Add(new CleanedRevision(_cleanedRevisions.Count + 1, cleanedText));
+            CleanedRegenerationRevisionNumber = _cleanedRevisions.Count; // server regeneration → client re-seeds (issue 0028)
         }
         ReconcileMentionedPeople();
     }

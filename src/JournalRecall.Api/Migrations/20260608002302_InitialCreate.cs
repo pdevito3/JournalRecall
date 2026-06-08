@@ -160,6 +160,7 @@ namespace JournalRecall.Api.Migrations
                     Synopsis = table.Column<string>(type: "TEXT", nullable: false),
                     CleanupStatus = table.Column<int>(type: "INTEGER", nullable: false),
                     LastCleanedRawRevisionNumber = table.Column<int>(type: "INTEGER", nullable: false),
+                    CleanedRegenerationRevisionNumber = table.Column<int>(type: "INTEGER", nullable: false),
                     CleanedHasHandEdits = table.Column<bool>(type: "INTEGER", nullable: false),
                     Moods = table.Column<string>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<long>(type: "INTEGER", nullable: false),

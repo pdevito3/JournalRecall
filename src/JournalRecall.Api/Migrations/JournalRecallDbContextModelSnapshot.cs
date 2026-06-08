@@ -290,6 +290,9 @@ namespace JournalRecall.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("CleanedRegenerationRevisionNumber")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("CleanupStatus")
                         .HasColumnType("INTEGER");
 

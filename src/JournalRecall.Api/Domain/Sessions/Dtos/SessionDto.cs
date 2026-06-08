@@ -13,6 +13,7 @@ public sealed record SessionDto(
     string Synopsis,
     CleanupStatus CleanupStatus,
     bool CleanedHasHandEdits,
+    int CleanedRegenerationRevisionNumber,
     IReadOnlyList<string> Topics,
     IReadOnlyList<string> People,
     IReadOnlyList<string> Moods,
@@ -29,6 +30,7 @@ public sealed record SessionDto(
         Session session, IReadOnlyList<string> peopleLabels, IReadOnlyList<PersonTagProposalDto> peopleProposals) => new(
         session.Id, session.CreatedAt, session.RawDraft, session.CleanedDraft, session.Synopsis,
         session.EffectiveCleanupStatus, session.CleanedHasHandEdits,
+        session.CleanedRegenerationRevisionNumber,
         session.Topics.Select(t => t.Name).ToList(),
         peopleLabels,
         session.Moods.ToList(),

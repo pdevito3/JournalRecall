@@ -108,4 +108,37 @@ public class session_cleanup_state_machine_tests
         session.CleanedDraft.ShouldBe("v2 fresh");
         session.CleanedRevisions.Count.ShouldBe(3); // v1, hand-edit, v2
     }
+
+    [Fact]
+    public void the_regeneration_token_advances_on_a_cleanup_but_not_on_a_hand_edit()
+    {
+        // The client keys the Cleaned editor remount on this token (issue 0028): it must move on a server
+        // regeneration (Cleanup run) and stay put on the user's own hand-edit, so a hand-edit autosave
+        // doesn't remount the editor mid-keystroke.
+        var session = new FakeSessionBuilder().WithRawText("helo").Cleaned("v1").Build();
+        var afterCleanup = session.CleanedRegenerationRevisionNumber;
+        afterCleanup.ShouldBe(1); // the first Cleaned Revision came from Cleanup
+
+        session.EditCleaned(ContentDoc.Doc("hand edited"));
+        session.CleanedRevisions.Count.ShouldBe(2);               // the hand-edit appended a Revision
+        session.CleanedRegenerationRevisionNumber.ShouldBe(afterCleanup); // but the token did not move
+
+        session.BeginCleanup();
+        session.CompleteCleanup(ContentDoc.Doc("v2 fresh"), "syn");
+        session.CleanedRegenerationRevisionNumber.ShouldBe(3);    // a re-run moves it to the new Revision
+    }
+
+    [Fact]
+    public void an_approved_people_tag_insertion_advances_the_regeneration_token()
+    {
+        // Approving a People-tag proposal inserts mentions server-side — a regeneration, so the token moves
+        // and the client re-seeds the editor with the tagged prose (issue 0028).
+        var session = new FakeSessionBuilder().WithRawText("met sam").Cleaned("I met Sam.").Build();
+        var beforeApproval = session.CleanedRegenerationRevisionNumber;
+
+        session.ApplyCleanedMentions(ContentDoc.Doc("I met @Sam."));
+
+        session.CleanedRegenerationRevisionNumber.ShouldBeGreaterThan(beforeApproval);
+        session.CleanedRegenerationRevisionNumber.ShouldBe(session.CleanedRevisions.Count);
+    }
 }

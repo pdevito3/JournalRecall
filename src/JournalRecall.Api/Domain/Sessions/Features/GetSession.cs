@@ -33,6 +33,7 @@ public static class GetSession
                         ? CleanupStatus.Stale
                         : s.CleanupStatus,
                     s.CleanedHasHandEdits,
+                    s.CleanedRegenerationRevisionNumber,
                     Topics = s.Topics.Select(t => t.Name).ToList(),
                     PersonIds = s.People.Select(p => p.PersonId).ToList(),
                     // Read the Moods JSON column as a whole (no element enumeration → no json_each/APPLY on SQLite).
@@ -69,7 +70,7 @@ public static class GetSession
 
             return new SessionDto(
                 row.Id, row.CreatedAt, row.RawDraft, row.CleanedDraft, row.Synopsis, row.Status,
-                row.CleanedHasHandEdits, row.Topics, people, row.Moods,
+                row.CleanedHasHandEdits, row.CleanedRegenerationRevisionNumber, row.Topics, people, row.Moods,
                 row.Suggestions, proposals,
                 Location.TryCreate(row.Latitude, row.Longitude, out var location)
                     ? new LocationDto(location.Latitude, location.Longitude)
