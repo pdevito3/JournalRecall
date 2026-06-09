@@ -5,7 +5,6 @@ using JournalRecall.AI.Runtime;
 using JournalRecall.Api.Databases;
 using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Sessions.Ai;
-using JournalRecall.Api.Domain.Sessions.Content;
 using JournalRecall.Api.Domain.Sessions.Dtos;
 using JournalRecall.Api.Domain.Summaries.Services;
 
@@ -18,7 +17,7 @@ namespace JournalRecall.Api.Domain.Sessions.Services;
 /// event stream is surfaced verbatim so the endpoint can stream live progress to the client.
 /// </summary>
 public sealed class SessionCleanupRunner(
-    JournalRecallDbContext db, IAgentRunner runner, SummaryStaleness staleness, PeopleTagService peopleTags)
+    JournalRecallDbContext db, IAgentRunner runner, SummaryStaleness staleness, CleanupPostProcessor postProcessor)
 {
     /// <summary>
     /// Runs Cleanup, yielding each lifecycle event as it occurs. The Session's terminal state is
@@ -132,34 +131,8 @@ public sealed class SessionCleanupRunner(
             return;
         }
 
-        // Hard-replace Corrections are applied deterministically to the Cleaned copy only. By contract
-        // (RICH-004) the model returns Markdown prose; the server converts it to canonical ProseMirror
-        // JSON so the Cleaned editor renders with formatting (ADR-0009).
-        var cleanedMarkdown = CorrectionApplier.ApplyHardReplacements(parsed.CleanedMarkdown, corrections);
-        var cleanedJson = MarkdownToProseMirror.ConvertToJson(cleanedMarkdown);
-
-        // People-tag handling (RICH-009): by default the run proposes People for per-Person review; a User
-        // who has turned approval off has resolved mentions tagged inline at Cleanup time. The setting
-        // defaults to requiring approval so the AI never writes to the directory without the User's say-so.
-        var requireApproval = await db.Users.AsNoTracking()
-            .Where(u => u.Id == session.UserId)
-            .Select(u => u.RequirePeopleTagApproval)
-            .FirstAsync(cancellationToken);
-
-        // Each branch hands the aggregate the data for one whole terminal state (Suggestions always
-        // accompany the run, issue 0012); the Session owns the proposal-vs-inline invariant from there.
-        if (requireApproval)
-        {
-            var cleanedPlainText = ProseMirrorToPlainText.Render(cleanedJson);
-            var proposals = await peopleTags.BuildProposalsAsync(cleanedPlainText, parsed.PeopleProposal, cancellationToken);
-            session.CompleteCleanupWithProposals(
-                cleanedJson, parsed.Synopsis, parsed.TopicSuggestions, parsed.MoodSuggestions, proposals);
-        }
-        else
-        {
-            cleanedJson = await peopleTags.InsertInlineAsync(cleanedJson, parsed.PeopleProposal, session.UserId, cancellationToken);
-            session.CompleteCleanupWithInlineMentions(
-                cleanedJson, parsed.Synopsis, parsed.TopicSuggestions, parsed.MoodSuggestions);
-        }
+        // The Engine-independent post-processing (hard-replace Corrections, Markdown → ProseMirror,
+        // People proposals-vs-inline) is shared with the OnDevice result path (issue 0034).
+        await postProcessor.CompleteAsync(session, parsed, corrections, cancellationToken);
     }
 }

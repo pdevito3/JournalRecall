@@ -194,10 +194,13 @@ public sealed class Session : BaseEntity, ITenantScoped
     /// <summary>
     /// Marks the Session as having a Cleanup in flight and snapshots the Raw Revision the run will read,
     /// so the resulting Cleaned copy is pinned to that exact Raw version (later Raw edits flip it Stale).
+    /// A client-run Cleanup (the OnDevice Engine, issue 0034) passes the
+    /// <paramref name="baseRawRevisionNumber"/> the device cleaned against instead — Stale then derives
+    /// naturally when Raw has advanced past it.
     /// </summary>
-    public void BeginCleanup()
+    public void BeginCleanup(int? baseRawRevisionNumber = null)
     {
-        _cleaningFromRawRevisionNumber = LatestRawRevisionNumber;
+        _cleaningFromRawRevisionNumber = baseRawRevisionNumber ?? LatestRawRevisionNumber;
         CleanupStatus = CleanupStatus.Running;
     }
 

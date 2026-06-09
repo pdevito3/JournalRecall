@@ -109,6 +109,15 @@ public static class SessionEndpoints
             return AgentResults.Stream(cleanup.StreamAsync(id, http.RequestAborted), StreamTransport.Sse);
         });
 
+        // The server half of the OnDevice Engine (issue 0034, ADR-0013): records a Cleanup the device
+        // ran, post-processed identically to a server run — in the domain the outcome is
+        // indistinguishable (CONTEXT.md "Engine"). Returns the updated Session, like /cleanup.
+        group.MapPost("/{id:guid}/cleanup/result", async (Guid id, RecordCleanupResult.Request body, ISender sender) =>
+        {
+            var recorded = await sender.Send(new RecordCleanupResult.Command(id, body));
+            return recorded ? Results.Ok(await sender.Send(new GetSession.Query(id))) : Results.NotFound();
+        });
+
         // Per-Session Cleaned Revision history (drill-down; not part of any list/search index).
         group.MapGet("/{id:guid}/cleaned-revisions", async (Guid id, ISender sender) =>
         {

@@ -59,6 +59,7 @@ public static class ApiRoutes
         public static string Metadata(Guid id) => $"{Root}/{id}/metadata";
         public static string Cleanup(Guid id) => $"{Root}/{id}/cleanup";
         public static string CleanupStream(Guid id) => $"{Root}/{id}/cleanup/stream";
+        public static string CleanupResult(Guid id) => $"{Root}/{id}/cleanup/result";
         public static string PeopleProposalRespond(Guid id) => $"{Root}/{id}/people-proposals/respond";
         public static string Revisions(Guid id) => $"{Root}/{id}/revisions";
         public static string CleanedRevisions(Guid id) => $"{Root}/{id}/cleaned-revisions";

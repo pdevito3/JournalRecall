@@ -83,6 +83,22 @@ public class session_cleanup_state_machine_tests
     }
 
     [Fact]
+    public void a_cleanup_pinned_to_an_older_raw_revision_derives_stale_on_completion()
+    {
+        // A client-run Cleanup (the OnDevice Engine, issue 0034) read Revision 1 offline; the edit that
+        // minted Revision 2 landed before the result did — so the recorded result is immediately Stale.
+        var session = new FakeSessionBuilder().WithRawText("first draft").Build();
+        session.SaveDraft(Doc("first draft, now revised")); // Revision 2
+
+        session.BeginCleanup(baseRawRevisionNumber: 1);
+        session.CompleteCleanup(Doc("Polished: first draft"), "recap");
+
+        session.CleanupStatus.ShouldBe(CleanupStatus.Clean);          // stored status, as ever
+        session.LastCleanedRawRevisionNumber.ShouldBe(1);             // pinned to the device's base
+        session.EffectiveCleanupStatus.ShouldBe(CleanupStatus.Stale); // Raw advanced past it
+    }
+
+    [Fact]
     public void a_running_cleanup_is_never_overridden_to_stale()
     {
         // Clean, edit Raw, then start a re-run: while it's in flight the status stays Running, even
