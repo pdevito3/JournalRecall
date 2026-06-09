@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
+import { HugeiconsIcon } from '@hugeicons/react'
 import { z } from 'zod'
 import {
   useCleanedRevision,
@@ -443,7 +444,8 @@ function MetaIndicators({ session }: { session: Session }) {
   if (activity) {
     items.push(
       <Chip key="act">
-        {ACTIVITY_ICONS[activity] ?? '•'} {activity}
+        {ACTIVITY_ICONS[activity] ? <HugeiconsIcon icon={ACTIVITY_ICONS[activity]} size={13} /> : null}
+        {activity}
       </Chip>,
     )
   }
@@ -581,6 +583,7 @@ function ActivityPicker({ field }: { field: { state: { value: string }; handleCh
       <div className="flex flex-wrap gap-2">
         {options.map((a) => {
           const active = matches(a) || (a === 'None' && value === '')
+          const icon = ACTIVITY_ICONS[a]
           return (
             <button
               key={a}
@@ -591,7 +594,7 @@ function ActivityPicker({ field }: { field: { state: { value: string }; handleCh
                 active ? 'border-accent bg-accent/15 text-content' : 'border-border bg-surface-3 text-muted hover:text-content'
               }`}
             >
-              <span aria-hidden>{ACTIVITY_ICONS[a]}</span>
+              {icon ? <HugeiconsIcon icon={icon} size={15} /> : null}
               {a}
             </button>
           )

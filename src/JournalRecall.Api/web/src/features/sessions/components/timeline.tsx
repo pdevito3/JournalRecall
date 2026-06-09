@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, getRouteApi } from '@tanstack/react-router'
+import { HugeiconsIcon } from '@hugeicons/react'
 import { buildSessionFilter, useSessionList, type TimelineSearch } from '@/features/sessions/useSessions'
 import { ACTIVITY_ICONS, KNOWN_ACTIVITIES, KNOWN_MOODS, type SessionListItem } from '@/features/sessions/api'
 
@@ -144,17 +145,19 @@ export function Timeline({ settings, onUpdateSettings }: TimelineProps) {
 }
 
 function MetadataChips({ item }: { item: SessionListItem }) {
-  // The single Activity shows first when set (not the 'None' zero value), with its glyph (PRD-0007).
+  // The single Activity shows first when set (not the 'None' zero value), with its Hugeicons glyph (PRD-0007).
   const hasActivity = Boolean(item.activity) && item.activity !== 'None'
-  const chips: string[] = [
-    ...(hasActivity ? [`${ACTIVITY_ICONS[item.activity] ?? ''} ${item.activity}`.trim()] : []),
-    ...item.topics.map((t) => `#${t}`),
-    ...item.people.map((p) => `@${p}`),
-    ...item.moods,
-  ]
-  if (chips.length === 0) return null
+  const activityIcon = hasActivity ? ACTIVITY_ICONS[item.activity] : undefined
+  const chips: string[] = [...item.topics.map((t) => `#${t}`), ...item.people.map((p) => `@${p}`), ...item.moods]
+  if (!hasActivity && chips.length === 0) return null
   return (
     <span className="mt-2 flex flex-wrap gap-1">
+      {hasActivity ? (
+        <span className="inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs text-muted">
+          {activityIcon ? <HugeiconsIcon icon={activityIcon} size={12} /> : null}
+          {item.activity}
+        </span>
+      ) : null}
       {chips.map((c, i) => (
         <span key={`${c}-${i}`} className="rounded-full bg-surface-3 px-2 py-0.5 text-xs text-muted">
           {c}

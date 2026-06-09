@@ -1,5 +1,15 @@
 // Sessions feature — runtime constants. Split out of `api.ts` per FE-023.
 // Re-exported from `api.ts` so existing intra-feature imports keep resolving.
+import type { IconSvgElement } from '@hugeicons/react'
+import {
+  Bus01Icon,
+  MinusSignIcon,
+  Sofa01Icon,
+  SleepingIcon,
+  SpoonAndForkIcon,
+  WalkingIcon,
+  WorkoutRunIcon,
+} from '@hugeicons/core-free-icons'
 
 /** The app-defined known moods (mirrors the server's Mood.Known). */
 export const KNOWN_MOODS = [
@@ -28,13 +38,13 @@ export const KNOWN_ACTIVITIES = [
   'Resting',
 ] as const
 
-/** A recognizable glyph per known activity (and the 'None' zero value) — purely presentational (PRD-0007). */
-export const ACTIVITY_ICONS: Record<string, string> = {
-  None: '—',
-  Stationary: '🛋️',
-  Walking: '🚶',
-  Eating: '🍽️',
-  Commuting: '🚌',
-  Exercising: '🏃',
-  Resting: '😴',
+/** A recognizable Hugeicons glyph per known activity (and the 'None' zero value) — presentational (PRD-0007). */
+export const ACTIVITY_ICONS: Record<string, IconSvgElement> = {
+  None: MinusSignIcon,
+  Stationary: Sofa01Icon,
+  Walking: WalkingIcon,
+  Eating: SpoonAndForkIcon,
+  Commuting: Bus01Icon,
+  Exercising: WorkoutRunIcon,
+  Resting: SleepingIcon,
 }
