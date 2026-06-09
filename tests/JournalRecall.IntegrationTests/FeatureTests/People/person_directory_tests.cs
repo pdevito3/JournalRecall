@@ -46,7 +46,7 @@ public class person_directory_tests : TestBase
     public async Task renaming_a_person_propagates_to_sessions_that_reference_it()
     {
         using var scope = new TestingServiceScope();
-        var sessionId = (await scope.SendAsync(new CreateSession.Command(null, null))).Id;
+        var sessionId = (await scope.SendAsync(new CreateSession.Command(null, null)))!.Id;
         // A Person is created explicitly (the @-mention inline-create path) and referenced by a mention
         // in the prose; saving the draft reconciles the SessionPerson to the mentioned id.
         var sam = await scope.SendAsync(new CreatePerson.Command(new PersonForWrite("Sam")));
@@ -62,7 +62,7 @@ public class person_directory_tests : TestBase
     public async Task renaming_a_person_rewrites_mention_labels_in_raw_and_cleaned_prose_and_plaintext()
     {
         using var scope = new TestingServiceScope();
-        var sessionId = (await scope.SendAsync(new CreateSession.Command(null, null))).Id;
+        var sessionId = (await scope.SendAsync(new CreateSession.Command(null, null)))!.Id;
         var sam = await scope.SendAsync(new CreatePerson.Command(new PersonForWrite("Sam")));
         // The Person is @-mentioned in both the Raw and the Cleaned copy, with the old label snapshotted in
         // each mention node (exactly what the editor saves).

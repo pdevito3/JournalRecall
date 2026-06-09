@@ -14,7 +14,7 @@ namespace JournalRecall.IntegrationTests.FeatureTests.People;
 public class people_projection_tests : TestBase
 {
     private static async Task<Guid> NewSession(TestingServiceScope scope) =>
-        (await scope.SendAsync(new CreateSession.Command(null, null))).Id;
+        (await scope.SendAsync(new CreateSession.Command(null, null)))!.Id;
 
     private static Task<PersonDto> NewPerson(TestingServiceScope scope, string label) =>
         scope.SendAsync(new CreatePerson.Command(new PersonForWrite(label)));

@@ -15,7 +15,7 @@ namespace JournalRecall.IntegrationTests.FeatureTests.Sessions;
 public class prosemirror_content_tests : TestBase
 {
     private static async Task<Guid> NewSession(TestingServiceScope scope) =>
-        (await scope.SendAsync(new CreateSession.Command(null, null))).Id;
+        (await scope.SendAsync(new CreateSession.Command(null, null)))!.Id;
 
     [Fact]
     public async Task saving_json_round_trips_the_markup_and_derives_plaintext_for_preview()

@@ -15,7 +15,7 @@ public class get_session_tests : TestBase
         using var scope = new TestingServiceScope();
         var created = await scope.SendAsync(new CreateSession.Command(null, null));
 
-        var view = await scope.SendAsync(new GetSession.Query(created.Id));
+        var view = await scope.SendAsync(new GetSession.Query(created!.Id));
 
         view.ShouldNotBeNull();
         view!.Id.ShouldBe(created.Id);
@@ -28,7 +28,7 @@ public class get_session_tests : TestBase
         var aliceSession = await alice.SendAsync(new CreateSession.Command(null, null));
 
         using var bob = new TestingServiceScope();
-        var bobView = await bob.SendAsync(new GetSession.Query(aliceSession.Id));
+        var bobView = await bob.SendAsync(new GetSession.Query(aliceSession!.Id));
 
         bobView.ShouldBeNull(); // never another User's content (Privacy invariant)
     }

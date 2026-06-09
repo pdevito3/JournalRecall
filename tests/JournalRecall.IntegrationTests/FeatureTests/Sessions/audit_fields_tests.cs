@@ -23,7 +23,7 @@ public class audit_fields_tests : TestBase
 
         var dto = await scope.SendAsync(new CreateSession.Command(null, null));
 
-        var session = await Load(scope, dto.Id);
+        var session = await Load(scope, dto!.Id);
         session.CreatedAt.ShouldBe(start);
         session.UpdatedAt.ShouldBe(start);
         session.CreatedBy.ShouldBe(session.UserId);   // the creator stamped as the author
@@ -35,7 +35,7 @@ public class audit_fields_tests : TestBase
     {
         using var scope = new TestingServiceScope();
         var dto = await scope.SendAsync(new CreateSession.Command(null, null));
-        var atCreate = await Load(scope, dto.Id);
+        var atCreate = await Load(scope, dto!.Id);
 
         Clock.Advance(TimeSpan.FromMinutes(5));
         (await scope.SendAsync(new SaveDraft.Command(dto.Id, "a later edit"))).ShouldBeTrue();

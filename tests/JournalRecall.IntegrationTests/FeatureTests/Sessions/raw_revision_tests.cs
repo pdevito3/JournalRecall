@@ -10,7 +10,7 @@ namespace JournalRecall.IntegrationTests.FeatureTests.Sessions;
 public class raw_revision_tests : TestBase
 {
     private static async Task<Guid> NewSession(TestingServiceScope scope) =>
-        (await scope.SendAsync(new CreateSession.Command(null, null))).Id;
+        (await scope.SendAsync(new CreateSession.Command(null, null)))!.Id;
 
     [Fact]
     public async Task each_changed_save_appends_a_revision_and_prior_revisions_are_immutable()

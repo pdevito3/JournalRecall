@@ -156,7 +156,11 @@ public sealed class Session : BaseEntity, ITenantScoped
 
     private Session() { } // EF
 
-    public static Session Create(Guid userId, Location? location = null)
+    /// <summary>
+    /// Creates a Session, optionally under a client-minted <paramref name="id"/> (offline-first create,
+    /// ADR-0013) so the create call can be replayed safely; when null the server mints the GUID as ever.
+    /// </summary>
+    public static Session Create(Guid userId, Location? location = null, Guid? id = null)
     {
         var session = new Session
         {
@@ -164,6 +168,8 @@ public sealed class Session : BaseEntity, ITenantScoped
             Latitude = location?.Latitude,
             Longitude = location?.Longitude,
         };
+        if (id is { } clientId)
+            session.OverrideId(clientId);
         session.QueueDomainEvent(new SessionCreated(session.Id));
         return session;
     }

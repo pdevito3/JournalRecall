@@ -18,12 +18,15 @@ public static class SessionEndpoints
         group.MapGet("", async (string? filter, string? mood, string? activity, ISender sender) =>
             Results.Ok(await sender.Send(new GetSessionList.Query(filter, mood, activity))));
 
-        // Optional body carries a captured lat/long (geo opt-in); a plain POST with no body creates
-        // a location-less Session as before (issue 0015).
+        // Optional body carries a client-minted Session id (offline-first create, ADR-0013/issue 0031)
+        // and/or a captured lat/long (geo opt-in, issue 0015); a plain POST with no body creates a
+        // server-minted, location-less Session as before. Replaying a create with an id the caller
+        // already owns idempotently returns the existing Session; an id owned by another user is a
+        // plain 404 — the same shape as any not-yours resource, so existence never leaks.
         group.MapPost("", async (CreateSession.Request? body, ISender sender) =>
         {
-            var dto = await sender.Send(new CreateSession.Command(body?.Latitude, body?.Longitude));
-            return Results.Created($"/api/sessions/{dto.Id}", dto);
+            var dto = await sender.Send(new CreateSession.Command(body?.Latitude, body?.Longitude, body?.Id));
+            return dto is null ? Results.NotFound() : Results.Created($"/api/sessions/{dto.Id}", dto);
         });
 
         group.MapGet("/{id:guid}", async (Guid id, ISender sender) =>

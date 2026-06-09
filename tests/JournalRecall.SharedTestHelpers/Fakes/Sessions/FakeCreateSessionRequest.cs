@@ -12,6 +12,6 @@ public sealed class FakeCreateSessionRequest : AutoFaker<CreateSession.Request>
 {
     public FakeCreateSessionRequest()
     {
-        CustomInstantiator(f => new CreateSession.Request(f.Address.Latitude(), f.Address.Longitude()));
+        CustomInstantiator(f => new CreateSession.Request(null, f.Address.Latitude(), f.Address.Longitude()));
     }
 }

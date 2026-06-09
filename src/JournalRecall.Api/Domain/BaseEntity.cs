@@ -11,6 +11,13 @@ public abstract class BaseEntity
 {
     public Guid Id { get; private set; } = Guid.CreateVersion7();
 
+    /// <summary>
+    /// Adopts an externally minted id in place of the generated one — a client-supplied GUID from an
+    /// offline-first create (ADR-0013). Protected so only an aggregate's own factory can call it, at
+    /// creation time, before the entity is ever persisted.
+    /// </summary>
+    protected void OverrideId(Guid id) => Id = id;
+
     /// <summary>When the row was first persisted (UTC). Stamped automatically on insert.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 

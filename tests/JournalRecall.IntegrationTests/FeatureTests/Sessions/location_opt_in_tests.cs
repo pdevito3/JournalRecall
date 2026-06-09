@@ -28,7 +28,7 @@ public class location_opt_in_tests : TestBase
 
         var dto = await scope.SendAsync(new CreateSession.Command(Lat, Lng));
 
-        dto.Location.ShouldBeNull();
+        dto!.Location.ShouldBeNull();
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public class location_opt_in_tests : TestBase
 
         var dto = await scope.SendAsync(new CreateSession.Command(Lat, Lng));
 
-        dto.Location.ShouldNotBeNull();
+        dto!.Location.ShouldNotBeNull();
         dto.Location!.Latitude.ShouldBe(Lat);
         dto.Location.Longitude.ShouldBe(Lng);
 
@@ -56,7 +56,7 @@ public class location_opt_in_tests : TestBase
 
         var dto = await scope.SendAsync(new CreateSession.Command(null, null));
 
-        dto.Location.ShouldBeNull();
+        dto!.Location.ShouldBeNull();
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class location_opt_in_tests : TestBase
 
         var dto = await scope.SendAsync(new CreateSession.Command(999.0, 0.0));
 
-        dto.Location.ShouldBeNull();
+        dto!.Location.ShouldBeNull();
     }
 
     [Fact]
@@ -75,10 +75,10 @@ public class location_opt_in_tests : TestBase
     {
         using var alice = new TestingServiceScope();
         await EnableGeo(alice);
-        (await alice.SendAsync(new CreateSession.Command(Lat, Lng))).Location.ShouldNotBeNull();
+        (await alice.SendAsync(new CreateSession.Command(Lat, Lng)))!.Location.ShouldNotBeNull();
 
         // Bob never opted in; Alice enabling it must not affect his Sessions.
         using var bob = new TestingServiceScope();
-        (await bob.SendAsync(new CreateSession.Command(Lat, Lng))).Location.ShouldBeNull();
+        (await bob.SendAsync(new CreateSession.Command(Lat, Lng)))!.Location.ShouldBeNull();
     }
 }

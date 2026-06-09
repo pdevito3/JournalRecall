@@ -14,7 +14,7 @@ namespace JournalRecall.IntegrationTests.FeatureTests.Sessions;
 public class metadata_tests : TestBase
 {
     private static async Task<Guid> NewSession(TestingServiceScope scope) =>
-        (await scope.SendAsync(new CreateSession.Command(null, null))).Id;
+        (await scope.SendAsync(new CreateSession.Command(null, null)))!.Id;
 
     private static Task<UpdateMetadata.Result> SetMetadata(
         TestingServiceScope scope, Guid id, string[] topics, string[] moods, string activity = "None") =>

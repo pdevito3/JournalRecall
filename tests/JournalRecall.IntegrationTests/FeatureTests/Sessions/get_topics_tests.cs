@@ -12,7 +12,7 @@ public class get_topics_tests : TestBase
 {
     private async Task SessionWithTopics(TestingServiceScope scope, params string[] topics)
     {
-        var id = (await scope.SendAsync(new CreateSession.Command(null, null))).Id;
+        var id = (await scope.SendAsync(new CreateSession.Command(null, null)))!.Id;
         await scope.SendAsync(new UpdateMetadata.Command(id, new MetadataForWrite(topics, [], "None")));
     }
 

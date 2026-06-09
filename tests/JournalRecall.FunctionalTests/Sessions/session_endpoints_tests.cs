@@ -28,6 +28,36 @@ public class session_endpoints_tests(WebTestFixture fixture) : TestBase(fixture)
     }
 
     [Fact]
+    public async Task a_client_supplied_id_creates_and_replays_idempotently()
+    {
+        var client = await RealAuth.CreateAuthenticatedClientAsync();
+        var id = Guid.CreateVersion7();
+
+        // The offline-first create (ADR-0013, issue 0031): the client mints the Session's GUID.
+        var created = await client.PostJsonAsync(ApiRoutes.Sessions.Create(), new { id });
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+        (await created.ReadJsonAsync<SessionDto>())!.Id.ShouldBe(id);
+
+        // Replaying the same create (a dropped response, retried) returns the existing Session —
+        // no duplicate, no error.
+        var replayed = await client.PostJsonAsync(ApiRoutes.Sessions.Create(), new { id });
+        replayed.StatusCode.ShouldBe(HttpStatusCode.Created);
+        (await replayed.ReadJsonAsync<SessionDto>())!.Id.ShouldBe(id);
+    }
+
+    [Fact]
+    public async Task a_client_id_owned_by_another_user_is_rejected_like_any_not_yours_resource()
+    {
+        var alice = await RealAuth.CreateAuthenticatedClientAsync();
+        var id = Guid.CreateVersion7();
+        await alice.PostJsonAsync(ApiRoutes.Sessions.Create(), new { id });
+
+        var bob = await RealAuth.CreateAuthenticatedClientAsync();
+        (await bob.PostJsonAsync(ApiRoutes.Sessions.Create(), new { id }))
+            .StatusCode.ShouldBe(HttpStatusCode.NotFound); // never a conflict — existence must not leak
+    }
+
+    [Fact]
     public async Task a_user_cannot_read_another_users_session()
     {
         var alice = await RealAuth.CreateAuthenticatedClientAsync();

@@ -13,7 +13,7 @@ namespace JournalRecall.IntegrationTests.FeatureTests.Sessions;
 public class session_timeline_tests : TestBase
 {
     private static async Task<Guid> NewSession(TestingServiceScope scope) =>
-        (await scope.SendAsync(new CreateSession.Command(null, null))).Id;
+        (await scope.SendAsync(new CreateSession.Command(null, null)))!.Id;
 
     private static Task SetCreatedAt(TestingServiceScope scope, Guid id, DateTimeOffset when) =>
         scope.ExecuteDbContextAsync(async db =>
