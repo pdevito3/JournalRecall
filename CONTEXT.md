@@ -48,8 +48,17 @@ at a save point. Drafts mutate; Revisions append.
 The pipeline that reads a Session's Raw text and produces the Cleaned copy, the **Synopsis**, and
 AI metadata Suggestions (formatting, typo/context-word fixes, etc.). Runs manually (a button) in
 v1; an optional per-user nightly batch over Stale/never-run Sessions comes later. Running Cleanup
-marks the Session's affected period **Summaries** `Stale`.
+marks the Session's affected period **Summaries** `Stale`. Cleanup is **one concept with two
+Engines** — where the model runs never changes what a Cleanup *is* or what it produces.
 _Avoid_: Processing, evaluation (informal "AI eval" is fine in conversation, not as a domain term)
+
+**Engine** (Cleanup engine):
+Where a Cleanup's model executes: `Server` (the app-wide Admin-configured provider, via the
+existing cleanup endpoints) or `OnDevice` (Apple Foundation Models on the user's iPhone, result
+submitted back to the server and recorded exactly like a server run). The user picks a default
+Engine and may override per run. Regardless of Engine, the server performs the same
+post-processing and the outcome is indistinguishable in the domain.
+_Avoid_: Runner, Provider (Provider is the Admin's server-side model config, not the run location)
 
 **Synopsis**:
 The short AI recap of a **single** Session, written onto that Session by Cleanup. Distinct from a
