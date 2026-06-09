@@ -24,6 +24,14 @@ public sealed class User : IdentityUser<Guid>
     public bool LocationCaptureEnabled { get; set; }
 
     /// <summary>
+    /// When the user's settings (timezone, geo opt-in, People-tag approval) last changed, in UTC — the
+    /// sync change feed's watermark for Settings (issue 0033, ADR-0013). User isn't a <c>BaseEntity</c>,
+    /// so the settings write stamps this explicitly rather than riding the audit interceptor. Defaults to
+    /// the zero instant ("never explicitly saved"); a bootstrap pull includes Settings regardless.
+    /// </summary>
+    public DateTimeOffset SettingsUpdatedAt { get; set; }
+
+    /// <summary>
     /// Set by an Admin to disable the account (issue 0016): a disabled User cannot log in. Their journal
     /// data is untouched and still strictly private — disabling is an access decision, not a data one.
     /// </summary>

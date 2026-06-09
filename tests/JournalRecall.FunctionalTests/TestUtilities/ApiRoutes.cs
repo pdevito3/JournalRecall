@@ -50,6 +50,12 @@ public static class ApiRoutes
         public const string Root = Base + "/topics";
     }
 
+    public static class Sync
+    {
+        public const string Changes = Base + "/sync/changes";
+        public static string ChangesSince(string cursor) => $"{Changes}?since={Uri.EscapeDataString(cursor)}";
+    }
+
     public static class Sessions
     {
         public const string Root = Base + "/sessions";

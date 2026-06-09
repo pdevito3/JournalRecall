@@ -16,7 +16,7 @@ public static class UpdateUserSettings
     public sealed record Command(string? TimeZoneId, bool LocationCaptureEnabled, bool RequirePeopleTagApproval)
         : IRequest<Result>;
 
-    public sealed class Handler(JournalRecallDbContext db, ICurrentUserService currentUser)
+    public sealed class Handler(JournalRecallDbContext db, ICurrentUserService currentUser, TimeProvider timeProvider)
         : IRequestHandler<Command, Result>
     {
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
@@ -29,6 +29,8 @@ public static class UpdateUserSettings
             user.TimeZoneId = request.TimeZoneId;
             user.LocationCaptureEnabled = request.LocationCaptureEnabled;
             user.RequirePeopleTagApproval = request.RequirePeopleTagApproval;
+            // User isn't a BaseEntity, so the Settings change-feed watermark is stamped here (issue 0033).
+            user.SettingsUpdatedAt = timeProvider.GetUtcNow();
             await db.SaveChangesAsync(cancellationToken);
 
             return Result.Ok;

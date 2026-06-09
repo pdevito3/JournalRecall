@@ -5,6 +5,7 @@ using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.People;
 using JournalRecall.Api.Domain.Sessions;
 using JournalRecall.Api.Domain.Summaries;
+using JournalRecall.Api.Domain.Sync;
 using JournalRecall.Api.Domain.Users;
 using JournalRecall.Api.Extensions;
 
@@ -73,6 +74,9 @@ try
 
     // Per-user Corrections that fix mis-dictations during Cleanup.
     app.MapCorrections();
+
+    // Pull-based delta change feed for the offline-first mobile client (ADR-0013).
+    app.MapSync();
 
     // Server access gate (issue 0022): redirect anonymous SPA navigations to /setup or /login before
     // the app shell is served. Runs before static files so assets still serve freely.

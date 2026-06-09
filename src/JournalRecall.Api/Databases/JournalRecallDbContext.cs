@@ -168,10 +168,13 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
     /// both creation and modification fields; an update sets only the modification fields. The acting User
     /// comes from the request scope (null for system/unauthenticated writes). Deletes are real — no soft
     /// delete. Owned children (Revisions, tags, suggestions) are not <see cref="BaseEntity"/> and keep
-    /// their own domain timestamps.
+    /// their own domain timestamps — but a child-only change still touches its root (see
+    /// <see cref="TouchRootsWithChangedOwnedChildren"/>).
     /// </summary>
     private void UpdateAuditFields()
     {
+        TouchRootsWithChangedOwnedChildren();
+
         var now = _timeProvider.GetUtcNow();
         foreach (var entry in ChangeTracker.Entries<BaseEntity>())
         {
@@ -185,6 +188,36 @@ public sealed class JournalRecallDbContext : IdentityDbContext<User, IdentityRol
                     entry.Entity.UpdateModifiedProperties(now, _currentUserId);
                     break;
             }
+        }
+    }
+
+    /// <summary>
+    /// Flips an aggregate root to Modified when only its owned children changed — a Suggestion
+    /// accept/reject, a Topic/People-tag edit, a Revision append — so <c>UpdatedAt</c> advances on
+    /// <b>every</b> mutation of the aggregate. EF leaves the root Unchanged in that case, which would let
+    /// such writes slip past the sync change feed's <c>UpdatedAt</c> watermark (issue 0033, ADR-0013).
+    /// </summary>
+    private void TouchRootsWithChangedOwnedChildren()
+    {
+        foreach (var child in ChangeTracker.Entries()
+                     .Where(e => e.Metadata.IsOwned()
+                         && e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+                     .ToList())
+        {
+            var ownership = child.Metadata.FindOwnership()!;
+            // The child's FK identifies its owner; a Deleted/Modified child reads the original value
+            // (an Added one has no originals — its FK can't have changed anyway).
+            var ownerKey = ownership.Properties
+                .Select(p => child.State == EntityState.Added ? child.CurrentValues[p] : child.OriginalValues[p])
+                .ToArray();
+            var owner = ChangeTracker.Entries<BaseEntity>().FirstOrDefault(o =>
+                o.Metadata == ownership.PrincipalEntityType
+                && ownership.PrincipalKey.Properties.Select(p => o.CurrentValues[p]).SequenceEqual(ownerKey));
+
+            // Marking the property modified transitions an Unchanged root to Modified, so the audit
+            // stamping above then advances UpdatedAt/UpdatedBy. Added/Modified roots are already stamped.
+            if (owner is { State: EntityState.Unchanged })
+                owner.Property(nameof(BaseEntity.UpdatedAt)).IsModified = true;
         }
     }
 }
