@@ -11,6 +11,9 @@ await runFlow('multi-mood', async (page) => {
   const id = await startSession(page, marker)
   console.log('started session', id)
 
+  // Variant B: Tags live behind an edit/done toggle in the right rail — open the editor first.
+  await page.getByRole('button', { name: 'edit' }).click()
+
   // Toggle two known Moods (chips are aria-pressed toggle buttons).
   await page.getByRole('button', { name: 'Joyful' }).click()
   await page.getByRole('button', { name: 'Tired' }).click()
@@ -20,12 +23,15 @@ await runFlow('multi-mood', async (page) => {
   await page.getByRole('button', { name: 'add' }).click()
   await expectText(page.getByText('bittersweet'), 'bittersweet', { message: 'custom mood chip added' })
 
-  await page.getByRole('button', { name: 'Save metadata' }).click()
-  await page.getByText('Saved', { exact: true }).first().waitFor({ state: 'visible' })
+  // Refinement #1: `done` saves AND collapses — there is no separate Save button. The editor
+  // collapsing back to the `edit` affordance is the signal the save completed.
+  await page.getByRole('button', { name: 'done' }).click()
+  await page.getByRole('button', { name: 'edit' }).waitFor({ state: 'visible' })
   console.log('saved three moods')
 
-  // RELOAD: the editor re-seeds from the server, so the selections must come back.
+  // RELOAD + re-open: the editor re-seeds from the server, so the selections must come back.
   await gotoApp(page, `/sessions/${id}`)
+  await page.getByRole('button', { name: 'edit' }).click()
   await page.getByRole('button', { name: 'Joyful', pressed: true }).waitFor({ state: 'visible' })
   await page.getByRole('button', { name: 'Tired', pressed: true }).waitFor({ state: 'visible' })
   await expectText(page.getByText('bittersweet'), 'bittersweet', { message: 'custom mood survives reload' })

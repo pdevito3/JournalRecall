@@ -36,9 +36,13 @@ import { useMentionConfig } from './mention'
 
 type EditorTab = 'raw' | 'cleaned'
 
+// Variant B — "Margin": the writing input is the hero in a wide left column; a quiet right rail carries
+// date / cleanup / tags / suggestions / proposals / history. The route widens this page past the global
+// reading width (see sessions.$sessionId.tsx), so the editor column gets the room it needs on lg+.
 export function SessionEditor({ sessionId }: { sessionId: string }) {
   const { data: session } = useSession(sessionId)
   const saveDraft = useSaveDraft(sessionId)
+  const saveCleaned = useSaveCleaned(sessionId)
   const mention = useMentionConfig()
 
   const [viewingRaw, setViewingRaw] = useState<number | null>(null)
@@ -46,86 +50,130 @@ export function SessionEditor({ sessionId }: { sessionId: string }) {
   // Raw and Cleaned share one pane via a toggle; Raw is the default view.
   const [tab, setTab] = useState<EditorTab>('raw')
 
-  // Debounced autosave of the serialized tiptap JSON.
-  const onChange = useAutosave(saveDraft.mutate)
+  // Debounced autosave of the serialized tiptap JSON, one channel per draft.
+  const onRaw = useAutosave(saveDraft.mutate)
+  const onCleaned = useAutosave(saveCleaned.mutate)
 
   const hasCleaned = session.cleanedDraft.length > 0
+  // The save dot mirrors whichever draft the visible tab edits.
+  const activeSave = tab === 'raw' ? saveDraft : saveCleaned
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      {/* ── hero editor ─────────────────────────────────────────────────────────────────────────── */}
+      <div className="order-2 lg:order-1">
+        <div className="mb-3 flex items-center justify-between">
+          <EditorTabs tab={tab} onTab={setTab} />
+          <SaveDot pending={activeSave.isPending} success={activeSave.isSuccess} error={activeSave.isError} />
+        </div>
+
+        <div className="min-h-[55vh] text-[1.05rem] leading-relaxed">
+          {tab === 'raw' ? (
+            // Uncontrolled, keyed per Session at the route level → seed Raw directly from server JSON.
+            <RichEditor
+              initialContent={session.rawDraft}
+              onChange={onRaw}
+              placeholder="Write freely… type @ to tag someone"
+              autoFocus
+              mention={mention}
+            />
+          ) : hasCleaned ? (
+            // Keyed on a server-*regeneration* token — the Cleaned Revision number of the last Cleanup run
+            // or approved People-tag insertion — NOT on `cleanedDraft`. A hand-edit autosave appends a
+            // Cleaned Revision and refetches `cleanedDraft` to the just-saved text; keying on the draft (or
+            // the raw revision count) would remount the uncontrolled editor on every save, resetting the
+            // caret and dropping keystrokes typed during the debounce + round-trip (issue 0028). The token
+            // doesn't move on a hand-edit, so the editor stays mounted; it only changes on a regeneration,
+            // which re-seeds it. Concurrent-edit policy: local unsaved edits win until a save point — only a
+            // server regeneration re-seeds (FE-015). Both the token and the seed ride the same Session DTO,
+            // so the remount and the re-seed stay in lockstep.
+            <RichEditor
+              key={cleanedEditorKey(session)}
+              initialContent={session.cleanedDraft}
+              onChange={onCleaned}
+              className="bg-surface-3"
+              mention={mention}
+            />
+          ) : (
+            <CleanedEmptyState />
+          )}
+        </div>
+
+        {session.synopsis ? (
+          <div className="mt-6 space-y-1 rounded-lg border border-border bg-surface-2 p-4">
+            <SectionLabel>Synopsis</SectionLabel>
+            <p className="text-content">{session.synopsis}</p>
+          </div>
+        ) : null}
+
+        {/* Refinement #2: on narrow screens History sits *below* the input (it lives in the rail on lg+). */}
+        <div className="mt-8 lg:hidden">
+          <SessionHistory
+            sessionId={sessionId}
+            viewingRaw={viewingRaw}
+            onViewRaw={setViewingRaw}
+            viewingCleaned={viewingCleaned}
+            onViewCleaned={setViewingCleaned}
+          />
+        </div>
+      </div>
+
+      {/* ── quiet right rail ────────────────────────────────────────────────────────────────────── */}
+      <aside className="order-1 space-y-5 lg:order-2 lg:sticky lg:top-6 lg:self-start">
         <div className="space-y-0.5">
-          <h1 className="text-lg font-semibold text-content">Session</h1>
+          <FormattedDate iso={session.createdAt} className="text-sm font-medium text-content" />
           {session.location ? (
             <p className="text-xs text-muted">
               📍 {session.location.latitude.toFixed(5)}, {session.location.longitude.toFixed(5)}
             </p>
           ) : null}
         </div>
-        <SaveStatus pending={saveDraft.isPending} success={saveDraft.isSuccess} error={saveDraft.isError} />
-      </div>
 
-      <CleanupBar session={session} />
+        {/* Refinement #3: cleanup status lives here only — no duplicate standalone pill under the date. */}
+        <CleanupBar session={session} />
 
-      {/* One view at a time: a Raw/Cleaned toggle replaces the old side-by-side grid. */}
-      <div className="space-y-2">
-        <EditorTabs tab={tab} onTab={setTab} />
-        {tab === 'raw' ? (
-          // Uncontrolled, keyed per Session at the route level → seed Raw directly from server JSON.
-          <RichEditor
-            initialContent={session.rawDraft}
-            onChange={onChange}
-            placeholder="Write freely… type @ to tag someone"
-            autoFocus
-            mention={mention}
+        <MetadataEditor key={metadataKey(session)} session={session} />
+
+        <SuggestionChips session={session} />
+        <PersonProposals session={session} />
+
+        {/* History stays in the rail on desktop; the mobile copy above is hidden there (refinement #2). */}
+        <div className="hidden lg:block">
+          <SessionHistory
+            sessionId={sessionId}
+            viewingRaw={viewingRaw}
+            onViewRaw={setViewingRaw}
+            viewingCleaned={viewingCleaned}
+            onViewCleaned={setViewingCleaned}
           />
-        ) : hasCleaned ? (
-          // Keyed on a server-*regeneration* token — the Cleaned Revision number of the last Cleanup run
-          // or approved People-tag insertion — NOT on `cleanedDraft`. A hand-edit autosave appends a
-          // Cleaned Revision and refetches `cleanedDraft` to the just-saved text; keying on the draft (or
-          // the raw revision count) would remount the uncontrolled editor on every save, resetting the
-          // caret and dropping keystrokes typed during the debounce + round-trip (issue 0028). The token
-          // doesn't move on a hand-edit, so the editor stays mounted; it only changes on a regeneration,
-          // which re-seeds it. Concurrent-edit policy: local unsaved edits win until a save point — only a
-          // server regeneration re-seeds (FE-015). Both the token and the seed ride the same Session DTO,
-          // so the remount and the re-seed stay in lockstep.
-          <CleanedEditor key={cleanedEditorKey(session)} session={session} />
-        ) : (
-          <CleanedEmptyState />
-        )}
-      </div>
-
-      {session.synopsis ? (
-        <div className="space-y-1 rounded-lg border border-border bg-surface-2 p-4">
-          <PanelLabel>Synopsis</PanelLabel>
-          <p className="text-content">{session.synopsis}</p>
         </div>
-      ) : null}
-
-      <SuggestionChips session={session} />
-
-      <PersonProposals session={session} />
-
-      <MetadataEditor key={metadataKey(session)} session={session} />
-
-      <RawHistory sessionId={sessionId} viewing={viewingRaw} onView={setViewingRaw} />
-      <CleanedHistory sessionId={sessionId} viewing={viewingCleaned} onView={setViewingCleaned} />
-    </section>
+      </aside>
+    </div>
   )
 }
 
-function PanelLabel({ children }: { children: ReactNode }) {
-  return <h2 className="text-sm font-medium text-muted">{children}</h2>
+/** A quiet uppercase section label for the rail (Variant B's minimal treatment). */
+function SectionLabel({ children }: { children: ReactNode }) {
+  return <h2 className="text-xs font-medium uppercase tracking-wide text-muted">{children}</h2>
 }
 
-/** Segmented Raw/Cleaned toggle — one editor is shown at a time. */
+/** The session date, spelled out (e.g. "Monday, January 1"). */
+function FormattedDate({ iso, className }: { iso: string; className?: string }) {
+  return (
+    <time className={className} dateTime={iso}>
+      {new Date(iso).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+    </time>
+  )
+}
+
+/** Quiet Raw/Cleaned text toggle — one editor is shown at a time. */
 function EditorTabs({ tab, onTab }: { tab: EditorTab; onTab: (tab: EditorTab) => void }) {
   return (
-    <div role="tablist" aria-label="Editor view" className="inline-flex rounded-lg border border-border bg-surface-2 p-0.5">
+    <div role="tablist" aria-label="Editor view" className="inline-flex items-center gap-1 text-sm">
       {(
         [
-          ['raw', 'Raw (yours)'],
-          ['cleaned', 'Cleaned (AI · editable)'],
+          ['raw', 'Raw'],
+          ['cleaned', 'Cleaned'],
         ] as const
       ).map(([value, label]) => (
         <button
@@ -135,7 +183,7 @@ function EditorTabs({ tab, onTab }: { tab: EditorTab; onTab: (tab: EditorTab) =>
           aria-selected={tab === value}
           onClick={() => onTab(value)}
           className={cn(
-            'rounded-md px-3 py-1 text-sm font-medium transition-colors',
+            'rounded-md px-2 py-0.5 transition-colors',
             tab === value ? 'bg-surface-3 text-content' : 'text-muted hover:text-content',
           )}
         >
@@ -143,6 +191,30 @@ function EditorTabs({ tab, onTab }: { tab: EditorTab; onTab: (tab: EditorTab) =>
         </button>
       ))}
     </div>
+  )
+}
+
+const SAVE_LABEL = { idle: 'Autosaves as you write', saving: 'Saving…', saved: 'Saved', error: 'Save failed' }
+
+/** A small colored save-dot + label, mirroring the active draft's autosave state. */
+function SaveDot({ pending, success, error }: { pending: boolean; success: boolean; error: boolean }) {
+  const state = error ? 'error' : pending ? 'saving' : success ? 'saved' : 'idle'
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+      <span
+        className={cn(
+          'size-1.5 rounded-full',
+          state === 'saving'
+            ? 'animate-pulse bg-amber-400'
+            : state === 'error'
+              ? 'bg-red-400'
+              : state === 'saved'
+                ? 'bg-accent'
+                : 'bg-muted/40',
+        )}
+      />
+      {SAVE_LABEL[state]}
+    </span>
   )
 }
 
@@ -166,8 +238,8 @@ function SuggestionChips({ session }: { session: Session }) {
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-dashed border-border bg-surface-2 p-4">
-      <PanelLabel>AI suggestions</PanelLabel>
+    <div className="space-y-2 rounded-lg border border-dashed border-border bg-surface-2 p-3">
+      <SectionLabel>AI suggestions</SectionLabel>
       <ul className="flex flex-wrap gap-2">
         {session.suggestions.map((s) => (
           <li
@@ -208,8 +280,8 @@ function PersonProposals({ session }: { session: Session }) {
   if (session.peopleProposals.length === 0) return null
 
   return (
-    <div className="space-y-3 rounded-lg border border-dashed border-border bg-surface-2 p-4" data-testid="people-proposals">
-      <PanelLabel>People the AI suggests tagging</PanelLabel>
+    <div className="space-y-3 rounded-lg border border-dashed border-border bg-surface-2 p-3" data-testid="people-proposals">
+      <SectionLabel>People the AI suggests tagging</SectionLabel>
       <ul className="space-y-3">
         {session.peopleProposals.map((p) => (
           <ProposalCard key={p.label} session={session} proposal={p} />
@@ -305,9 +377,15 @@ function metadataKey(session: Session): string {
   return JSON.stringify([session.topics, session.moods, session.activity])
 }
 
-/** Per-Session manual metadata: Topics and one-or-more Moods (known or custom free text). */
+/**
+ * The rail "Tags" section: read-only chips by default; an `edit`/`done` toggle reveals the per-Session
+ * metadata form (Topics, Moods, Activity, plus read-only projected People). Refinement #1: `done` submits
+ * AND collapses — there is no separate Save button; on a successful save the form's onSubmit closes the
+ * editor (it stays open, showing errors, if validation or the server rejects).
+ */
 function MetadataEditor({ session }: { session: Session }) {
   const save = useSaveMetadata(session.id)
+  const [editing, setEditing] = useState(false)
 
   const form = useForm({
     defaultValues: {
@@ -323,6 +401,7 @@ function MetadataEditor({ session }: { session: Session }) {
           moods: splitList(value.moods),
           activity: value.activity || 'None',
         })
+        setEditing(false) // collapse only after a clean save; a server error keeps the editor open
       } catch (error) {
         applyServerErrors(form, error)
       }
@@ -330,23 +409,61 @@ function MetadataEditor({ session }: { session: Session }) {
   })
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <PanelLabel>Metadata</PanelLabel>
-        <SaveStatus pending={save.isPending} success={save.isSuccess} error={save.isError} />
+        <SectionLabel>Tags</SectionLabel>
+        <button
+          type="button"
+          onClick={() => (editing ? void form.handleSubmit() : setEditing(true))}
+          className="text-xs text-accent hover:underline"
+        >
+          {editing ? (save.isPending ? 'saving…' : 'done') : 'edit'}
+        </button>
       </div>
-      <Form
-        form={form}
-        className="space-y-3 rounded-lg border border-border bg-surface-2 p-4"
-      >
-        <Field name="topics">{(field) => <TopicBadges field={field} />}</Field>
-        <ProjectedPeople people={session.people} />
-        <Field name="moods">{(field) => <MoodChips field={field} />}</Field>
-        <Field name="activity">{(field) => <ActivityPicker field={field} />}</Field>
-        <Form.Errors />
-        <Form.Submit>Save metadata</Form.Submit>
-      </Form>
+
+      {editing ? (
+        <Form form={form} className="space-y-3 rounded-lg border border-border bg-surface-2 p-3">
+          <Field name="topics">{(field) => <TopicBadges field={field} />}</Field>
+          <ProjectedPeople people={session.people} />
+          <Field name="moods">{(field) => <MoodChips field={field} />}</Field>
+          <Field name="activity">{(field) => <ActivityPicker field={field} />}</Field>
+          <Form.Errors />
+        </Form>
+      ) : (
+        <MetaIndicators session={session} />
+      )}
     </div>
+  )
+}
+
+/** Read-only metadata chips for the collapsed Tags section: activity, moods, topics, people (or a hint). */
+function MetaIndicators({ session }: { session: Session }) {
+  const activity = session.activity && session.activity !== 'None' ? session.activity : null
+  const items: ReactNode[] = []
+  if (activity) {
+    items.push(
+      <Chip key="act">
+        {ACTIVITY_ICONS[activity] ?? '•'} {activity}
+      </Chip>,
+    )
+  }
+  session.moods.forEach((m) => items.push(<Chip key={`m${m}`}>{m}</Chip>))
+  session.topics.forEach((t) => items.push(<Chip key={`t${t}`} tone="topic">#{t}</Chip>))
+  session.people.forEach((p) => items.push(<Chip key={`p${p}`}>@{p}</Chip>))
+  if (items.length === 0) return <p className="text-xs text-muted/70">No tags yet</p>
+  return <div className="flex flex-wrap items-center gap-1.5">{items}</div>
+}
+
+function Chip({ children, tone = 'plain' }: { children: ReactNode; tone?: 'plain' | 'topic' }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs',
+        tone === 'topic' ? 'border-accent/30 bg-accent/10 text-accent' : 'border-border bg-surface-3 text-content',
+      )}
+    >
+      {children}
+    </span>
   )
 }
 
@@ -584,23 +701,6 @@ export function cleanedEditorKey(session: Session): string {
   return `${session.id}:${session.cleanedRegenerationRevisionNumber}`
 }
 
-/** The AI-derived Cleaned copy, hand-editable. Edits debounce-save and append a Cleaned Revision. */
-function CleanedEditor({ session }: { session: Session }) {
-  const saveCleaned = useSaveCleaned(session.id)
-  const mention = useMentionConfig()
-  // Uncontrolled, keyed per cleaned-Revision by CleanedEditorBoundary → seed directly from server JSON.
-  const onChange = useAutosave(saveCleaned.mutate) // debounced autosave
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-end">
-        <SaveStatus pending={saveCleaned.isPending} success={saveCleaned.isSuccess} error={saveCleaned.isError} />
-      </div>
-      <RichEditor initialContent={session.cleanedDraft} onChange={onChange} className="bg-surface-3" mention={mention} />
-    </div>
-  )
-}
-
 const STATUS_LABELS: Record<CleanupStatus, string> = {
   NotRun: 'Not cleaned',
   Running: 'Cleaning…',
@@ -609,6 +709,15 @@ const STATUS_LABELS: Record<CleanupStatus, string> = {
   Failed: 'Cleanup failed',
 }
 
+const STATUS_DOT: Record<CleanupStatus, string> = {
+  NotRun: 'bg-muted/40',
+  Running: 'animate-pulse bg-amber-400',
+  Clean: 'bg-accent',
+  Stale: 'bg-amber-400',
+  Failed: 'bg-red-400',
+}
+
+/** The rail's single cleanup spot (refinement #3): status-as-a-dot + run button, with progress/errors. */
 function CleanupBar({ session }: { session: Session }) {
   const { run, running, progress, error } = useCleanup(session.id)
   // No AI provider set → cleanup has nothing to call. Default to enabled while the (app-loaded, cached)
@@ -630,33 +739,41 @@ function CleanupBar({ session }: { session: Session }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 p-3">
-      <div className="flex items-center gap-3">
-        <span
-          className={cn(
-            'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
-            isStale || status === 'Failed'
-              ? 'bg-amber-500/15 text-amber-400'
-              : status === 'Clean'
-                ? 'bg-accent/15 text-accent'
-                : 'bg-surface-3 text-muted',
-          )}
-        >
-          {STATUS_LABELS[status]}
-        </span>
-        {session.cleanedHasHandEdits ? <span className="text-xs text-muted">hand-edited</span> : null}
-        {running && progress.length > 0 ? (
-          <span className="text-sm text-muted">{progress[progress.length - 1]}</span>
-        ) : null}
-        {error ? <span className="text-sm text-amber-400">Something went wrong.</span> : null}
-        {!aiConfigured ? (
-          <span className="text-sm text-muted">No AI provider is configured — ask an Admin to set one up.</span>
-        ) : null}
+    <div className="space-y-2 rounded-lg border border-border bg-surface-2 p-3">
+      <div className="flex items-center gap-2">
+        <span className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[status])} />
+        <span className="text-xs text-muted">{STATUS_LABELS[status]}</span>
+        {session.cleanedHasHandEdits ? <span className="text-xs text-muted">· hand-edited</span> : null}
       </div>
+      {running && progress.length > 0 ? <p className="text-xs text-muted">{progress[progress.length - 1]}</p> : null}
+      {error ? <p className="text-xs text-amber-400">Something went wrong.</p> : null}
+      {!aiConfigured ? <p className="text-xs text-muted">No AI provider is configured — ask an Admin to set one up.</p> : null}
 
-      <Button variant="primary" onPress={handleRun} isDisabled={running || !aiConfigured}>
+      <Button variant="primary" onPress={handleRun} isDisabled={running || !aiConfigured} className="w-full">
         {running ? 'Cleaning…' : isStale || status === 'Clean' || status === 'Failed' ? 'Re-run cleanup' : 'Clean up with AI'}
       </Button>
+    </div>
+  )
+}
+
+/** Raw + Cleaned revision history; rendered in the rail on desktop and under the editor on mobile. */
+function SessionHistory({
+  sessionId,
+  viewingRaw,
+  onViewRaw,
+  viewingCleaned,
+  onViewCleaned,
+}: {
+  sessionId: string
+  viewingRaw: number | null
+  onViewRaw: (revisionNumber: number | null) => void
+  viewingCleaned: number | null
+  onViewCleaned: (revisionNumber: number | null) => void
+}) {
+  return (
+    <div className="space-y-4">
+      <RawHistory sessionId={sessionId} viewing={viewingRaw} onView={onViewRaw} />
+      <CleanedHistory sessionId={sessionId} viewing={viewingCleaned} onView={onViewCleaned} />
     </div>
   )
 }
@@ -717,7 +834,7 @@ function RevisionDrilldown({
 
   return (
     <div className="space-y-2 border-t border-border pt-4">
-      <h2 className="text-sm font-medium text-muted">{title}</h2>
+      <SectionLabel>{title}</SectionLabel>
       <ul className="flex flex-wrap gap-2">
         {revisions.map((r) => (
           <li key={r.revisionNumber}>
@@ -744,9 +861,4 @@ function RevisionDrilldown({
       ) : null}
     </div>
   )
-}
-
-function SaveStatus({ pending, success, error }: { pending: boolean; success: boolean; error: boolean }) {
-  const label = error ? 'Save failed' : pending ? 'Saving…' : success ? 'Saved' : 'Autosaves as you write'
-  return <span className="text-sm text-muted">{label}</span>
 }

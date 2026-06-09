@@ -12,6 +12,11 @@ await runFlow('mentions', async (page) => {
   const id = await startSession(page, marker)
   console.log('started session', id)
 
+  // Variant B: the projected People badges live inside the rail's Tags editor — open it and keep it
+  // open (People aren't a form field, so an autosave-driven refetch re-renders the badges in place
+  // without collapsing the editor) so the read-only @-mention projection stays visible to assert on.
+  await page.getByRole('button', { name: 'edit' }).click()
+
   // Type `@Sam` — the directory is empty, so the popup offers to create Sam inline.
   const editor = rawEditor(page)
   await editor.click()

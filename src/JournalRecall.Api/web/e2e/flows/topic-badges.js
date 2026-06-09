@@ -11,6 +11,9 @@ await runFlow('topic-badges', async (page) => {
   const id = await startSession(page, marker)
   console.log('started session', id)
 
+  // Variant B: Tags live behind an edit/done toggle in the right rail — open the editor first.
+  await page.getByRole('button', { name: 'edit' }).click()
+
   // Add two topics as badges via the topic input.
   const topicInput = page.getByPlaceholder('Add a topic')
   await topicInput.fill('work')
@@ -20,19 +23,22 @@ await runFlow('topic-badges', async (page) => {
   await expectText(page.getByText('#work'), '#work', { message: 'work badge added' })
   await expectText(page.getByText('#travel'), '#travel', { message: 'travel badge added' })
 
-  await page.getByRole('button', { name: 'Save metadata' }).click()
-  await page.getByText('Saved', { exact: true }).first().waitFor({ state: 'visible' })
+  // Refinement #1: `done` saves AND collapses (no separate Save button). The collapsed Tags section
+  // shows the saved Topics as read-only chips — `#work`/`#travel` — proving the round-trip on reload.
+  await page.getByRole('button', { name: 'done' }).click()
+  await page.getByRole('button', { name: 'edit' }).waitFor({ state: 'visible' })
   console.log('saved two topic badges')
 
-  // RELOAD: badges re-seed from the server.
+  // RELOAD: the collapsed Tags chips re-seed from the server.
   await gotoApp(page, `/sessions/${id}`)
   await expectText(page.getByText('#work'), '#work', { message: 'work badge survives reload' })
   await expectText(page.getByText('#travel'), '#travel', { message: 'travel badge survives reload' })
   console.log('topic badges round-tripped across reload')
 
-  // A second Session: the autocomplete datalist now offers the earlier topics (GET /topics).
+  // A second Session: open the Tags editor; the autocomplete datalist now offers the earlier topics.
   await gotoApp(page, '/')
   await startSession(page, `${marker}-2`)
+  await page.getByRole('button', { name: 'edit' }).click()
   await waitFor(
     async () => (await page.locator('#topic-suggestions option[value="work"]').count()) > 0,
     { message: 'autocomplete offers a previously-used topic' },
