@@ -35,9 +35,13 @@ public static class SessionEndpoints
             return dto is null ? Results.NotFound() : Results.Ok(dto);
         });
 
+        // The optional baseRevisionNumber + clientSavedAt make the save safe for offline replay
+        // (ADR-0013, issue 0032): conflicts resolve last-write-wins with every contender kept as a
+        // Revision. A body without them (the web client) behaves exactly as before.
         group.MapPut("/{id:guid}/draft", async (Guid id, SaveDraft.Request body, ISender sender) =>
         {
-            var saved = await sender.Send(new SaveDraft.Command(id, body.RawText));
+            var saved = await sender.Send(
+                new SaveDraft.Command(id, body.RawText, body.BaseRevisionNumber, body.ClientSavedAt));
             return saved ? Results.NoContent() : Results.NotFound();
         });
 
@@ -83,10 +87,11 @@ public static class SessionEndpoints
             return handled ? Results.NoContent() : Results.NotFound();
         });
 
-        // Hand-edit the Cleaned copy: appends a Cleaned Revision; never touches Raw (issue 0010).
+        // Hand-edit the Cleaned copy: appends a Cleaned Revision; never touches Raw (issue 0010). An
+        // optional clientSavedAt older than the Session's last write skips the edit (ADR-0013, issue 0032).
         group.MapPut("/{id:guid}/cleaned", async (Guid id, SaveCleaned.Request body, ISender sender) =>
         {
-            var saved = await sender.Send(new SaveCleaned.Command(id, body.CleanedText));
+            var saved = await sender.Send(new SaveCleaned.Command(id, body.CleanedText, body.ClientSavedAt));
             return saved ? Results.NoContent() : Results.NotFound();
         });
 

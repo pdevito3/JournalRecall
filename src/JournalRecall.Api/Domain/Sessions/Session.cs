@@ -46,6 +46,22 @@ public sealed class Session : BaseEntity, ITenantScoped
     /// </summary>
     public string RawPlainText { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// The Raw Revision number whose content is the current <see cref="RawDraft"/> (ADR-0013, issue 0032).
+    /// Equal to <see cref="LatestRawRevisionNumber"/> except after a concurrent save lost last-write-wins:
+    /// the losing contender still appends to the stream, so the head can sit past the winning Draft.
+    /// 0 when empty.
+    /// </summary>
+    public int RawDraftRevisionNumber { get; private set; }
+
+    /// <summary>
+    /// When the current <see cref="RawDraft"/> was actually saved (ADR-0013, issue 0032): the
+    /// client-claimed save time for a replayed offline edit, else the server save time. Concurrent saves
+    /// resolve last-write-wins against this — the later save time holds the Draft slot, the earlier
+    /// contender stays in the Revision stream.
+    /// </summary>
+    public DateTimeOffset RawDraftSavedAt { get; private set; }
+
     /// <summary>The optional captured latitude/longitude (CONTEXT.md Location); null unless geo opt-in stamped one.</summary>
     public double? Latitude { get; private set; }
     public double? Longitude { get; private set; }
@@ -143,14 +159,17 @@ public sealed class Session : BaseEntity, ITenantScoped
     /// The Cleanup status as the user sees it: the stored status, except a Session that has a prior
     /// successful Cleanup whose Raw has since advanced past it reads as <see cref="CleanupStatus.Stale"/>
     /// (CONTEXT.md — "Stale means the latest Raw Revision is newer than the last successful Cleanup").
-    /// This holds for any non-<see cref="CleanupStatus.Running"/> state — so a Clean → Raw edit →
-    /// Failed re-run → Raw edit still reads Stale, not Failed. <see cref="CleanupStatus.Running"/> is
-    /// never overridden (a run is in flight), and a Failed run with no prior success reads Failed.
+    /// Derived from <see cref="RawDraftRevisionNumber"/>, not the stream head, so Stale follows the
+    /// current Draft — an LWW-losing contender appended past the cleaned Revision never flips a Clean
+    /// Session Stale (issue 0032). This holds for any non-<see cref="CleanupStatus.Running"/> state — so
+    /// a Clean → Raw edit → Failed re-run → Raw edit still reads Stale, not Failed.
+    /// <see cref="CleanupStatus.Running"/> is never overridden (a run is in flight), and a Failed run
+    /// with no prior success reads Failed.
     /// </summary>
     public CleanupStatus EffectiveCleanupStatus =>
         CleanupStatus != CleanupStatus.Running
         && LastCleanedRawRevisionNumber > 0
-        && LatestRawRevisionNumber > LastCleanedRawRevisionNumber
+        && RawDraftRevisionNumber > LastCleanedRawRevisionNumber
             ? CleanupStatus.Stale
             : CleanupStatus;
 
@@ -178,15 +197,56 @@ public sealed class Session : BaseEntity, ITenantScoped
     /// Save point for Raw: the live Draft mutates to the user's text (verbatim), and when the content
     /// actually changed a new immutable Revision is appended. A debounced/explicit save that doesn't
     /// change the text mints nothing, so rapid keystrokes never each create a Revision.
+    ///
+    /// A replayed offline save additionally carries the Revision its edit was based on and the user's
+    /// actual save time (ADR-0013, issue 0032). When the Draft moved past that base in the meantime (a
+    /// concurrent edit landed first), the save resolves last-write-wins by save time — see
+    /// <see cref="ResolveConcurrentSave"/>. A request without the new fields (the web client) always takes
+    /// the head path, exactly as before. Returns whether the current Draft advanced — the signal that
+    /// search/AI projections and period Summaries must react to.
     /// </summary>
-    public void SaveDraft(string rawText)
+    public bool SaveDraft(string rawText, int? baseRevisionNumber = null, DateTimeOffset? savedAt = null)
     {
         rawText ??= string.Empty;
+        var effectiveSavedAt = savedAt ?? DateTimeOffset.UtcNow;
+
+        // The Draft moved past the client's base → a concurrent edit won the head; resolve LWW.
+        if (baseRevisionNumber is { } baseRevision && baseRevision != RawDraftRevisionNumber)
+            return ResolveConcurrentSave(rawText, effectiveSavedAt);
+
         var changed = !string.Equals(rawText, LatestRawContent, StringComparison.Ordinal);
 
         RawDraft = rawText;
         if (changed)
             _rawRevisions.Add(new RawRevision(_rawRevisions.Count + 1, rawText));
+        RawDraftRevisionNumber = LatestRawRevisionNumber;
+        RawDraftSavedAt = effectiveSavedAt;
+        return changed;
+    }
+
+    /// <summary>
+    /// Resolves a save whose base Revision the Draft has moved past (ADR-0013, issue 0032): the incoming
+    /// content still appends to the Revision stream — every contender is kept, nothing is ever discarded —
+    /// and the contender with the later actual save time holds the Draft slot, whichever order the saves
+    /// arrived in. Returns whether the current Draft changed.
+    /// </summary>
+    private bool ResolveConcurrentSave(string rawText, DateTimeOffset savedAt)
+    {
+        // Keep the incoming contender (the append is skipped only when its content already is the head
+        // snapshot — identical content is already preserved).
+        if (!string.Equals(rawText, LatestRawContent, StringComparison.Ordinal))
+            _rawRevisions.Add(new RawRevision(_rawRevisions.Count + 1, rawText));
+
+        // Last-write-wins by save time: an earlier save than the current Draft's loses the slot — its
+        // Revision above is the "worst case: open Revisions and copy a paragraph back" guarantee.
+        if (savedAt < RawDraftSavedAt)
+            return false;
+
+        var draftChanged = !string.Equals(rawText, RawDraft, StringComparison.Ordinal);
+        RawDraft = rawText;
+        RawDraftRevisionNumber = LatestRawRevisionNumber;
+        RawDraftSavedAt = savedAt;
+        return draftChanged;
     }
 
     private string LatestRawContent => _rawRevisions.Count == 0 ? string.Empty : _rawRevisions[^1].Content;
@@ -200,7 +260,10 @@ public sealed class Session : BaseEntity, ITenantScoped
     /// </summary>
     public void BeginCleanup(int? baseRawRevisionNumber = null)
     {
-        _cleaningFromRawRevisionNumber = baseRawRevisionNumber ?? LatestRawRevisionNumber;
+        // A client-run Cleanup pins to the base it actually cleaned against (issue 0034); otherwise
+        // Cleanup reads the Draft (the LWW winner), so pin the Draft's Revision — not the stream head,
+        // which may hold a losing concurrent contender (issue 0032).
+        _cleaningFromRawRevisionNumber = baseRawRevisionNumber ?? RawDraftRevisionNumber;
         CleanupStatus = CleanupStatus.Running;
     }
 

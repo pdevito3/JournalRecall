@@ -22,6 +22,12 @@ public static class UpdateMetadata
             if (session is null)
                 return Result.NotFound;
 
+            // Last-write-wins for queued offline edits (ADR-0013, issue 0032): a metadata write the user
+            // saved before this Session's last write must not clobber newer server state — acknowledged,
+            // not applied. The web client never sends ClientSavedAt and always applies, as before.
+            if (request.Metadata.ClientSavedAt is { } clientSavedAt && clientSavedAt < session.UpdatedAt)
+                return Result.Ok;
+
             // Full replace (ADR-0011): every field is written wholesale — a missing list clears it, it
             // never means "leave alone". Manual edits are all UserSet; AI-provenance topics (if any) are
             // preserved by the entity. Moods are resolved known-vs-custom and deduped by the entity. Activity

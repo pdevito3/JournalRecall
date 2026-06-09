@@ -15,7 +15,7 @@ public static class UserSettingsEndpoints
         group.MapPut("", async (UpdateUserSettings.Request body, ISender sender) =>
         {
             var result = await sender.Send(new UpdateUserSettings.Command(
-                body.TimeZoneId, body.LocationCaptureEnabled, body.RequirePeopleTagApproval));
+                body.TimeZoneId, body.LocationCaptureEnabled, body.RequirePeopleTagApproval, body.ClientSavedAt));
             return result == UpdateUserSettings.Result.Ok
                 ? Results.NoContent()
                 : Results.Problem("Unknown timezone.", statusCode: StatusCodes.Status400BadRequest);

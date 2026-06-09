@@ -54,6 +54,25 @@ public class correction_feature_tests : TestBase
     }
 
     [Fact]
+    public async Task an_update_saved_before_the_corrections_last_write_is_skipped()
+    {
+        using var scope = new TestingServiceScope();
+        var created = await scope.SendAsync(new CreateCorrection.Command(Write("Profisee", ["prophecy"], false))); // last write: 12:00
+
+        // Saved offline before the Correction's last write (ADR-0013, issue 0032) → acknowledged, not applied.
+        var stale = new CorrectionForWrite("Clobber", [], true,
+            ClientSavedAt: new DateTimeOffset(2026, 1, 1, 11, 0, 0, TimeSpan.Zero));
+        (await scope.SendAsync(new UpdateCorrection.Command(created.Id, stale))).ShouldBeTrue();
+        (await scope.SendAsync(new GetCorrections.Query())).Single().CanonicalTerm.ShouldBe("Profisee");
+
+        // A newer offline save applies as usual.
+        var newer = new CorrectionForWrite("Profisee Inc", ["prophecy"], false,
+            ClientSavedAt: new DateTimeOffset(2026, 1, 1, 13, 0, 0, TimeSpan.Zero));
+        (await scope.SendAsync(new UpdateCorrection.Command(created.Id, newer))).ShouldBeTrue();
+        (await scope.SendAsync(new GetCorrections.Query())).Single().CanonicalTerm.ShouldBe("Profisee Inc");
+    }
+
+    [Fact]
     public async Task hint_mode_correction_is_injected_into_the_cleanup_prompt_and_reflected_in_cleaned()
     {
         using var scope = new TestingServiceScope();

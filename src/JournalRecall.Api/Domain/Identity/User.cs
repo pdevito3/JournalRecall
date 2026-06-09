@@ -46,6 +46,15 @@ public sealed class User : IdentityUser<Guid>
     public bool RequirePeopleTagApproval { get; set; } = true;
 
     /// <summary>
+    /// When the User's settings (timezone, geo opt-in, approval mode) were last saved (ADR-0013,
+    /// issue 0032): the client-claimed save time for a replayed offline edit, else the server save time.
+    /// Settings writes are last-write-wins — a queued offline save older than this is skipped, never
+    /// clobbering newer state. Null until the first settings save. The User isn't a BaseEntity (no
+    /// UpdatedAt audit column), so the settings slice tracks its own last-write time.
+    /// </summary>
+    public DateTimeOffset? SettingsSavedAt { get; set; }
+
+    /// <summary>
     /// True when the User must replace a temporary password before doing anything else (issue 0024): set
     /// on Admin-create and Admin-reset, cleared when the User sets their own password. While set, the
     /// server confines them to the change-password flow (the password-change sentinel).

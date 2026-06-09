@@ -20,6 +20,12 @@ public static class UpdateCorrection
             if (correction is null)
                 return false;
 
+            // Last-write-wins for queued offline edits (ADR-0013, issue 0032): an update the user saved
+            // before this Correction's last write must not clobber newer server state — acknowledged,
+            // not applied. The web client never sends ClientSavedAt and always applies, as before.
+            if (request.Correction.ClientSavedAt is { } clientSavedAt && clientSavedAt < correction.UpdatedAt)
+                return true;
+
             correction.Update(request.Correction.CanonicalTerm, request.Correction.Mishearings, request.Correction.HardReplace);
             await db.SaveChangesAsync(cancellationToken);
             return true;

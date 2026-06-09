@@ -40,7 +40,9 @@ public static class GetChanges
 
             // Changed Sessions as their full current state, projected like GetSession so the owned
             // Revision history never becomes rows. Every query here is scoped to the caller by the
-            // global tenant filter (Privacy invariant); Stale is derived in SQL.
+            // global tenant filter (Privacy invariant); Stale is derived in SQL from the current Draft
+            // Revision (the LWW winner, issue 0032 — not the stream head, which may hold a losing
+            // contender), matching GetSession.
             var sessionRows = await db.Sessions
                 .AsNoTracking()
                 .Where(s => s.UpdatedAt > since)
@@ -53,7 +55,7 @@ public static class GetChanges
                     s.RawDraft,
                     s.CleanedDraft,
                     s.Synopsis,
-                    Status = s.CleanupStatus == CleanupStatus.Clean && s.RawRevisions.Count > s.LastCleanedRawRevisionNumber
+                    Status = s.CleanupStatus == CleanupStatus.Clean && s.RawDraftRevisionNumber > s.LastCleanedRawRevisionNumber
                         ? CleanupStatus.Stale
                         : s.CleanupStatus,
                     s.CleanedHasHandEdits,
