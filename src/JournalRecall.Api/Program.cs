@@ -33,6 +33,11 @@ try
     // so it catches everything below.
     app.UseProblemDetails();
 
+    // OpenAPI document + Swagger UI at /swagger (linked from the Aspire dashboard). Placed before auth
+    // and the access gate so the docs are reachable freely; the API still enforces its own auth.
+    app.UseSwagger();
+    app.UseSwaggerUI();
+
     app.UseAuthentication();
     app.UseAuthorization();
 

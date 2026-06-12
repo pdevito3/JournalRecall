@@ -21,6 +21,7 @@
     <PackageReference Include="QueryKit" />
     <PackageReference Include="Ardalis.SmartEnum" />
     <PackageReference Include="Markdig" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>

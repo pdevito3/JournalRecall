@@ -57,6 +57,9 @@
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.6.0" />
 
+    <!-- OpenAPI document + Swagger UI (served at /swagger) -->
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.1" />
+
     <!-- Aspire dev orchestration -->
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" Version="9.9.0" />
 

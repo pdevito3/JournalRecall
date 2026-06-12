@@ -61,6 +61,11 @@ public static class ServiceRegistration
         services.AddControllers();
         services.AddProblemDetails(ProblemDetailsConfigurationExtension.ConfigureProblemDetails);
 
+        // OpenAPI document + Swagger UI (served at /swagger). AddEndpointsApiExplorer surfaces the
+        // minimal-API endpoints to Swashbuckle (this app maps no controllers).
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen();
+
         // Identity + first-party JWT (cookie or bearer) authentication (ADR-0002).
         services.AddJournalRecallAuth(builder.Configuration);
 
