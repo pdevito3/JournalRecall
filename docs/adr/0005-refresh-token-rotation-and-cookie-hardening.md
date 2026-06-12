@@ -2,7 +2,8 @@
 
 ## Status
 
-accepted
+accepted — amended by [ADR-0014](0014-dpop-sender-constrained-bearer-path.md): a bearer (DPoP)
+refresh chain may be bound to a device key; rotation then requires a proof from that key.
 
 ## Context & decision
 

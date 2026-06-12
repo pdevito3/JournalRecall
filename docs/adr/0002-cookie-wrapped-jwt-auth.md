@@ -5,6 +5,8 @@
 accepted — refined by [ADR-0005](0005-refresh-token-rotation-and-cookie-hardening.md), which adds
 first-party refresh-token rotation for durable sessions and hardens the cookies
 (`__Host-`/`__Secure-` prefixes, `X-CSRF`). The single-JWT model below is unchanged.
+Amended by [ADR-0014](0014-dpop-sender-constrained-bearer-path.md): the bearer path is now
+sender-constrainable via DPoP (`cnf.jkt`-bound tokens); the cookie path stays unbound.
 
 ## Context & decision
 

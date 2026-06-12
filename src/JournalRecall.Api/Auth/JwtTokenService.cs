@@ -25,8 +25,13 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
     /// current DB state and cleared once the User sets their own password.</summary>
     public const string MustChangePasswordClaim = "must_change_password";
 
+    /// <summary>RFC 9449 §6 confirmation claim: a DPoP-bound token carries <c>cnf: { jkt }</c>, the
+    /// thumbprint of the device key every protected request must prove possession of (ADR-0014).</summary>
+    public const string ConfirmationClaim = "cnf";
+
     public (string Token, DateTimeOffset ExpiresAt) Create(
-        User user, IEnumerable<string> roles, Guid? refreshChainId = null, bool mustChangePassword = false)
+        User user, IEnumerable<string> roles, Guid? refreshChainId = null, bool mustChangePassword = false,
+        string? boundKeyThumbprint = null)
     {
         var now = DateTimeOffset.UtcNow;
         var expiresAt = now.AddMinutes(_options.ExpiryMinutes);
@@ -41,6 +46,10 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
             claims.Add(new Claim(RefreshChainClaim, chainId.ToString()));
         if (mustChangePassword)
             claims.Add(new Claim(MustChangePasswordClaim, "true"));
+        if (boundKeyThumbprint is not null)
+            claims.Add(new Claim(ConfirmationClaim,
+                System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string> { ["jkt"] = boundKeyThumbprint }),
+                JsonClaimValueTypes.Json));
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));

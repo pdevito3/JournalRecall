@@ -38,11 +38,17 @@ public sealed class RefreshToken
     /// <summary>Best-effort device label from the User-Agent (not security-bearing).</summary>
     public string? DeviceLabel { get; private set; }
 
+    /// <summary>The DPoP device-key thumbprint (jkt) this chain is bound to (ADR-0014). Null = an
+    /// unbound (web cookie) chain; set = a bound (bearer) chain whose rotation requires a proof from
+    /// this key. Carried across rotations — a rotated token inherits the chain's binding.</summary>
+    public string? BoundKeyThumbprint { get; private set; }
+
     private RefreshToken() { } // EF
 
     public static RefreshToken Issue(
         Guid userId, string tokenHash, Guid chainId,
-        DateTimeOffset createdAt, DateTimeOffset expiresAt, string? deviceLabel) => new()
+        DateTimeOffset createdAt, DateTimeOffset expiresAt, string? deviceLabel,
+        string? boundKeyThumbprint = null) => new()
     {
         Id = Guid.CreateVersion7(),
         UserId = userId,
@@ -51,6 +57,7 @@ public sealed class RefreshToken
         CreatedAt = createdAt,
         ExpiresAt = expiresAt,
         DeviceLabel = deviceLabel,
+        BoundKeyThumbprint = boundKeyThumbprint,
     };
 
     /// <summary>Usable iff it has not been revoked and has not slid past its expiry.</summary>
