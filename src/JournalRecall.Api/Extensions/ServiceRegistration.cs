@@ -64,7 +64,10 @@ public static class ServiceRegistration
         // OpenAPI document + Swagger UI (served at /swagger). AddEndpointsApiExplorer surfaces the
         // minimal-API endpoints to Swashbuckle (this app maps no controllers).
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
+        // Vertical slices each nest a Request/Response inside a feature class, so the short type name
+        // collides across slices (CreateSession+Request vs SaveDraft+Request). Qualify nested types with
+        // their declaring feature: CreateSession+Request -> "CreateSessionRequest".
+        services.AddSwaggerGen(c => c.CustomSchemaIds(SchemaId));
 
         // Identity + first-party JWT (cookie or bearer) authentication (ADR-0002).
         services.AddJournalRecallAuth(builder.Configuration);
@@ -104,6 +107,19 @@ public static class ServiceRegistration
     /// keyed by name, with the appsettings section as its boot-time fallback. A test (or a future override)
     /// can register a keyed <c>IChatClient</c> for the same key afterwards and win.
     /// </summary>
+    /// <summary>
+    /// Swashbuckle schemaId that disambiguates the vertical-slice pattern: a type nested in a feature
+    /// class is named declaring-type-first (CreateSession+Request -> "CreateSessionRequest"), walking up
+    /// for deeper nesting. Top-level types keep their plain name.
+    /// </summary>
+    private static string SchemaId(Type type)
+    {
+        var name = type.Name;
+        for (var declaring = type.DeclaringType; declaring is not null; declaring = declaring.DeclaringType)
+            name = declaring.Name + name;
+        return name;
+    }
+
     private static void AddConfigurableChatModel(IServiceCollection services, string key, IConfiguration section)
     {
         var fallback = new JournalRecall.AI.OpenAI.ChatModelOptions();
