@@ -5,7 +5,10 @@
 #   docker compose down               # stop (keeps the volume → data persists)
 #   docker compose down -v            # stop AND delete the data volume
 #
-# Override JWT__SIGNINGKEY and the host port via a .env file or your shell before deploying.
+# Configure via a .env file (see .env.example) or your shell before deploying. Key knobs:
+#   JOURNALRECALL_PORT  host port to publish (default 8080)
+#   JOURNALRECALL_DATA  where the SQLite DB lives: named volume (default) or a host path (bind mount)
+#   JWT__SIGNINGKEY     >=32-byte signing key — REQUIRED, do not ship the default
 
 name: journalrecall
 
@@ -25,10 +28,22 @@ services:
       # ValidateOnStart). Override this in production — do not ship the default key.
       Jwt__SigningKey: "${JWT__SIGNINGKEY:-change-me-in-production-please-use-a-32byte+-secret}"
       ASPNETCORE_ENVIRONMENT: "Production"
+      # Optional BYO OpenAI-compatible endpoint for AI Cleanup. Blank = disabled.
+      ChatModels__cleanup__Endpoint: "${CHATMODELS__CLEANUP__ENDPOINT:-}"
+      ChatModels__cleanup__ApiKey: "${CHATMODELS__CLEANUP__APIKEY:-}"
+      ChatModels__cleanup__Model: "${CHATMODELS__CLEANUP__MODEL:-}"
+    # The image runs as the non-root `app` user (UID 1654). The named-volume default below is
+    # chowned to that user at build time, so it just works. For a BIND MOUNT to a host path,
+    # the host directory's ownership wins — either `sudo chown -R 1654:1654 <path>` once, or
+    # uncomment `user:` and set JOURNALRECALL_UID/GID to a UID that can write to that path.
+    # user: "${JOURNALRECALL_UID:-1654}:${JOURNALRECALL_GID:-1654}"
     volumes:
-      # Named volume holding the .db (and -wal/-shm) files. Documented path: /data.
-      - journalrecall-data:/data
+      # DB storage mounted at /data (holds the .db and its -wal/-shm files). Defaults to the
+      # named volume `journalrecall-data`. Override JOURNALRECALL_DATA with a host path to
+      # bind-mount instead, e.g. JOURNALRECALL_DATA=/mnt/tank/journalrecall.
+      - "${JOURNALRECALL_DATA:-journalrecall-data}:/data"
     restart: unless-stopped
 
 volumes:
+  # Only used when JOURNALRECALL_DATA is left at its default (a host path turns it into a bind mount).
   journalrecall-data:
