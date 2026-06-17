@@ -62,6 +62,11 @@
 
     <!-- Aspire dev orchestration -->
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" Version="9.9.0" />
+    <!-- Transitive pin: lifts MessagePack (via Aspire's StreamJsonRpc) off 2.5.192 to the
+         patched build for GHSA-hv8m-jj95-wg3x (CVE-2026-48109, LZ4 decompression DoS). Fixed
+         upstream by microsoft/aspire#18155 (StreamJsonRpc 2.25.29 -> MessagePack 2.5.302), shipping
+         in Aspire 13.5 with a release/13.4 backport. Drop once we bump Aspire off 13.4.0. -->
+    <PackageVersion Include="MessagePack" Version="2.5.301" />
 
     <!-- Testing -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
