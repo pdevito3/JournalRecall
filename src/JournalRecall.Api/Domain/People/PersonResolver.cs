@@ -28,7 +28,9 @@ public sealed class PersonResolver(JournalRecallDbContext db)
         if (string.IsNullOrEmpty(normalized))
             return null;
 
-        var directory = await db.People.AsNoTracking().ToListAsync(cancellationToken);
+        var directory = await db.People.AsNoTracking()
+            .TagWithOperationCallSite("people.resolve.directory")
+            .ToListAsync(cancellationToken);
         var match = directory.FirstOrDefault(
             p => p.Label.Equals(normalized, StringComparison.OrdinalIgnoreCase));
         return match?.Id;

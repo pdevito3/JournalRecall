@@ -42,6 +42,8 @@
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+    <!-- EF Core instrumentation ships pre-release only; the 1.15 line matches the other instrumentations. -->
+    <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.15.1-beta.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
 
@@ -67,6 +69,12 @@
          upstream by microsoft/aspire#18155 (StreamJsonRpc 2.25.29 -> MessagePack 2.5.302), shipping
          in Aspire 13.5 with a release/13.4 backport. Drop once we bump Aspire off 13.4.0. -->
     <PackageVersion Include="MessagePack" Version="2.5.301" />
+
+    <!-- Transitive pin: lifts SQLitePCLRaw.lib.e_sqlite3 (via Microsoft.EntityFrameworkCore.Sqlite
+         -> SQLitePCLRaw.bundle_e_sqlite3) off 2.1.11 to a build outside the affected range of
+         GHSA-2m69-gcr7-jv3q. Drop once EF Core ships a Sqlite provider that resolves 2.1.12 or
+         later on its own. -->
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.13" />
 
     <!-- Testing -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

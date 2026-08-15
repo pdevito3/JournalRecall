@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using JournalRecall.Api.Databases;
+using JournalRecall.Api.Observability;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -51,8 +54,16 @@ public static class HostExtensions
                 .AddMeter(Telemetry.MeterName))         // AI run/turn/tool/token metrics (issue 0017)
             .WithTracing(tracing => tracing
                 .AddSource(Telemetry.SourceName)         // AI-lifecycle spans (issue 0017)
+                .AddSource(ApiTelemetry.SourceName)      // MediatR request spans + Cleanup run roots
                 .AddAspNetCoreInstrumentation(o => o.RecordException = true)
-                .AddHttpClientInstrumentation(o => o.RecordException = true));
+                .AddHttpClientInstrumentation(o => o.RecordException = true)
+                .AddEntityFrameworkCoreInstrumentation(o =>
+                {
+                    // A query with no ambient activity belongs to startup (migrations, role seeding)
+                    // and would export as an orphan root span.
+                    o.Filter = (_, _) => Activity.Current is not null;
+                    o.EnrichWithIDbCommand = EfCommandEnrichment.Enrich;
+                }));
 
         // Logs are exported by Serilog's OpenTelemetry sink (see ServiceRegistration); only traces +
         // metrics use the OTLP exporter here. Active only when an OTLP endpoint is configured (Aspire).

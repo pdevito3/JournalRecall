@@ -17,6 +17,7 @@ public static class GetCorrections
             // The global query filter scopes this to the current user (Privacy invariant).
             var corrections = await db.Corrections
                 .AsNoTracking()
+                .TagWithOperationCallSite("corrections.list")
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync(cancellationToken);
 

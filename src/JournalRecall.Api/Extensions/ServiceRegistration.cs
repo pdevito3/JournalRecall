@@ -75,7 +75,12 @@ public static class ServiceRegistration
         // Application stack: MediatR vertical slices + Mapster mappings (scan this assembly).
         var assembly = typeof(ServiceRegistration).Assembly;
         TypeAdapterConfig.GlobalSettings.Scan(assembly);
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(assembly);
+            // Outermost behavior, so its span covers every later behavior and the handler itself.
+            cfg.AddOpenBehavior(typeof(JournalRecall.Api.Observability.RequestTracingBehavior<,>));
+        });
 
         // AI agent runner (ADR-0004). The Cleanup/Summary models resolve through a ConfigurableChatClient
         // that reads the effective provider at call time — the Admin-configured app-wide provider when set

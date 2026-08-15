@@ -48,6 +48,7 @@ public sealed class SummaryStaleness(JournalRecallDbContext db, ICurrentUserServ
         foreach (var (period, anchor) in targets)
         {
             var summary = await db.Summaries
+                .TagWithOperationCallSite("summaries.staleness.load")
                 .FirstOrDefaultAsync(s => s.Period == period && s.PeriodDate == anchor, cancellationToken);
             if (summary is null)
                 continue; // a period with no Summary yet has nothing to invalidate
@@ -67,6 +68,7 @@ public sealed class SummaryStaleness(JournalRecallDbContext db, ICurrentUserServ
             return null;
 
         return await db.Users
+            .TagWithOperationCallSite("summaries.staleness.user_time_zone")
             .Where(u => u.Id == userId)
             .Select(u => u.TimeZoneId)
             .FirstOrDefaultAsync(cancellationToken);

@@ -23,6 +23,7 @@ public sealed class SummarySourceReader(JournalRecallDbContext db, ICurrentUserS
         var windowEnd = new DateTimeOffset(end.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).AddDays(2);
 
         var candidates = await db.Sessions.AsNoTracking()
+            .TagWithOperationCallSite("summaries.session_sources.read")
             .Where(s => s.CreatedAt >= windowStart && s.CreatedAt < windowEnd)
             .OrderBy(s => s.CreatedAt)
             .Select(s => new { s.CreatedAt, s.RawPlainText, s.CleanedPlainText })
@@ -50,6 +51,7 @@ public sealed class SummarySourceReader(JournalRecallDbContext db, ICurrentUserS
             return null;
 
         return await db.Users
+            .TagWithOperationCallSite("summaries.session_sources.user_time_zone")
             .Where(u => u.Id == userId)
             .Select(u => u.TimeZoneId)
             .FirstOrDefaultAsync(cancellationToken);

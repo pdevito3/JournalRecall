@@ -21,6 +21,7 @@ public static class SaveCleaned
         public async Task<bool> Handle(Command request, CancellationToken cancellationToken)
         {
             var session = await db.Sessions
+                .TagWithOperationCallSite("sessions.save_cleaned.load")
                 .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
             if (session is null)
                 return false;

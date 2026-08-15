@@ -45,6 +45,7 @@ public static class GetChanges
             // contender), matching GetSession.
             var sessionRows = await db.Sessions
                 .AsNoTracking()
+                .TagWithOperationCallSite("sync.changes.sessions")
                 .Where(s => s.UpdatedAt > since)
                 .OrderBy(s => s.UpdatedAt)
                 .Select(s => new
@@ -76,12 +77,14 @@ public static class GetChanges
 
             var corrections = await db.Corrections
                 .AsNoTracking()
+                .TagWithOperationCallSite("sync.changes.corrections")
                 .Where(c => c.UpdatedAt > since)
                 .OrderBy(c => c.UpdatedAt)
                 .ToListAsync(cancellationToken);
 
             var people = await db.People
                 .AsNoTracking()
+                .TagWithOperationCallSite("sync.changes.people")
                 .Where(p => p.UpdatedAt > since)
                 .OrderBy(p => p.UpdatedAt)
                 .Select(p => new { p.Id, p.Label, p.UpdatedAt })
@@ -90,6 +93,7 @@ public static class GetChanges
             // Settings live on the User row (not a BaseEntity) and carry their own watermark; a bootstrap
             // always includes them, a delta pull only when they changed after the cursor.
             var user = await db.Users
+                .TagWithOperationCallSite("sync.changes.user_settings")
                 .Where(u => u.Id == userId)
                 .Select(u => new
                 {
@@ -107,6 +111,7 @@ public static class GetChanges
                     .Where(p => p.MatchedPersonId is not null).Select(p => p.MatchedPersonId!.Value))
                 .Distinct().ToList();
             var labels = await db.People
+                .TagWithOperationCallSite("sync.changes.person_labels")
                 .Where(p => neededIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Label, cancellationToken);
 

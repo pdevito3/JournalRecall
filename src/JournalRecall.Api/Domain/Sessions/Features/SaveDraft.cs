@@ -25,6 +25,7 @@ public static class SaveDraft
         public async Task<bool> Handle(Command request, CancellationToken cancellationToken)
         {
             var session = await db.Sessions
+                .TagWithOperationCallSite("sessions.save_draft.load")
                 .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
             if (session is null)
                 return false;

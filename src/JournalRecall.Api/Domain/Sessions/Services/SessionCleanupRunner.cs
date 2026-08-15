@@ -7,6 +7,7 @@ using JournalRecall.Api.Domain.Corrections;
 using JournalRecall.Api.Domain.Sessions.Ai;
 using JournalRecall.Api.Domain.Sessions.Dtos;
 using JournalRecall.Api.Domain.Summaries.Services;
+using JournalRecall.Api.Observability;
 
 namespace JournalRecall.Api.Domain.Sessions.Services;
 
@@ -28,7 +29,15 @@ public sealed class SessionCleanupRunner(
     public async IAsyncEnumerable<AgentEvent> StreamAsync(
         Guid sessionId, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var session = await db.Sessions.FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
+        // A Cleanup run is its own workflow, not a detail of the request that started it: the streaming
+        // endpoint holds one Server-Sent Events response open for the whole run, so as a child every
+        // model turn and query would hide under that transport span. TraceRoot gives the run its own
+        // trace and links it back to the request.
+        using var trace = ApiTelemetry.TraceRoot([("session.id", sessionId)], "sessions.cleanup.run");
+
+        var session = await db.Sessions
+            .TagWithOperationCallSite("sessions.cleanup.load")
+            .FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
         if (session is null)
             yield break;
 
@@ -39,7 +48,9 @@ public sealed class SessionCleanupRunner(
 
         // The caller's Corrections (per-user via the global query filter): hint-mode entries go into
         // the prompt; hard-replace entries are substituted deterministically after the model runs.
-        var corrections = await db.Corrections.AsNoTracking().ToListAsync(cancellationToken);
+        var corrections = await db.Corrections.AsNoTracking()
+            .TagWithOperationCallSite("sessions.cleanup.corrections")
+            .ToListAsync(cancellationToken);
         var definition = CleanupAgent.BuildDefinition(CorrectionApplier.BuildHintContext(corrections));
         var context = new RunContext { Subject = session.UserId.ToString() };
 
@@ -72,7 +83,9 @@ public sealed class SessionCleanupRunner(
     /// <summary>Runs Cleanup to completion and returns the updated Session, or null when it doesn't exist.</summary>
     public async Task<SessionDto?> RunAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
-        if (!await db.Sessions.AnyAsync(s => s.Id == sessionId, cancellationToken))
+        if (!await db.Sessions
+            .TagWithOperationCallSite("sessions.cleanup.exists")
+            .AnyAsync(s => s.Id == sessionId, cancellationToken))
             return null;
 
         await foreach (var _ in StreamAsync(sessionId, cancellationToken)) { }
@@ -98,7 +111,9 @@ public sealed class SessionCleanupRunner(
             .ToList();
         var labels = matchedIds.Count == 0
             ? new Dictionary<Guid, string>()
-            : await db.People.Where(p => matchedIds.Contains(p.Id))
+            : await db.People
+                .TagWithOperationCallSite("sessions.cleanup.matched_person_labels")
+                .Where(p => matchedIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Label, cancellationToken);
 
         return session.PeopleProposals
@@ -114,6 +129,7 @@ public sealed class SessionCleanupRunner(
             return [];
 
         return await db.People
+            .TagWithOperationCallSite("sessions.cleanup.person_labels")
             .Where(p => personIds.Contains(p.Id))
             .OrderBy(p => p.Label)
             .Select(p => p.Label)

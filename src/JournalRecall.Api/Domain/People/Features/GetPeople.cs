@@ -17,6 +17,7 @@ public static class GetPeople
             // The global query filter scopes this to the current user (Privacy invariant).
             return await db.People
                 .AsNoTracking()
+                .TagWithOperationCallSite("people.list")
                 .OrderBy(p => p.Label)
                 .Select(p => new PersonDto(p.Id, p.Label))
                 .ToListAsync(cancellationToken);

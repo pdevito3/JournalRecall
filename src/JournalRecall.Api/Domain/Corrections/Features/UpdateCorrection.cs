@@ -16,6 +16,7 @@ public static class UpdateCorrection
         {
             // The global query filter scopes this to the current user; another user's row is invisible.
             var correction = await db.Corrections
+                .TagWithOperationCallSite("corrections.update.load")
                 .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
             if (correction is null)
                 return false;

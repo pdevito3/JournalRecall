@@ -22,6 +22,7 @@ public static class GetSession
             // hold a losing contender) has advanced past the last cleaned Revision reads as Stale.
             var row = await db.Sessions
                 .AsNoTracking()
+                .TagWithOperationCallSite("sessions.get_by_id")
                 .Where(s => s.Id == request.SessionId)
                 .Select(s => new
                 {
@@ -59,6 +60,7 @@ public static class GetSession
             var matchedIds = row.Proposals.Where(p => p.MatchedPersonId is not null)
                 .Select(p => p.MatchedPersonId!.Value);
             var labels = await db.People
+                .TagWithOperationCallSite("sessions.get_by_id.person_labels")
                 .Where(p => row.PersonIds.Contains(p.Id) || matchedIds.Contains(p.Id))
                 .Select(p => new { p.Id, p.Label })
                 .ToListAsync(cancellationToken);

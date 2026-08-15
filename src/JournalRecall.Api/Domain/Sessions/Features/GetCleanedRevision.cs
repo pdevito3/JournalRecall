@@ -16,6 +16,7 @@ public static class GetCleanedRevision
         {
             var session = await db.Sessions
                 .AsNoTracking()
+                .TagWithOperationCallSite("sessions.cleaned_revision.get")
                 .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
 
             var revision = session?.CleanedRevisions.FirstOrDefault(r => r.RevisionNumber == request.RevisionNumber);

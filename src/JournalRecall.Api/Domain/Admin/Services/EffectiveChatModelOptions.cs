@@ -14,7 +14,9 @@ public sealed class EffectiveChatModelOptions(JournalRecallDbContext db)
 {
     public async Task<ChatModelOptions> ResolveAsync(ChatModelOptions fallback, CancellationToken cancellationToken = default)
     {
-        var stored = await db.AiProviderSettings.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        var stored = await db.AiProviderSettings.AsNoTracking()
+            .TagWithOperationCallSite("admin.chat_model_options.resolve")
+            .FirstOrDefaultAsync(cancellationToken);
         if (stored is null || !stored.IsConfigured)
             return fallback;
 

@@ -16,6 +16,7 @@ public static class GetRawRevision
         {
             var session = await db.Sessions
                 .AsNoTracking()
+                .TagWithOperationCallSite("sessions.raw_revision.get")
                 .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
 
             var revision = session?.RawRevisions.FirstOrDefault(r => r.RevisionNumber == request.RevisionNumber);

@@ -37,6 +37,7 @@ public sealed class SummaryGenerator(
             return SummaryDto.Missing(period, anchor, 0);
 
         var summary = await db.Summaries
+            .TagWithOperationCallSite("summaries.generate.load")
             .FirstOrDefaultAsync(s => s.Period == period && s.PeriodDate == anchor, cancellationToken);
         if (summary is null)
         {

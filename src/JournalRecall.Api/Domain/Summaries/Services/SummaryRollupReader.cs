@@ -22,6 +22,7 @@ public sealed class SummaryRollupReader(JournalRecallDbContext db)
         var (start, end) = SummaryPeriods.CalendarRange(period, anchor);
 
         return await db.Summaries.AsNoTracking()
+            .TagWithOperationCallSite("summaries.rollup_sources.read")
             .Where(s => s.Period == childPeriod
                 && s.PeriodDate >= start && s.PeriodDate <= end
                 && s.Content != "")

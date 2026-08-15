@@ -19,6 +19,7 @@ public static class GetCleanedRevisions
             // owned Revision bodies and the Session's other owned collections are never materialized.
             var summary = await db.Sessions
                 .AsNoTracking()
+                .TagWithOperationCallSite("sessions.cleaned_revisions.list")
                 .Where(s => s.Id == request.SessionId)
                 .Select(s => new
                 {

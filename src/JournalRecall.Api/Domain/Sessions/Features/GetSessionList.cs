@@ -25,7 +25,7 @@ public static class GetSessionList
 
         public async Task<IReadOnlyList<SessionListItemDto>> Handle(Query request, CancellationToken cancellationToken)
         {
-            var query = db.Sessions.AsNoTracking().AsQueryable();
+            var query = db.Sessions.AsNoTracking().TagWithOperationCallSite("sessions.list").AsQueryable();
             if (!string.IsNullOrWhiteSpace(request.Filter))
                 // The config maps topics/raw query names onto the metadata (issue 0011); built-in names
                 // like CreatedAt keep working.
@@ -69,6 +69,7 @@ public static class GetSessionList
             // People are directory references; resolve labels in one query (per-user via the filter).
             var allPersonIds = rows.SelectMany(s => s.PersonIds).Distinct().ToList();
             var labels = await db.People
+                .TagWithOperationCallSite("sessions.list.person_labels")
                 .Where(p => allPersonIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Label, cancellationToken);
 
@@ -90,6 +91,7 @@ public static class GetSessionList
                 return null;
 
             return await db.Users
+                .TagWithOperationCallSite("sessions.list.user_time_zone")
                 .Where(u => u.Id == userId)
                 .Select(u => u.TimeZoneId)
                 .FirstOrDefaultAsync(cancellationToken);

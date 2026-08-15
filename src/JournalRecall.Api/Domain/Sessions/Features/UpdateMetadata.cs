@@ -18,6 +18,7 @@ public static class UpdateMetadata
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
             var session = await db.Sessions
+                .TagWithOperationCallSite("sessions.update_metadata.load")
                 .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
             if (session is null)
                 return Result.NotFound;

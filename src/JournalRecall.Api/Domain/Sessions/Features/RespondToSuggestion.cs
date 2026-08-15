@@ -19,6 +19,7 @@ public static class RespondToSuggestion
         public async Task<bool> Handle(Command request, CancellationToken cancellationToken)
         {
             var session = await db.Sessions
+                .TagWithOperationCallSite("sessions.suggestion_response.load")
                 .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
             if (session is null)
                 return false;

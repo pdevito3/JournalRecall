@@ -29,6 +29,7 @@ public static class CreateSession
                 // A client-minted id (ADR-0013): look it up across all users (tenant filter off) so a
                 // replay and a cross-user collision are told apart before the insert can blow up on the PK.
                 var ownerId = await db.Sessions
+                    .TagWithOperationCallSite("sessions.create.owner_probe")
                     .IgnoreQueryFilters([JournalRecallDbContext.TenantFilter])
                     .Where(s => s.Id == clientId)
                     .Select(s => (Guid?)s.UserId)
@@ -47,7 +48,9 @@ public static class CreateSession
 
             // Privacy/defense-in-depth: only stamp a location when the user has opted in. A point sent
             // while opt-in is off is ignored, so the setting alone governs whether location is stored.
-            var optedIn = await db.Users.Where(u => u.Id == userId)
+            var optedIn = await db.Users
+                .TagWithOperationCallSite("sessions.create.location_opt_in")
+                .Where(u => u.Id == userId)
                 .Select(u => u.LocationCaptureEnabled).FirstOrDefaultAsync(cancellationToken);
             var location = optedIn && Location.TryCreate(request.Latitude, request.Longitude, out var loc)
                 ? loc

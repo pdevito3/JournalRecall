@@ -14,6 +14,7 @@ public static class DeleteCorrection
         public async Task<bool> Handle(Command request, CancellationToken cancellationToken)
         {
             var correction = await db.Corrections
+                .TagWithOperationCallSite("corrections.delete.load")
                 .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
             if (correction is null)
                 return false;

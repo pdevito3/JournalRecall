@@ -22,7 +22,9 @@ public static class RespondToPersonProposal
     {
         public async Task<bool> Handle(Command request, CancellationToken cancellationToken)
         {
-            var session = await db.Sessions.FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
+            var session = await db.Sessions
+                .TagWithOperationCallSite("sessions.person_proposal.load")
+                .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
             if (session is null)
                 return false;
 
@@ -38,7 +40,9 @@ public static class RespondToPersonProposal
             }
 
             // A reassign target must be the caller's own directory entry (the global query filter scopes this).
-            if (request.BindToPersonId is { } bind && !await db.People.AnyAsync(p => p.Id == bind, cancellationToken))
+            if (request.BindToPersonId is { } bind && !await db.People
+                .TagWithOperationCallSite("sessions.person_proposal.bind_target_exists")
+                .AnyAsync(p => p.Id == bind, cancellationToken))
                 return false;
 
             var cleanedJson = await peopleTags.ApproveAsync(

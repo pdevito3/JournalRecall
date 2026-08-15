@@ -28,6 +28,7 @@ public static class GetSummary
                 : (await rollups.ReadAsync(request.Period, anchor, cancellationToken)).Count;
 
             var summary = await db.Summaries.AsNoTracking()
+                .TagWithOperationCallSite("summaries.get")
                 .FirstOrDefaultAsync(s => s.Period == request.Period && s.PeriodDate == anchor, cancellationToken);
 
             return summary is null

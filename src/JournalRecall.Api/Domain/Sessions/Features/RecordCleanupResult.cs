@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using JournalRecall.Api.Databases;
@@ -6,6 +7,7 @@ using JournalRecall.Api.Domain.Sessions.Metadata;
 using JournalRecall.Api.Domain.Sessions.Services;
 using JournalRecall.Api.Domain.Summaries.Services;
 using JournalRecall.Api.Exceptions;
+using JournalRecall.Api.Observability;
 
 namespace JournalRecall.Api.Domain.Sessions.Features;
 
@@ -21,6 +23,11 @@ public static class RecordCleanupResult
     /// The CleanupAgent output shape the device assembled, plus the Raw Revision it cleaned against and
     /// the Engine that ran it. The Engine identifier is required but not persisted — the recorded outcome
     /// carries no trace of where the model executed.
+    /// <para>
+    /// <paramref name="Trace"/> is optional telemetry, never domain data: the device queues results and
+    /// uploads them after it reconnects, so the <c>traceparent</c> header on this call describes the
+    /// upload and not the run. A device that traced its run can echo that context here to link the two.
+    /// </para>
     /// </summary>
     public sealed record Request(
         string? CleanedMarkdown,
@@ -29,7 +36,8 @@ public static class RecordCleanupResult
         string[]? PeopleProposal,
         string[]? MoodSuggestions,
         int BaseRawRevisionNumber,
-        string? Engine);
+        string? Engine,
+        TraceContext? Trace = null);
 
     /// <summary>Returns false when the Session doesn't exist for the current user (→ 404).</summary>
     public sealed record Command(Guid SessionId, Request Result) : IRequest<bool>;
@@ -40,9 +48,18 @@ public static class RecordCleanupResult
         public async Task<bool> Handle(Command request, CancellationToken cancellationToken)
         {
             var result = request.Result;
+
+            // Link, do not parent: the device's run finished before this upload began, so the two are
+            // separate traces with a cause between them. The ambient span is the one
+            // RequestTracingBehavior started for this Command. (Qualified: the Session metadata namespace
+            // has its own Activity type.)
+            if (ApiTelemetry.TryParseTraceContext(result.Trace, out var deviceRun))
+                System.Diagnostics.Activity.Current?.AddLink(new ActivityLink(deviceRun));
+
             Validate(result);
 
             var session = await db.Sessions
+                .TagWithOperationCallSite("sessions.cleanup_result.load")
                 .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
             if (session is null)
                 return false;
@@ -68,7 +85,9 @@ public static class RecordCleanupResult
 
             // Identical post-processing to a server run — including hard-replace Corrections, which are
             // re-applied server-side even if the device missed them — pinned to the device's base Revision.
-            var corrections = await db.Corrections.AsNoTracking().ToListAsync(cancellationToken);
+            var corrections = await db.Corrections.AsNoTracking()
+                .TagWithOperationCallSite("sessions.cleanup_result.corrections")
+                .ToListAsync(cancellationToken);
             session.BeginCleanup(result.BaseRawRevisionNumber);
             await postProcessor.CompleteAsync(session, parsed, corrections, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);

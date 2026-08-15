@@ -16,6 +16,7 @@ public static class RenamePerson
         {
             // The global query filter scopes this to the current user; another user's row is invisible.
             var person = await db.People
+                .TagWithOperationCallSite("people.rename.load")
                 .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
             if (person is null)
                 return false;
@@ -28,6 +29,7 @@ public static class RenamePerson
             // rename must re-label them too, not just the directory row. Load only the Sessions that actually
             // reference this Person (the SessionPerson badge join), scoped per-User by the global query filter.
             var affected = await db.Sessions
+                .TagWithOperationCallSite("people.rename.affected_sessions")
                 .Where(s => s.People.Any(p => p.PersonId == request.Id))
                 .ToListAsync(cancellationToken);
             foreach (var session in affected)

@@ -17,6 +17,7 @@ public static class GetTopics
             // distinct runs off the SessionTopic(SessionId, Name) index. No Topic entity — these are the
             // owned SessionTopic strings, deduped across the User's Sessions.
             return await db.Sessions
+                .TagWithOperationCallSite("sessions.topics.list")
                 .SelectMany(s => s.Topics.Select(t => t.Name))
                 .Distinct()
                 .OrderBy(name => name)
